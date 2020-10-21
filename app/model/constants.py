@@ -14,3 +14,6 @@ AUTH_TOKEN: Final = "auth_token"
 
 THINGIVERSE_URL = "https://api.thingiverse.com/"
 THINGIVERSE_THINGS_PATH = "things/"
+THINGIVERSE_USERS_PATH = "users/"
+THINGIVERSE_FILES_PATH = "files/"
+THINGIVERSE_TAGS_PATH = "tags/"
