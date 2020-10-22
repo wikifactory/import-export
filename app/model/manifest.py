@@ -1,4 +1,5 @@
 from .manifest_metadata import ManifestMetadata
+import json
 
 
 class Manifest:
@@ -9,4 +10,8 @@ class Manifest:
         self.project_id = ""
         self.project_description = ""
         self.things = []
+        pass
+
+    def toJson(self):
+        return json.dumps(self, default=lambda o: o.__dict__)
         pass

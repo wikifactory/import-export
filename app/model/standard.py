@@ -1,4 +1,5 @@
 # from certification import Certification
+import json
 
 
 class Standard:
@@ -7,3 +8,7 @@ class Standard:
         self.title = ""
         self.reference = ""
         self.certifications = []  # [Certification]
+    
+    def toJson(self):
+        return json.dumps(self, default=lambda o: o.__dict__)
+        pass

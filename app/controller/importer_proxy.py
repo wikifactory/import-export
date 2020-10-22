@@ -13,12 +13,11 @@ class ImporterProxy:
         print(json_request)
         if(json_request[SERVICE].lower() == THINGIVERSE_SERVICE):
 
-            await self.handle_thingiverse(json_request[SOURCE_URL],
-                                          json_request[AUTH_TOKEN])
+            return await self.handle_thingiverse(json_request[SOURCE_URL],
+                                                 json_request[AUTH_TOKEN])
         else:
             raise NotImplementedError()
 
     async def handle_thingiverse(self, url, auth_token):
         imp = ThingiverseImporter()
-        await imp.process_url(url, auth_token)
-        print("finished")
+        return await imp.process_url(url, auth_token)

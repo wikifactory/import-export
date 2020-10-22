@@ -1,4 +1,5 @@
 from .user import User
+import json
 
 
 class Thing:
@@ -19,3 +20,7 @@ class Thing:
         self.categories = []
 
         self.associated_standards = []  # [Standard]
+
+    def toJson(self):
+        return json.dumps(self, default=lambda o: o.__dict__)
+        pass

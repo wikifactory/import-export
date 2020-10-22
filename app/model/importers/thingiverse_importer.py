@@ -4,6 +4,8 @@ import aiohttp
 
 
 from ..constants import THINGIVERSE_URL, THINGIVERSE_THINGS_PATH
+from ..manifest import Manifest
+from ..thing import Thing
 
 
 class AppTokenError(Exception):
@@ -24,8 +26,26 @@ class ThingiverseImporter(Importer):
     async def process_url(self, url, auth_token):
         print("THINGIVERSE: Starting process of URL:")
         print(url)
+
         # TODO: validate the URL
 
+        basic_thing_info = await self.retrieve_basic_thing_info(url,
+                                                                auth_token)
+        # TODO: Check for empty values (None)
+        print("->")
+        print(basic_thing_info.keys())
+
+        # Create the Manifest that will be later exported
+        manifest = Manifest()
+
+        # Populate the manifest using the retrieved information
+        # Initially, each imported "thing" will be exported as a
+        # thing of the manifest
+        self.populate_manifest_with_things(manifest, [basic_thing_info])
+
+        return manifest.toJson()
+
+    async def retrieve_basic_thing_info(self, url, auth_token):
         # Extract the ID of the thing, so we can later use the thingiverse API
         url_components = url.split("/")
 
@@ -34,13 +54,26 @@ class ThingiverseImporter(Importer):
         thing_id = thing_identifier_label.split(":")[1]
 
         thing_url = THINGIVERSE_URL + THINGIVERSE_THINGS_PATH + thing_id \
-                                    + "/files?access_token=" + self.app_token
+                                    + "?access_token=" + self.app_token
 
         async with aiohttp.ClientSession() as session:
             async with session.get(thing_url) as response:
-                print(response.status)
                 json_result = await response.json()
-                print(json_result)
+                return json_result
 
-                # print(json_result["id"])
-                # print(json_result["name"])
+    def populate_manifest_with_things(self, manifest, things_arr):
+
+        for thing in things_arr:
+
+            new_thing = Thing()
+
+            # TODO: Generate new id?
+            new_thing.id = thing["id"]
+
+            new_thing.title = thing["name"]
+            new_thing.description = thing["description"]
+
+            manifest.things.append(new_thing)
+
+            
+

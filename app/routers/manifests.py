@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from ..controller.importer_proxy import ImporterProxy
+from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
@@ -32,5 +33,7 @@ async def post_manifest(body: dict):
     else:
         print("OK")
         processing_prx = ImporterProxy()
-        result = await processing_prx.handle_request(body)
-        return result
+        result_json_string = await processing_prx.handle_request(body)
+        print(result_json_string)
+        return result_json_string
+        
