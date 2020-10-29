@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from ..controller.importer_proxy import ImporterProxy
 from fastapi.responses import JSONResponse
+import time
 
 router = APIRouter()
 
@@ -31,9 +32,17 @@ async def post_manifest(body: dict):
         raise HTTPException(status_code=500, detail="Missing fields")
 
     else:
-        print("OK")
         processing_prx = ImporterProxy()
         result_json_string = await processing_prx.handle_request(body)
-        print(result_json_string)
+        print("DONE!")
+
+
+        outputfile_path = "/tmp/outputs/" + str(int(round(time.time() * 1000))) + ".json"
+
+        text_file = open(outputfile_path, "w+")
+        text_file.write(result_json_string)
+        text_file.close()
+
+
         return result_json_string
         

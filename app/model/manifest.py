@@ -9,7 +9,8 @@ class Manifest:
         self.project_name = ""
         self.project_id = ""
         self.project_description = ""
-        self.things = []
+        self.elements = []
+        self.collaborators = []
         pass
 
     def toJson(self):
