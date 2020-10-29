@@ -11,8 +11,8 @@ class Manifest:
         self.project_description = ""
         self.elements = []
         self.collaborators = []
-        pass
-
+        self.source_url = ""
+        
     def toJson(self):
         return json.dumps(self, default=lambda o: o.__dict__)
-        pass
+        
