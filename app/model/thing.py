@@ -11,8 +11,8 @@ class Thing:
         self.tags = []  # Similar to keywords
 
         # Required. This will be taken as the seed to be populated
-        self.project_url = ""
-        self.contact = User()
+        # self.thing_url = ""
+        self.contact = None
         self.contributors = []  # [User]
 
         self.associated_files_urls = []

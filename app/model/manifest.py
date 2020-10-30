@@ -9,9 +9,10 @@ class Manifest:
         self.project_name = ""
         self.project_id = ""
         self.project_description = ""
-        self.things = []
-        pass
-
+        self.elements = []
+        self.collaborators = []
+        self.source_url = ""
+        
     def toJson(self):
         return json.dumps(self, default=lambda o: o.__dict__)
-        pass
+        
