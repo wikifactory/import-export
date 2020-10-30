@@ -6,6 +6,7 @@ WIKIFACTORY_SERVICE: Final = "wikifactory"
 GITHUB_SERVICE: Final = "github"
 GOOGLEDRIVE_SERVICE: Final = "googledrive"
 GIT_SERVICE: Final = "git"
+MYMINIFACTORY_SERVICE: Final = "mtminifactory"
 
 
 SOURCE_URL: Final = "source_url"

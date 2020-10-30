@@ -1,4 +1,4 @@
-from ..model.constants import THINGIVERSE_SERVICE
+from ..model.constants import THINGIVERSE_SERVICE, MYMINIFACTORY_SERVICE
 from ..model.constants import GITHUB_SERVICE, GIT_SERVICE
 from ..model.constants import SOURCE_URL, AUTH_TOKEN, SERVICE
 from ..model.importers.thingiverse_importer import ThingiverseImporter
@@ -17,12 +17,14 @@ class ImporterProxy:
 
             return await self.handle_thingiverse(json_request[SOURCE_URL],
                                                  json_request[AUTH_TOKEN])
+
         elif(json_request[SERVICE].lower() == GITHUB_SERVICE):
             return await self.handle_github(json_request[SOURCE_URL],
+                                            json_request[AUTH_TOKEN])
+
         elif(json_request[SERVICE].lower() == GIT_SERVICE):
             return await self.handle_git(json_request[SOURCE_URL],
-                                            json_request[AUTH_TOKEN])
-                                            json_request[AUTH_TOKEN])
+                                         json_request[AUTH_TOKEN])
 
         elif(json_request[SERVICE].lower() == MYMINIFACTORY_SERVICE):
             return await self.handle_myminifactory(json_request[SOURCE_URL],
