@@ -129,3 +129,6 @@ dmypy.json
 .pyre/
 
 .vscode
+
+config/credentials.json
+/app/credentials.py

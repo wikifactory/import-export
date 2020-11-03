@@ -1,9 +1,12 @@
 from ..model.constants import THINGIVERSE_SERVICE, MYMINIFACTORY_SERVICE
 from ..model.constants import GITHUB_SERVICE, GIT_SERVICE
 from ..model.constants import SOURCE_URL, AUTH_TOKEN, SERVICE
+from ..model.constants import GOOGLEDRIVE_SERVICE
 from ..model.importers.thingiverse_importer import ThingiverseImporter
 from ..model.importers.github_importer import GithubImporter
 from ..model.importers.git_importer import GitImporter
+from ..model.importers.googledrive_importer import GoogleDriveImporter
+from ..model.importers.myminifactory_importer import MyMiniFactoryImporter
 
 class ImporterProxy:
 
@@ -29,6 +32,10 @@ class ImporterProxy:
         elif(json_request[SERVICE].lower() == MYMINIFACTORY_SERVICE):
             return await self.handle_myminifactory(json_request[SOURCE_URL],
                                                    json_request[AUTH_TOKEN])
+
+        elif(json_request[SERVICE].lower() == GOOGLEDRIVE_SERVICE):
+            return await self.handle_googledrive(json_request[SOURCE_URL],
+                                                 json_request[AUTH_TOKEN])
         else:
             raise NotImplementedError()
 
@@ -42,6 +49,10 @@ class ImporterProxy:
 
     async def handle_git(self, url, auth_token):
         imp = GitImporter()
+        return await imp.process_url(url, auth_token)
+
+    async def handle_googledrive(self, url, auth_token):
+        imp = GoogleDriveImporter()
         return await imp.process_url(url, auth_token)
 
     async def handle_myminifactory(self, url, auth_token):

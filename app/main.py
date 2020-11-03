@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from .routers import manifests
 
 import uvicorn
@@ -6,6 +8,15 @@ import os
 
 app = FastAPI()
 app.include_router(manifests.router)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 TMP_FOLDER = "/tmp/outputs/"
 

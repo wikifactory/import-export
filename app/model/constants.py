@@ -27,6 +27,8 @@ MYMINIFACTORY_OBJECT_PATH: Final = "object/"
 MYMINIFACTORY_COLLECTIONS_PATH: Final = "collections/"
 MYMINIFACTORY_FILE_PATH: Final = "file/"
 MYMINIFACTORY_IMAGE_PATH: Final = "image/"
+
+
 GITHUB_URL: Final = "https://api.github.com/"
 GITHUB_REPOS_PATH: Final = "repos/"
 GITHUB_ENV_VAR_NAME: Final = "GITHUB_TOKEN"
