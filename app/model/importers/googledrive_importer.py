@@ -5,14 +5,10 @@ from ..element import Element, ElementType
 from ...credentials import CLIENT_ID, CLIENT_SECRET
 
 from googleapiclient.discovery import build
-from google.auth.transport.requests import Request
+import httplib2
+from oauth2client.client import AccessTokenCredentials
 
-
-SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
-          'https://www.googleapis.com/auth/drive.file',
-          'https://www.googleapis.com/auth/drive']
-
-
+SCOPES = ['https://www.googleapis.com/auth/drive']
 query_c = "mimeType='application/vnd.google-apps.folder'"
 fields_c = "nextPageToken, files(id,name, mimeType)"
 query_infolder = " in parents"
@@ -25,15 +21,14 @@ class GoogleDriveImporter(Importer):
 
     async def process_url(self, url, auth_token):
 
-        # Create the credentials object
-        creds = self.get_credentials_object(auth_token)
+        print("Google Drive: Starting process of folder:")
+        print(url)
 
         try:
-            # Create the connection with the google drive service
-            drive_service = build('drive', 'v3', creds)
-
-            print(drive_service)
-
+            creds = AccessTokenCredentials(auth_token, user_agent="https://www.googleapis.com/oauth2/v1/certs")
+            http = httplib2.Http()
+            http = creds.authorize(http)
+            drive_service = build('drive', 'v3', credentials=creds)
             self.list_contents_of_folder_with_id(drive_service, url)
 
         except Exception as e:
@@ -44,7 +39,7 @@ class GoogleDriveImporter(Importer):
 
         return manifest.toJson()
 
-    def list_contents_of_folder_with_id(drive_service, folder_id):
+    def list_contents_of_folder_with_id(self, drive_service, folder_id):
         list_result = []
         last_page_token = None
 
@@ -83,12 +78,15 @@ class GoogleDriveImporter(Importer):
     def get_credentials_object(self, token):
 
         cred = {}
-        cred["token"] = token
-        cred["_id_token"] = None
-        cred["_scopes"] = SCOPES
-        cred["_token_uri"] = "https://oauth2.googleapis.com/token"
-        cred["_client_id"] = CLIENT_ID
-        cred["_client_secret"] = CLIENT_SECRET
-        cred["_quota_project_id"] = None
+        cred["installed"] = {}
+        cred["installed"]["token"] = token
+        cred["installed"]["project_id"] = "gdtest-293711"
+        cred["installed"]["id_token"] = None
+        cred["installed"]["scopes"] = SCOPES
+        cred["installed"]["token_uri"] = "https://oauth2.googleapis.com/token"
+        cred["installed"]["client_id"] = CLIENT_ID
+        cred["installed"]["client_secret"] = CLIENT_SECRET
+        cred["installed"]["auth_provider_x509_cert_url"] = "https://www.googleapis.com/oauth2/v1/certs"
+        cred["installed"]["quota_project_id"] = None
 
         return cred
