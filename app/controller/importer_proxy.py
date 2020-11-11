@@ -8,34 +8,39 @@ from ..model.importers.git_importer import GitImporter
 from ..model.importers.googledrive_importer import GoogleDriveImporter
 from ..model.importers.myminifactory_importer import MyMiniFactoryImporter
 
-class ImporterProxy:
 
+class ImporterProxy:
     def __init__(self):
         pass
 
     async def handle_request(self, json_request):
 
         print(json_request)
-        if(json_request[SERVICE].lower() == THINGIVERSE_SERVICE):
+        if json_request[SERVICE].lower() == THINGIVERSE_SERVICE:
 
-            return await self.handle_thingiverse(json_request[SOURCE_URL],
-                                                 json_request[AUTH_TOKEN])
+            return await self.handle_thingiverse(
+                json_request[SOURCE_URL], json_request[AUTH_TOKEN]
+            )
 
-        elif(json_request[SERVICE].lower() == GITHUB_SERVICE):
-            return await self.handle_github(json_request[SOURCE_URL],
-                                            json_request[AUTH_TOKEN])
+        elif json_request[SERVICE].lower() == GITHUB_SERVICE:
+            return await self.handle_github(
+                json_request[SOURCE_URL], json_request[AUTH_TOKEN]
+            )
 
-        elif(json_request[SERVICE].lower() == GIT_SERVICE):
-            return await self.handle_git(json_request[SOURCE_URL],
-                                         json_request[AUTH_TOKEN])
+        elif json_request[SERVICE].lower() == GIT_SERVICE:
+            return await self.handle_git(
+                json_request[SOURCE_URL], json_request[AUTH_TOKEN]
+            )
 
-        elif(json_request[SERVICE].lower() == MYMINIFACTORY_SERVICE):
-            return await self.handle_myminifactory(json_request[SOURCE_URL],
-                                                   json_request[AUTH_TOKEN])
+        elif json_request[SERVICE].lower() == MYMINIFACTORY_SERVICE:
+            return await self.handle_myminifactory(
+                json_request[SOURCE_URL], json_request[AUTH_TOKEN]
+            )
 
-        elif(json_request[SERVICE].lower() == GOOGLEDRIVE_SERVICE):
-            return await self.handle_googledrive(json_request[SOURCE_URL],
-                                                 json_request[AUTH_TOKEN])
+        elif json_request[SERVICE].lower() == GOOGLEDRIVE_SERVICE:
+            return await self.handle_googledrive(
+                json_request[SOURCE_URL], json_request[AUTH_TOKEN]
+            )
         else:
             raise NotImplementedError()
 
