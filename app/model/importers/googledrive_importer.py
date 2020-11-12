@@ -1,3 +1,5 @@
+import time
+import os
 from ..importer import Importer
 from ..manifest import Manifest
 from ..element import Element, ElementType
@@ -8,6 +10,8 @@ from googleapiclient.discovery import build
 import httplib2
 from oauth2client.client import AccessTokenCredentials
 
+temp_folder_path = "/tmp/gdimports/"
+
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 query_c = "mimeType='application/vnd.google-apps.folder'"
 query_fields = "nextPageToken, files(id,name, mimeType)"
@@ -16,7 +20,20 @@ query_idinparents = " in parents"
 
 class GoogleDriveImporter(Importer):
     def __init__(self):
-        pass
+        self.id = str(int(round(time.time() * 1000)))
+
+        self.path = None
+
+        # Check if the tmp folder exists
+        try:
+            if not os.path.exists(temp_folder_path):
+                print("Creating tmp folder")
+                os.makedirs(temp_folder_path)
+
+            self.path = temp_folder_path + self.id
+
+        except Exception as e:
+            print(e)
 
     async def process_url(self, url, auth_token):
 
@@ -53,6 +70,7 @@ class GoogleDriveImporter(Importer):
         root_element = Element()
         root_element.id = root_folder_id
         root_element.type = ElementType.FOLDER
+        root_element.path = self.path
         element_for_id[root_folder_id] = root_element
 
         # While we have folders to process
@@ -84,6 +102,7 @@ class GoogleDriveImporter(Importer):
                     f_ele.type = ElementType.FOLDER
                     f_ele.id = subfolder.get("id")
                     f_ele.name = subfolder.get("name")
+                    f_ele.path = element.path + "/" + f_ele.name
                     element_for_id[f_ele.id] = f_ele
 
                     element.children.append(f_ele)
@@ -95,7 +114,7 @@ class GoogleDriveImporter(Importer):
 
                 ch_element = Element()
                 ch_element.id = f.get("id")
-                ch_element.path = f.get("name")
+                ch_element.path = element.path + "/" + f.get("name")
                 ch_element.type = ElementType.FILE
 
                 element.children.append(ch_element)
