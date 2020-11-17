@@ -6,9 +6,8 @@ from ..thing import Thing
 
 
 class MyMiniFactoryImporter(Importer):
-
-    def __init__(self):
-        pass
+    def __init__(self, request_id):
+        self.request_id = request_id
 
     async def process_url(self, url, auth_token):
         print("Myminifactory: Starting process of URL:")

@@ -5,6 +5,7 @@ from ..manifest import Manifest
 from ..thing import Thing
 from ..user import User
 import base64
+
 # from ..thing import Thing
 from github import Github
 
@@ -15,15 +16,14 @@ class GithubAppTokenError(Exception):
 
 
 class GithubImporter(Importer):
-
-    def __init__(self):
+    def __init__(self, request_id):
         self.app_token = os.getenv(GITHUB_ENV_VAR_NAME)
-        print(self.app_token)
+        self.request_id = request_id
         self.github_access = None
 
         self.logged_user = User()
 
-        if(self.app_token is None):
+        if self.app_token is None:
             raise GithubAppTokenError()
         else:
             pass
@@ -66,7 +66,7 @@ class GithubImporter(Importer):
         print(repository)
 
         contents = repository.get_contents("")
-        
+
         # Access recursively to all the files of the repository
         while contents:
             file_content = contents.pop(0)
@@ -74,12 +74,14 @@ class GithubImporter(Importer):
             if file_content.type == "dir":
                 contents.extend(repository.get_contents(file_content.path))
             else:
-                if(file_content.name == "README.md"):
+                if file_content.name == "README.md":
 
                     print("REAdME->")
                     print(file_content.url)
                     # print(file_content.content)
-                    manifest.project_description = file_content.decoded_content.decode("utf-8").replace("\"", "\\\"")
+                    manifest.project_description = file_content.decoded_content.decode(
+                        "utf-8"
+                    ).replace('"', '\\"')
                 else:
                     # Any other file will be inserted as a thing?
                     new_thing = Thing()
@@ -89,8 +91,4 @@ class GithubImporter(Importer):
                     new_thing.associated_files_urls.append(file_content.url)
                     manifest.things.append(new_thing)
                     pass
-        
 
-
-
-        

@@ -12,18 +12,16 @@ ignored_folders = [".git"]
 
 
 class Progress(git.remote.RemoteProgress):
-    def update(self, op_code, cur_count, max_count=None, message=''):
-        print('update({}, {}, {}, {})'.format(op_code,
-                                              cur_count, max_count, message))
+    def update(self, op_code, cur_count, max_count=None, message=""):
+        print("update({}, {}, {}, {})".format(op_code, cur_count, max_count, message))
 
 
 class GitImporter(Importer):
-
-    def __init__(self):
+    def __init__(self, request_id):
 
         # Assign this import process a unique id
         # This id will identify the tmp folder
-        self.id = str(int(round(time.time() * 1000)))
+        self.request_id = request_id
 
         self.path = None
 
@@ -33,7 +31,7 @@ class GitImporter(Importer):
                 print("Creating tmp folder")
                 os.makedirs(temp_folder_path)
 
-            self.path = temp_folder_path + self.id
+            self.path = temp_folder_path + self.request_id
 
         except Exception as e:
             print(e)
@@ -57,8 +55,7 @@ class GitImporter(Importer):
         manifest.source_url = url
 
         # Populate the manifest from the directory
-        self.populate_manifest_from_repository_path(manifest,
-                                                    self.path)
+        self.populate_manifest_from_repository_path(manifest, self.path)
 
         # Find the contributors
         self.fill_contributors(manifest, repo)
@@ -86,7 +83,7 @@ class GitImporter(Importer):
 
             full_path = os.path.join(repo_path, current_path)
 
-            if(full_path == repo_path):
+            if full_path == repo_path:
                 # Root element
                 root_element = Element()
                 root_element.id = "root"
@@ -105,7 +102,7 @@ class GitImporter(Importer):
 
                     folder_element.path = current_folder_path
 
-                    if(full_path in elements_dic):
+                    if full_path in elements_dic:
                         elements_dic[full_path].children.append(folder_element)
                         elements_dic[current_folder_path] = folder_element
 
@@ -118,13 +115,13 @@ class GitImporter(Importer):
                 file_element.id = filename
                 file_element.path = os.path.join(current_path, filename)
 
-                if(current_path in elements_dic):
+                if current_path in elements_dic:
                     elements_dic[current_path].children.append(file_element)
 
                 # If we are at root level and the file is the readme, use it
                 # for the description of the manifest
-                if(full_path == repo_path and filename.lower() == "readme.md"):
-                    with open(file_element.path, 'r') as file:
+                if full_path == repo_path and filename.lower() == "readme.md":
+                    with open(file_element.path, "r") as file:
                         manifest.project_description = file.read()
 
         manifest.elements = [root_element]

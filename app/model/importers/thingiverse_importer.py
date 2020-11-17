@@ -14,11 +14,10 @@ class AppTokenError(Exception):
 
 
 class ThingiverseImporter(Importer):
-
-    def __init__(self):
+    def __init__(self, request_id):
         self.app_token = os.getenv("THINGIVERSE_APP_TOKEN")
-
-        if(self.app_token is None):
+        self.request_id = request_id
+        if self.app_token is None:
             raise AppTokenError()
         else:
             pass
@@ -29,8 +28,7 @@ class ThingiverseImporter(Importer):
 
         # TODO: validate the URL
 
-        basic_thing_info = await self.retrieve_basic_thing_info(url,
-                                                                auth_token)
+        basic_thing_info = await self.retrieve_basic_thing_info(url, auth_token)
         # TODO: Check for empty values (None)
         print("->")
         print(basic_thing_info.keys())
@@ -53,8 +51,13 @@ class ThingiverseImporter(Importer):
 
         thing_id = thing_identifier_label.split(":")[1]
 
-        thing_url = THINGIVERSE_URL + THINGIVERSE_THINGS_PATH + thing_id \
-                                    + "?access_token=" + self.app_token
+        thing_url = (
+            THINGIVERSE_URL
+            + THINGIVERSE_THINGS_PATH
+            + thing_id
+            + "?access_token="
+            + self.app_token
+        )
 
         async with aiohttp.ClientSession() as session:
             async with session.get(thing_url) as response:
@@ -74,6 +77,4 @@ class ThingiverseImporter(Importer):
             new_thing.description = thing["description"]
 
             manifest.things.append(new_thing)
-
-            
 
