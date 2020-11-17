@@ -1,16 +1,23 @@
 import time
 import os
+import io
+import asyncio
 from ..importer import Importer
 from ..manifest import Manifest
 from ..element import Element, ElementType
-
-from ...credentials import CLIENT_ID, CLIENT_SECRET
+from pathlib import Path
 
 from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
 import httplib2
 from oauth2client.client import AccessTokenCredentials
 
+import aiohttp
+from socket import AF_INET
+from aioresponses import aioresponses
+
 temp_folder_path = "/tmp/gdimports/"
+SIZE_POOL_AIOHTTP = 100
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 query_c = "mimeType='application/vnd.google-apps.folder'"
@@ -18,11 +25,52 @@ query_fields = "nextPageToken, files(id,name, mimeType)"
 query_idinparents = " in parents"
 
 
+class SingletonAiohttp:
+    sem: asyncio.Semaphore = None
+    aiohttp_client: aiohttp.ClientSession = None
+
+    @classmethod
+    def get_aiohttp_client(cls) -> aiohttp.ClientSession:
+        if cls.aiohttp_client is None:
+            timeout = aiohttp.ClientTimeout(total=2)
+            connector = aiohttp.TCPConnector(
+                family=AF_INET, limit_per_host=SIZE_POOL_AIOHTTP
+            )
+            cls.aiohttp_client = aiohttp.ClientSession(
+                timeout=timeout, connector=connector
+            )
+
+        return cls.aiohttp_client
+
+    @classmethod
+    async def close_aiohttp_client(cls):
+        if cls.aiohttp_client:
+            await cls.aiohttp_client.close()
+            cls.aiohttp_client = None
+
+    @classmethod
+    async def query_url(cls, url: str):
+        client = cls.get_aiohttp_client()
+
+        try:
+            async with client.post(url) as response:
+                if response.status != 200:
+                    return {"ERROR OCCURED" + str(await response.text())}
+
+                json_result = await response.json()
+        except Exception as e:
+            return {"ERROR": e}
+
+        return json_result
+
+
 class GoogleDriveImporter(Importer):
     def __init__(self):
         self.id = str(int(round(time.time() * 1000)))
 
         self.path = None
+
+        self.elements_list = []
 
         # Check if the tmp folder exists
         try:
@@ -55,8 +103,21 @@ class GoogleDriveImporter(Importer):
         manifest = Manifest()
 
         self.process_folder_recursively(manifest, drive_service, url)
+        self.create_folder_structure_sync(self.elements_list)
+
+        await self.download_all_files(drive_service, self.elements_list)
 
         return manifest.toJson()
+
+    def create_folder_structure_sync(self, elements):
+
+        for element in elements:
+            if element.type == ElementType.FOLDER:
+                # folder_path = os.path.dirname(element.path)
+                try:
+                    Path(element.path).mkdir(parents=True, exist_ok=True)
+                except Exception as e:
+                    print(e)
 
     def process_folder_recursively(self, manifest, drive_service, root_folder_id):
 
@@ -72,6 +133,8 @@ class GoogleDriveImporter(Importer):
         root_element.type = ElementType.FOLDER
         root_element.path = self.path
         element_for_id[root_folder_id] = root_element
+
+        self.elements_list.append(root_element)
 
         # While we have folders to process
         while len(folders_ids) > 0:
@@ -107,6 +170,8 @@ class GoogleDriveImporter(Importer):
 
                     element.children.append(f_ele)
 
+                    self.elements_list.append(f_ele)
+
             # For each file
             for f in files:
 
@@ -119,8 +184,22 @@ class GoogleDriveImporter(Importer):
 
                 element.children.append(ch_element)
 
+                self.elements_list.append(ch_element)
+
         # Finally, set the elements of the manifest
         manifest.elements = [root_element]
+
+    async def download_all_files(self, drive_service, elements):
+
+        async_calls = []
+
+        for i in range(len(elements)):
+            ele = elements[i]
+            if ele.type == ElementType.FILE:
+                async_calls.append(self.download_file_from_element(drive_service, ele))
+
+        all_results = await asyncio.gather(*async_calls)
+        return all_results
 
     def get_files_and_subfolders(self, drive_service, folder_id):
         files = []
@@ -161,3 +240,25 @@ class GoogleDriveImporter(Importer):
                 break
 
         return (files, subfolders)
+
+    async def download_file_from_element(self, drive_service, element):
+
+        request = drive_service.files().get_media(fileId=element.id)
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+
+        if element.type == ElementType.FILE:
+            try:
+                while done is False:
+                    status, done = downloader.next_chunk()
+                    # print("{}".format(status.progress() * 100))
+            except Exception as e:
+                print(e)
+
+            try:
+                print("File {} done".format(element.path))
+                with open(element.path, "wb") as outfile:
+                    outfile.write(fh.getbuffer())
+            except Exception as e:
+                print(e)
