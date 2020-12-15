@@ -14,7 +14,7 @@ from oauth2client.client import AccessTokenCredentials
 
 import aiohttp
 from socket import AF_INET
-from aioresponses import aioresponses
+
 
 temp_folder_path = "/tmp/gdimports/"
 SIZE_POOL_AIOHTTP = 100

@@ -1,0 +1,21 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+uvicorn = "*"
+fastapi = "*"
+aiohttp = "==3.7.3"
+typing-extensions = "*"
+pygithub = "*"
+gitpython = "*"
+google-api-python-client = "*"
+httplib2 = "*"
+oauth2client = "*"
+aioresponses = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.7"

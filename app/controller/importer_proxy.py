@@ -1,14 +1,17 @@
-from ..model.constants import THINGIVERSE_SERVICE, MYMINIFACTORY_SERVICE
-from ..model.constants import GITHUB_SERVICE, GIT_SERVICE
-from ..model.constants import SOURCE_URL, AUTH_TOKEN, SERVICE
-from ..model.constants import GOOGLEDRIVE_SERVICE
-from ..model.importers.thingiverse_importer import ThingiverseImporter
-from ..model.importers.github_importer import GithubImporter
-from ..model.importers.git_importer import GitImporter
-from ..model.importers.googledrive_importer import GoogleDriveImporter
-from ..model.importers.myminifactory_importer import MyMiniFactoryImporter
-
-import time
+from model.constants import (
+    THINGIVERSE_SERVICE,
+    MYMINIFACTORY_SERVICE,
+    WIKIFACTORY_SERVICE,
+)
+from model.constants import GITHUB_SERVICE, GIT_SERVICE
+from model.constants import SOURCE_URL, AUTH_TOKEN, SERVICE
+from model.constants import GOOGLEDRIVE_SERVICE
+from model.importers.thingiverse_importer import ThingiverseImporter
+from model.importers.github_importer import GithubImporter
+from model.importers.git_importer import GitImporter
+from model.importers.googledrive_importer import GoogleDriveImporter
+from model.importers.myminifactory_importer import MyMiniFactoryImporter
+from model.importers.wikifactory_importer import WikifactoryImporter
 
 
 class ImporterProxy:
@@ -42,6 +45,10 @@ class ImporterProxy:
             return await self.handle_googledrive(
                 json_request[SOURCE_URL], json_request[AUTH_TOKEN], self.request_id
             )
+        elif json_request[SERVICE].lower() == WIKIFACTORY_SERVICE:
+            return await self.handle_wikifactory(
+                json_request[SOURCE_URL], json_request[AUTH_TOKEN], self.request_id
+            )
         else:
             raise NotImplementedError()
 
@@ -63,4 +70,8 @@ class ImporterProxy:
 
     async def handle_myminifactory(self, url, auth_token, request_id):
         imp = MyMiniFactoryImporter(request_id)
+        return await imp.process_url(url, auth_token)
+
+    async def handle_wikifactory(self, url, auth_token, request_id):
+        imp = WikifactoryImporter(request_id)
         return await imp.process_url(url, auth_token)

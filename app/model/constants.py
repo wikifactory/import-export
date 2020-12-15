@@ -1,4 +1,4 @@
-from typing import Final
+from typing_extensions import Final
 
 
 THINGIVERSE_SERVICE: Final = "thingiverse"
@@ -32,3 +32,6 @@ MYMINIFACTORY_IMAGE_PATH: Final = "image/"
 GITHUB_URL: Final = "https://api.github.com/"
 GITHUB_REPOS_PATH: Final = "repos/"
 GITHUB_ENV_VAR_NAME: Final = "GITHUB_TOKEN"
+
+
+WIKIFACTORY_URL: Final = "https://wikifactory.com/api/graphql"

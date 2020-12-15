@@ -4,7 +4,7 @@ from ..constants import GITHUB_ENV_VAR_NAME
 from ..manifest import Manifest
 from ..thing import Thing
 from ..user import User
-import base64
+
 
 # from ..thing import Thing
 from github import Github

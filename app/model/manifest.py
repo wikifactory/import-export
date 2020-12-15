@@ -3,7 +3,6 @@ import json
 
 
 class Manifest:
-
     def __init__(self):
         self.metatadata = ManifestMetadata()
         self.project_name = ""
@@ -12,7 +11,6 @@ class Manifest:
         self.elements = []
         self.collaborators = []
         self.source_url = ""
-        
+
     def toJson(self):
         return json.dumps(self, default=lambda o: o.__dict__)
-        

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import manifests
+from routers import manifests
 
 import uvicorn
 import os
@@ -29,5 +29,5 @@ except Exception as e:
     print(e)
 
 if __name__ == "__main__":
-
+    print("Starting....")
     uvicorn.run(app, host="0.0.0.0", port=8000)
