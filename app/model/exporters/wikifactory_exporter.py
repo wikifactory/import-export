@@ -17,7 +17,6 @@ project_name = "exporttest2"  # QUESTION: Where do I get this?
 project_id = "UHJvamVjdDo0NDMxOTI="  # QUESTION: Where do I get this?
 space_id = "U3BhY2U6ODU5NDc="  # QUESTION: Where do I get this?
 
-token = "eyJfcGVybWFuZW50Ijp0cnVlLCJ1c2VybmFtZSI6InRlc3R1c2VyMyJ9.X-BcBg.DU4NNitRgRUP7b38btz0rfcSTYk"
 export_url = "http://localweb:8080/@{}/{}".format(user_id, project_name)
 
 
@@ -44,9 +43,9 @@ class WikifactoryMutations:
                 }
 
                 userErrors {
-                message
-                key
-                code
+                    message
+                    key
+                    code
                 }
 
             }
@@ -183,7 +182,7 @@ class WikifactoryExporter(Exporter):
 
                     # First, execute the file mutation
                     file_result = await self.process_element(
-                        element, file_name, project_path
+                        element, file_name, project_path, export_token
                     )
 
                     # Check that we got the right results
@@ -230,13 +229,13 @@ class WikifactoryExporter(Exporter):
         else:
             raise NotValidManifest()
 
-    async def process_element(self, element, file_name, project_path):
+    async def process_element(self, element, file_name, project_path, export_token):
 
         transport = AIOHTTPTransport(
             url=endpoint_url,
             headers={
                 "CLIENT-USERNAME": client_username,
-                "Cookie": "session={}".format(token),
+                "Cookie": "session={}".format(export_token),
             },
         )
 

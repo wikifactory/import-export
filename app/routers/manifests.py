@@ -20,9 +20,12 @@ async def get_manifests():
 # The route used to init the import/export process
 """
 The body must contain the following parameters:
-    - source_url
-    - service
-    - auth_token
+    - import_url
+    - import_service
+    - import_token
+    - export_url
+    - export_service
+    - export_token
 """
 
 
@@ -33,7 +36,11 @@ def generate_request_id():
 @router.post("/manifest")
 async def post_manifest(body: dict):
 
-    if "source_url" not in body or "service" not in body or "auth_token" not in body:
+    if (
+        "import_url" not in body
+        or "import_service" not in body
+        or "import_token" not in body
+    ):
         raise HTTPException(status_code=500, detail="Missing fields")
 
     else:
@@ -46,9 +53,9 @@ async def post_manifest(body: dict):
 
         outputfile_path = OUTPUT_FOLDER + request_id + ".json"
 
-        text_file = open(outputfile_path, "w+")
-        text_file.write(result_json_string)
-        text_file.close()
+        # text_file = open(outputfile_path, "w+")
+        # text_file.write(result_json_string)
+        # text_file.close()
 
         return result_json_string
 
