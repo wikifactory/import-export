@@ -107,7 +107,7 @@ class GoogleDriveImporter(Importer):
 
         await self.download_all_files(drive_service, self.elements_list)
 
-        return manifest.toJson()
+        return manifest
 
     def create_folder_structure_sync(self, elements):
 

@@ -1,23 +1,24 @@
 from enum import Enum
 
 
-class ImporterStatus(Enum):
+class ExporterStatus(Enum):
     INITIALIZED = 0
     STARTED = 1
-    URL_PROCESSED = 2
+    UPLOADING_FILES = 2
+    FILES_UPLOADED = 3
     ABORTED = -1
 
 
-class Importer:
+class Exporter:
 
-    status = ImporterStatus.INITIALIZED
+    status = ExporterStatus.INITIALIZED
 
     hooks_for_status = {}
 
     def __init__(self, request_id):
         raise NotImplementedError
 
-    async def process_url(self, url):
+    async def export_manifest(self, manifest, export_url, export_token):
         raise NotImplementedError
 
     def validate_url(url):
@@ -47,5 +48,9 @@ class Importer:
             self.hooks_for_status[status].remove(action)
 
 
-class NotValidURLForImportException(Exception):
+class NotValidURLForExportException(Exception):
+    pass
+
+
+class NotValidManifest(Exception):
     pass

@@ -8,14 +8,23 @@ uvicorn = "*"
 fastapi = "*"
 aiohttp = "==3.7.3"
 typing-extensions = "*"
-pygithub = "*"
-gitpython = "*"
+PyGithub = "*"
+GitPython = "*"
 google-api-python-client = "*"
 httplib2 = "*"
 oauth2client = "*"
 aioresponses = "*"
+boto3 = "*"
+requests = "*"
+python-magic = "*"
 
 [dev-packages]
 
 [requires]
 python_version = "3.7"
+
+[pipenv]
+allow_prereleases = true
+
+[packages.gql]
+extras = [ "all",]

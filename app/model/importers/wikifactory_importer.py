@@ -59,5 +59,5 @@ class WikifactoryImporter(Importer):
         # TODO: Populate the manifest
         manifest = Manifest()
 
-        return manifest.toJson()
+        return manifest
 

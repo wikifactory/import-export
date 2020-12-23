@@ -41,7 +41,7 @@ class ThingiverseImporter(Importer):
         # thing of the manifest
         self.populate_manifest_with_things(manifest, [basic_thing_info])
 
-        return manifest.toJson()
+        return manifest
 
     async def retrieve_basic_thing_info(self, url, auth_token):
         # Extract the ID of the thing, so we can later use the thingiverse API

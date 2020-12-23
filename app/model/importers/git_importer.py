@@ -36,6 +36,9 @@ class GitImporter(Importer):
         except Exception as e:
             print(e)
 
+    def validate_url():
+        pass
+
     async def process_url(self, url, auth_token):
         print("GIT: Starting process")
 
@@ -45,22 +48,29 @@ class GitImporter(Importer):
 
         # If the url / path is valid, start the process
         # First, we clone the repo into the tmp folder
-        repo = git.Repo.clone_from(url, self.path, progress=Progress())
 
-        # Create the manifest instance
-        manifest = Manifest()
+        try:
+            repo = git.Repo.clone_from(url, self.path, progress=Progress())
 
-        # Fill some basic information of the project
-        manifest.project_name = os.path.basename(os.path.normpath(url))
-        manifest.source_url = url
+            # Create the manifest instance
+            manifest = Manifest()
 
-        # Populate the manifest from the directory
-        self.populate_manifest_from_repository_path(manifest, self.path)
+            # Fill some basic information of the project
+            manifest.project_name = os.path.basename(os.path.normpath(url))
+            manifest.source_url = url
 
-        # Find the contributors
-        self.fill_contributors(manifest, repo)
+            # Populate the manifest from the directory
+            self.populate_manifest_from_repository_path(manifest, self.path)
 
-        return manifest.toJson()
+            # Find the contributors
+            self.fill_contributors(manifest, repo)
+
+            return manifest
+
+        except Exception as e:
+
+            print(e)
+            return None
 
     def fill_contributors(self, manifest, repo):
         branch = repo.active_branch
