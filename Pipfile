@@ -6,7 +6,7 @@ name = "pypi"
 [packages]
 uvicorn = "*"
 fastapi = "*"
-aiohttp = "==3.7.3"
+aiohttp = "*"
 typing-extensions = "*"
 PyGithub = "*"
 GitPython = "*"
@@ -17,6 +17,8 @@ aioresponses = "*"
 boto3 = "*"
 requests = "*"
 python-magic = "*"
+asyncio = "*"
+gql = "*"
 
 [dev-packages]
 
@@ -25,6 +27,3 @@ python_version = "3.7"
 
 [pipenv]
 allow_prereleases = true
-
-[packages.gql]
-extras = [ "all",]

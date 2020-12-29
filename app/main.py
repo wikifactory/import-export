@@ -7,13 +7,15 @@ import os
 
 from app.routers import manifests
 
+print("EHEHEHEH")
 
-app = FastAPI()
-app.include_router(manifests.router)
+fastapi_app = FastAPI()
+fastapi_app.include_router(manifests.router)
+
 
 TMP_FOLDER = "/tmp/outputs/"
 
-app.add_middleware(
+fastapi_app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
@@ -32,4 +34,4 @@ except Exception as e:
 
 if __name__ == "__main__":
     print("Starting....")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(fastapi_app, host="0.0.0.0", port=8000)
