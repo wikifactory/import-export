@@ -1,9 +1,9 @@
-from ..importer import Importer
+from app.model.importer import Importer
 import os
 import git
 import time
-from ..manifest import Manifest
-from ..element import Element, ElementType
+from app.model.manifest import Manifest
+from app.model.element import Element, ElementType
 
 
 temp_folder_path = "/tmp/gitimports/"

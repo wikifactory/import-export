@@ -7,11 +7,11 @@ from app.model.constants import IMPORT_SERVICE, IMPORT_URL, IMPORT_TOKEN
 from app.model.constants import GITHUB_SERVICE, GIT_SERVICE
 
 from app.model.constants import GOOGLEDRIVE_SERVICE
-from app.model.importers.thingiverse_importer import ThingiverseImporter
-from app.model.importers.git_importer import GitImporter
-from app.model.importers.googledrive_importer import GoogleDriveImporter
-from app.model.importers.myminifactory_importer import MyMiniFactoryImporter
-from app.model.importers.wikifactory_importer import WikifactoryImporter
+from app.controller.importers.thingiverse_importer import ThingiverseImporter
+from app.controller.importers.git_importer import GitImporter
+from app.controller.importers.googledrive_importer import GoogleDriveImporter
+from app.controller.importers.myminifactory_importer import MyMiniFactoryImporter
+from app.controller.importers.wikifactory_importer import WikifactoryImporter
 
 
 class ImporterProxy:

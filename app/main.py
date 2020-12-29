@@ -7,8 +7,6 @@ import os
 
 from app.routers import manifests
 
-print("EHEHEHEH")
-
 fastapi_app = FastAPI()
 fastapi_app.include_router(manifests.router)
 
@@ -34,4 +32,4 @@ except Exception as e:
 
 if __name__ == "__main__":
     print("Starting....")
-    uvicorn.run(fastapi_app, host="0.0.0.0", port=8000)
+    uvicorn.run(fastapi_app, host="0.0.0.0", port=os.getenv("PORT"))

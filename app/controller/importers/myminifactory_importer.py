@@ -1,8 +1,8 @@
-from ..importer import Importer
+from app.model.importer import Importer
 
-from ..constants import MYMINIFACTORY_URL
-from ..manifest import Manifest
-from ..thing import Thing
+from app.model.constants import MYMINIFACTORY_URL
+from app.model.manifest import Manifest
+from app.model.thing import Thing
 
 
 class MyMiniFactoryImporter(Importer):

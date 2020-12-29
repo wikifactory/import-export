@@ -1,8 +1,8 @@
-from ..importer import Importer
+from app.model.importer import Importer
 import os
 
-from ..manifest import Manifest
-from ..element import Element, ElementType
+from app.model.manifest import Manifest
+from app.model.element import Element, ElementType
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 import requests

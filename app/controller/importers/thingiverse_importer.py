@@ -1,11 +1,11 @@
-from ..importer import Importer
+from app.model.importer import Importer
 import os
 import aiohttp
 
 
-from ..constants import THINGIVERSE_URL, THINGIVERSE_THINGS_PATH
-from ..manifest import Manifest
-from ..thing import Thing
+from app.model.constants import THINGIVERSE_URL, THINGIVERSE_THINGS_PATH
+from app.model.manifest import Manifest
+from app.model.thing import Thing
 
 
 class AppTokenError(Exception):
