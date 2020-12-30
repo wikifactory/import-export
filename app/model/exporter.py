@@ -18,7 +18,7 @@ class Exporter:
     def __init__(self, request_id):
         raise NotImplementedError
 
-    async def export_manifest(self, manifest, export_url, export_token):
+    def export_manifest(self, manifest, export_url, export_token):
         raise NotImplementedError
 
     def validate_url(url):

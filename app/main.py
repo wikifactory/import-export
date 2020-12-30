@@ -7,6 +7,7 @@ import os
 
 from app.routers import manifests
 
+
 fastapi_app = FastAPI()
 fastapi_app.include_router(manifests.router)
 

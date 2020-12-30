@@ -11,16 +11,16 @@ import time
 import os
 
 
-user_id = "testuser3"  # QUESTION: Where do I get this?
-client_username = "dGVzdHVzZXIz"  # QUESTION: Where do I get this?
-project_name = "exporttest2"  # QUESTION: Where do I get this?
-project_id = "UHJvamVjdDo0NDMxOTI="  # QUESTION: Where do I get this?
-space_id = "U3BhY2U6ODU5NDc="  # QUESTION: Where do I get this?
+user_id = "testuseradmin"  # QUESTION: Where do I get this?
+client_username = "dGVzdHVzZXJhZG1pbg=="  # QUESTION: Where do I get this?
+project_name = "testproject"  # QUESTION: Where do I get this?
+project_id = "UHJvamVjdDo0NDMyODE="  # QUESTION: Where do I get this?
+space_id = "U3BhY2U6ODU5NDk="  # QUESTION: Where do I get this?
 
-export_url = "http://localweb:8080/@{}/{}".format(user_id, project_name)
+export_url = "http://192.168.50.102:8080/@{}/{}".format(user_id, project_name)
 
 
-endpoint_url = "http://localweb:8080/api/graphql"
+endpoint_url = "http://192.168.50.102:8080/api/graphql"
 
 
 class WikifactoryMutations:
@@ -137,7 +137,7 @@ class WikifactoryExporter(Exporter):
         else:
             return True
 
-    async def export_manifest(self, manifest, export_url, export_token):
+    def export_manifest(self, manifest, export_url, export_token):
 
         print("WIKIFACTORY: Starting the exporting process")
 
@@ -181,7 +181,7 @@ class WikifactoryExporter(Exporter):
                     # Perform all the steps for this element / file
 
                     # First, execute the file mutation
-                    file_result = await self.process_element(
+                    file_result = self.process_element(
                         element, file_name, project_path, export_token
                     )
 
@@ -206,13 +206,15 @@ class WikifactoryExporter(Exporter):
 
                             # 3) Once finished do the ADD operation
 
-                            await self.perform_mutation_operation(
-                                element, wikifactory_file_id, project_path
+                            self.perform_mutation_operation(
+                                element, wikifactory_file_id, project_path, export_token
                             )
 
                             # 4) Finally, mark the file as completed
 
-                            await self.complete_file(space_id, wikifactory_file_id)
+                            self.complete_file(
+                                space_id, wikifactory_file_id, export_token
+                            )
 
                         else:
                             print("WARNING: There is no S3 url")
@@ -224,12 +226,13 @@ class WikifactoryExporter(Exporter):
             # Once I have finished with all the files, perform the last step.
             # Do the contribution
             self.set_status(ExporterStatus.FILES_UPLOADED)
-            return await self.commit_contribution()
+            self.commit_contribution(export_token)
+            return {"exported": "true", "manifest": manifest.toJson()}
 
         else:
             raise NotValidManifest()
 
-    async def process_element(self, element, file_name, project_path, export_token):
+    def process_element(self, element, file_name, project_path, export_token):
 
         transport = AIOHTTPTransport(
             url=endpoint_url,
@@ -239,7 +242,29 @@ class WikifactoryExporter(Exporter):
             },
         )
 
-        async with Client(
+        session = Client(transport=transport, fetch_schema_from_transport=True)
+        # FIX: the projectPath should be the path using the folders,
+        # not the name
+        variables = {
+            "fileInput": {
+                "filename": file_name,
+                "spaceId": space_id,
+                "size": os.path.getsize(element.path),
+                "projectPath": element.path.replace(project_path, "")[1:],
+                "gitHash": str(int(round(time.time() * 1000))),
+                "completed": "false",
+                "contentType": magic.from_file(element.path, mime=True),
+            }
+        }
+
+        print(variables)
+
+        result = session.execute(
+            WikifactoryMutations.file_mutation, variable_values=variables
+        )
+
+        return result
+        """async with Client(
             transport=transport, fetch_schema_from_transport=True
         ) as session:
 
@@ -264,16 +289,34 @@ class WikifactoryExporter(Exporter):
             )
 
             return result
+        """
 
-    async def perform_mutation_operation(self, element, file_id, project_path):
+    def perform_mutation_operation(self, element, file_id, project_path, export_token):
         transport = AIOHTTPTransport(
             url=endpoint_url,
             headers={
                 "CLIENT-USERNAME": client_username,
-                "Cookie": "session={}".format(token),
+                "Cookie": "session={}".format(export_token),
             },
         )
 
+        session = Client(transport=transport, fetch_schema_from_transport=True)
+        variables = {
+            "operationData": {
+                "fileId": file_id,
+                "opType": "ADD",
+                "path": element.path.replace(project_path, "")[1:],
+                "projectId": project_id,
+            }
+        }
+
+        result = session.execute(
+            WikifactoryMutations.operation_mutation, variable_values=variables
+        )
+        print("OPERATION ADD done")
+        print(result)
+
+        """
         async with Client(
             transport=transport, fetch_schema_from_transport=True
         ) as session:
@@ -292,6 +335,7 @@ class WikifactoryExporter(Exporter):
             )
             print("OPERATION ADD done")
             print(result)
+        """
 
     def upload_file(self, local_path, file_url):
 
@@ -312,15 +356,26 @@ class WikifactoryExporter(Exporter):
             else:
                 print("UPLOADED TO S3")
 
-    async def complete_file(self, space_id, file_id):
+    def complete_file(self, space_id, file_id, export_token):
         transport = AIOHTTPTransport(
             url=endpoint_url,
             headers={
                 "CLIENT-USERNAME": client_username,
-                "Cookie": "session={}".format(token),
+                "Cookie": "session={}".format(export_token),
             },
         )
 
+        session = Client(transport=transport, fetch_schema_from_transport=True)
+        variables = {
+            "fileInput": {"spaceId": space_id, "id": file_id, "completed": True}
+        }
+
+        result = session.execute(
+            WikifactoryMutations.complete_file_mutation, variable_values=variables
+        )
+        print("Complete file mutation done")
+        print(result)
+        """
         async with Client(
             transport=transport, fetch_schema_from_transport=True
         ) as session:
@@ -334,17 +389,33 @@ class WikifactoryExporter(Exporter):
             )
             print("Complete file mutation done")
             print(result)
+        """
 
-    async def commit_contribution(self):
+    def commit_contribution(self, export_token):
 
         transport = AIOHTTPTransport(
             url=endpoint_url,
             headers={
                 "CLIENT-USERNAME": client_username,
-                "Cookie": "session={}".format(token),
+                "Cookie": "session={}".format(export_token),
             },
         )
 
+        session = Client(transport=transport, fetch_schema_from_transport=True)
+        variables = {
+            "commitData": {
+                "projectId": project_id,
+                "title": "Test",
+                "description": "descrp",
+            }
+        }
+
+        result = session.execute(
+            WikifactoryMutations.commit_contribution_mutation, variable_values=variables
+        )
+        print("Commit mutation done")
+        print(result)
+        """
         async with Client(
             transport=transport, fetch_schema_from_transport=True
         ) as session:
@@ -363,6 +434,7 @@ class WikifactoryExporter(Exporter):
             )
             print("Commit mutation done")
             print(result)
+        """
 
     def on_files_uploaded(self):
         print("------------------")

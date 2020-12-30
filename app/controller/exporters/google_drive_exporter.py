@@ -12,7 +12,7 @@ class GoogleDriveExporter(Exporter):
     def validate_url(url):
         raise NotImplementedError
 
-    async def export_manifest(self, manifest, export_url, export_token):
+    def export_manifest(self, manifest, export_url, export_token):
 
         # https://drive.google.com/drive/folders/1fWEQbbCC4jwpF-lDBuJIAUWDT4LUbUDr?usp=sharing
         self.manifest = manifest

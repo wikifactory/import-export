@@ -39,7 +39,7 @@ class GitImporter(Importer):
     def validate_url():
         pass
 
-    async def process_url(self, url, auth_token):
+    def process_url(self, url, auth_token):
         print("GIT: Starting process")
 
         # TODO: Check if the repo url is valid

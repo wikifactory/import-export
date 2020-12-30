@@ -11,7 +11,7 @@ import zipfile
 temp_folder_path = "/tmp/wikifactoryimports/"
 temp_zip_folder_path = "/tmp/wikifactoryzips/"
 
-endpoint_url = "http://localweb:8080/api/graphql"
+endpoint_url = "http://192.168.50.102:8080/api/graphql"
 client_username = "dGVzdHVzZXIz"  # QUESTION: Where do I get this?
 
 
@@ -83,29 +83,31 @@ class WikifactoryImporter(Importer):
         except Exception as e:
             print(e)
 
-    async def process_url(self, import_url, import_token):
+    def process_url(self, import_url, import_token):
         print("WIKIFACTORY: Starting process")
 
         manifest = Manifest()
 
-        project_info = await self.get_project_details(import_url, import_token)
+        project_info = self.get_project_details(import_url, import_token)
 
         # INFO: Maybe use the name or other field here?
         manifest.project_name = project_info["slug"]
 
         # Download the files
-        await self.download_files_from_zip_url(project_info["zip_archive_url"])
+        self.download_files_from_zip_url(project_info["zip_archive_url"])
 
         # Populate the manifest from the directory
         self.populate_manifest_from_folder_path(manifest, self.path)
 
-        return manifest
+        return manifest.toJson()
 
-    async def get_project_details(self, import_url, import_token):
+    def get_project_details(self, import_url, import_token):
 
         url_components = import_url.split("/")
         project_space = url_components[len(url_components) - 2]
         project_slug = url_components[len(url_components) - 1]
+
+        print(endpoint_url)
 
         transport = AIOHTTPTransport(
             url=endpoint_url,
@@ -115,6 +117,38 @@ class WikifactoryImporter(Importer):
             },
         )
 
+        session = Client(transport=transport, fetch_schema_from_transport=True)
+
+        variables = {"space": project_space, "slug": project_slug}
+        print(variables)
+
+        result = session.execute(
+            WikifactoryImporterQuerys.repository_zip_query, variable_values=variables
+        )
+
+        if len(result["project"]["userErrors"]) > 0:
+
+            for e in result["project"]["userErrors"]:
+                print(e)
+            return None
+
+        else:
+
+            server_url = endpoint_url.replace("api/graphql", "")[:-1]
+            project_id = result["project"]["result"]["id"]
+            slug = result["project"]["result"]["slug"]
+
+            zip_archive_url = (
+                server_url
+                + result["project"]["result"]["contributionUpstream"]["zipArchiveUrl"]
+            )
+
+            return {
+                "project_id": project_id,
+                "zip_archive_url": zip_archive_url,
+                "slug": slug,
+            }
+        """
         async with Client(
             transport=transport, fetch_schema_from_transport=True
         ) as session:
@@ -150,8 +184,9 @@ class WikifactoryImporter(Importer):
                     "zip_archive_url": zip_archive_url,
                     "slug": slug,
                 }
+        """
 
-    async def download_files_from_zip_url(self, zip_url):
+    def download_files_from_zip_url(self, zip_url):
 
         response = requests.get(zip_url)
 

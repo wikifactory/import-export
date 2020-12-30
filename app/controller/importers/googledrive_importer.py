@@ -83,7 +83,7 @@ class GoogleDriveImporter(Importer):
         except Exception as e:
             print(e)
 
-    async def process_url(self, url, auth_token):
+    def process_url(self, url, auth_token):
 
         print("Google Drive: Starting process of folder:")
         print(url)
@@ -105,7 +105,7 @@ class GoogleDriveImporter(Importer):
         self.process_folder_recursively(manifest, drive_service, url)
         self.create_folder_structure_sync(self.elements_list)
 
-        await self.download_all_files(drive_service, self.elements_list)
+        self.download_all_files(drive_service, self.elements_list)
 
         return manifest
 

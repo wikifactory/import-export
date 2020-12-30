@@ -19,6 +19,8 @@ requests = "*"
 python-magic = "*"
 asyncio = "*"
 gql = "*"
+celery = "*"
+redis = "*"
 
 [dev-packages]
 

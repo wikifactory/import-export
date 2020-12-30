@@ -22,13 +22,13 @@ class ThingiverseImporter(Importer):
         else:
             pass
 
-    async def process_url(self, url, auth_token):
+    def process_url(self, url, auth_token):
         print("THINGIVERSE: Starting process of URL:")
         print(url)
 
         # TODO: validate the URL
 
-        basic_thing_info = await self.retrieve_basic_thing_info(url, auth_token)
+        basic_thing_info = self.retrieve_basic_thing_info(url, auth_token)
         # TODO: Check for empty values (None)
         print("->")
         print(basic_thing_info.keys())
@@ -43,9 +43,9 @@ class ThingiverseImporter(Importer):
 
         return manifest
 
-    async def retrieve_basic_thing_info(self, url, auth_token):
+    def retrieve_basic_thing_info(self, url, auth_token):
         # Extract the ID of the thing, so we can later use the thingiverse API
-        url_components = url.split("/")
+        """url_components = url.split("/")
 
         thing_identifier_label = url_components[len(url_components) - 1]
 
@@ -62,7 +62,8 @@ class ThingiverseImporter(Importer):
         async with aiohttp.ClientSession() as session:
             async with session.get(thing_url) as response:
                 json_result = await response.json()
-                return json_result
+                return json_result"""
+        return {}
 
     def populate_manifest_with_things(self, manifest, things_arr):
 
