@@ -227,6 +227,7 @@ class WikifactoryImporter(Importer):
                 root_element = Element()
                 root_element.id = "root"
                 root_element.path = full_path
+                root_element.type = ElementType.FOLDER
 
                 elements_dic[full_path] = root_element
 

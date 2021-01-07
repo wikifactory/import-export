@@ -2,7 +2,6 @@ from app.model.exporter import Exporter
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 
-from app.model.element import ElementType
 from app.model.exporter import ExporterStatus, NotValidManifest
 
 import requests
@@ -13,9 +12,9 @@ import os
 
 user_id = "testuseradmin"  # QUESTION: Where do I get this?
 client_username = "dGVzdHVzZXJhZG1pbg=="  # QUESTION: Where do I get this?
-project_name = "testproject"  # QUESTION: Where do I get this?
-project_id = "UHJvamVjdDo0NDMyODE="  # QUESTION: Where do I get this?
-space_id = "U3BhY2U6ODU5NDk="  # QUESTION: Where do I get this?
+project_name = "testproject2"  # QUESTION: Where do I get this?
+project_id = "UHJvamVjdDo0NDM2MTI="  # QUESTION: Where do I get this?
+space_id = "U3BhY2U6ODU5NTA="  # QUESTION: Where do I get this?
 
 export_url = "http://192.168.50.102:8080/@{}/{}".format(user_id, project_name)
 
@@ -148,89 +147,80 @@ class WikifactoryExporter(Exporter):
         slug = url_parts[-1]
         """
         self.manifest = manifest
+        self.export_token = export_token
 
         # Check if we have a manifest
         if manifest is not None:
 
-            root_element = manifest.elements[0]
+            self.project_path = manifest.elements[0].path
 
-            # Get the path of the root folder
-            project_path = root_element.path
-
-            # Init the queue for the files
-            elements_queue = []
-
-            self.set_status(ExporterStatus.UPLOADING_FILES)
-
-            for e in root_element.children:
-                elements_queue.append(e)
-
-            while len(elements_queue) > 0:
-
-                element = elements_queue.pop(0)
-                file_name = element.path.split("/")[-1]
-
-                if element.type == ElementType.FOLDER:
-                    # It is a folder, ignore it but add its files to the queue
-                    for ch_element in element.children:
-                        elements_queue.append(ch_element)
-
-                else:
-                    # It is a file
-
-                    # Perform all the steps for this element / file
-
-                    # First, execute the file mutation
-                    file_result = self.process_element(
-                        element, file_name, project_path, export_token
-                    )
-
-                    # Check that we got the right results
-                    if len(file_result["file"]["userErrors"]) > 0:
-                        print("Errors")
-
-                        for i in len(file_result["file"]["userErrors"]):
-                            print(file_result["file"]["userErrors"])
-                        return
-
-                    wikifactory_file_id = file_result["file"]["file"]["id"]
-                    s3_upload_url = file_result["file"]["file"]["uploadUrl"]
-
-                    if wikifactory_file_id is not None:
-
-                        # We actually have the id, move to the next step
-
-                        # 2) Upload to S3
-                        if s3_upload_url is not None and (len(s3_upload_url) > 0):
-                            self.upload_file(element.path, s3_upload_url)
-
-                            # 3) Once finished do the ADD operation
-
-                            self.perform_mutation_operation(
-                                element, wikifactory_file_id, project_path, export_token
-                            )
-
-                            # 4) Finally, mark the file as completed
-
-                            self.complete_file(
-                                space_id, wikifactory_file_id, export_token
-                            )
-
-                        else:
-                            print("WARNING: There is no S3 url")
-
-                    else:
-                        print("WARNING: For some reason, we don't ")
-                        pass
-
-            # Once I have finished with all the files, perform the last step.
-            # Do the contribution
-            self.set_status(ExporterStatus.FILES_UPLOADED)
-            self.commit_contribution(export_token)
+            manifest.iterate_through_elements(
+                self, self.on_file_cb, self.on_folder_cb, self.on_finished_cb
+            )
             return {"exported": "true", "manifest": manifest.toJson()}
 
         else:
             raise NotValidManifest()
+
+    def on_file_cb(self, file_element):
+
+        print("FILE!")
+        print(file_element.path)
+
+        file_name = file_element.path.split("/")[-1]
+
+        file_result = self.process_element(
+            file_element, file_name, self.project_path, self.export_token
+        )
+
+        # Check that we got the right results
+        if len(file_result["file"]["userErrors"]) > 0:
+            print("Errors")
+
+            for i in len(file_result["file"]["userErrors"]):
+                print(file_result["file"]["userErrors"])
+            return
+
+        wikifactory_file_id = file_result["file"]["file"]["id"]
+        s3_upload_url = file_result["file"]["file"]["uploadUrl"]
+
+        if wikifactory_file_id is not None:
+
+            # We actually have the id, move to the next step
+
+            # 2) Upload to S3
+            if s3_upload_url is not None and (len(s3_upload_url) > 0):
+                self.upload_file(file_element.path, s3_upload_url)
+
+                # 3) Once finished do the ADD operation
+
+                self.perform_mutation_operation(
+                    file_element,
+                    wikifactory_file_id,
+                    self.project_path,
+                    self.export_token,
+                )
+
+                # 4) Finally, mark the file as completed
+
+                self.complete_file(space_id, wikifactory_file_id, self.export_token)
+
+            else:
+                print("WARNING: There is no S3 url")
+
+        else:
+            print("WARNING: For some reason, we don't ")
+            pass
+
+    def on_folder_cb(self, folder_element):
+        print("Ignoring folder element")
+
+    def on_finished_cb(self):
+
+        print("COMMIT")
+        print(self.export_token)
+        # In order to finish, I need to perform the commit
+        self.commit_contribution(self.export_token)
 
     def process_element(self, element, file_name, project_path, export_token):
 

@@ -13,7 +13,10 @@ ignored_folders = [".git"]
 
 class Progress(git.remote.RemoteProgress):
     def update(self, op_code, cur_count, max_count=None, message=""):
-        print("update({}, {}, {}, {})".format(op_code, cur_count, max_count, message))
+
+        # INFO: Uncomment this line to show the progress of the cloning process
+        # print("update({}, {}, {}, {})".format(op_code, cur_count, max_count, message))
+        pass
 
 
 class GitImporter(Importer):
@@ -98,6 +101,7 @@ class GitImporter(Importer):
                 root_element = Element()
                 root_element.id = "root"
                 root_element.path = full_path
+                root_element.type = ElementType.FOLDER
 
                 elements_dic[full_path] = root_element
 
