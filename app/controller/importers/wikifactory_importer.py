@@ -12,7 +12,7 @@ temp_folder_path = "/tmp/wikifactoryimports/"
 temp_zip_folder_path = "/tmp/wikifactoryzips/"
 
 endpoint_url = "http://192.168.50.102:8080/api/graphql"
-client_username = "dGVzdHVzZXIz"  # QUESTION: Where do I get this?
+client_username = "dGVzdHVzZXJhZG1pbg=="  # QUESTION: Where do I get this?
 
 
 class WikifactoryImporterQuerys:
@@ -99,7 +99,7 @@ class WikifactoryImporter(Importer):
         # Populate the manifest from the directory
         self.populate_manifest_from_folder_path(manifest, self.path)
 
-        return manifest.toJson()
+        return manifest
 
     def get_project_details(self, import_url, import_token):
 
