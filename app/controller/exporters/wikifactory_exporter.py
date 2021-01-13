@@ -13,8 +13,6 @@ import os
 user_id = "testuseradmin"  # QUESTION: Where do I get this?
 client_username = "dGVzdHVzZXJhZG1pbg=="  # QUESTION: Where do I get this?
 project_name = "testproject2"  # QUESTION: Where do I get this?
-project_id = "UHJvamVjdDo0NDM2MTI="  # QUESTION: Where do I get this?
-space_id = "U3BhY2U6ODU5NTA="  # QUESTION: Where do I get this?
 
 export_url = "http://192.168.50.102:8080/@{}/{}".format(user_id, project_name)
 
@@ -106,6 +104,22 @@ class WikifactoryMutations:
         """
     )
 
+    project_query = gql(
+        """query q($space:String, $slug:String){
+            project(space:$space, slug:$slug){
+                result{
+                    id
+                    space {
+                        id
+                    }
+                    inSpace {
+                        id
+                    }
+                }
+            }
+        }"""
+    )
+
 
 class WikifactoryExporter(Exporter):
     def __init__(self, request_id):
@@ -121,6 +135,9 @@ class WikifactoryExporter(Exporter):
         self.add_hook_for_status(
             ExporterStatus.FILES_UPLOADED, self.invite_collaborators
         )
+
+        self.space_id = ""
+        self.project_id = ""
 
     def validate_url(url):
 
@@ -140,14 +157,23 @@ class WikifactoryExporter(Exporter):
 
         print("WIKIFACTORY: Starting the exporting process")
 
-        """
         # Extract the space and slug from the URL
         url_parts = export_url.split("/")
         space = url_parts[-2]
         slug = url_parts[-1]
-        """
+
         self.manifest = manifest
         self.export_token = export_token
+
+        # TODO: Get the details of the project: project_id, space_id
+
+        details = self.get_project_details(space, slug, export_token)
+
+        if details is None:
+            return {}
+
+        self.project_id = details[0]
+        self.space_id = details[1]
 
         # Check if we have a manifest
         if manifest is not None:
@@ -203,7 +229,9 @@ class WikifactoryExporter(Exporter):
 
                 # 4) Finally, mark the file as completed
 
-                self.complete_file(space_id, wikifactory_file_id, self.export_token)
+                self.complete_file(
+                    self.space_id, wikifactory_file_id, self.export_token
+                )
 
             else:
                 print("WARNING: There is no S3 url")
@@ -238,7 +266,7 @@ class WikifactoryExporter(Exporter):
         variables = {
             "fileInput": {
                 "filename": file_name,
-                "spaceId": space_id,
+                "spaceId": self.space_id,
                 "size": os.path.getsize(element.path),
                 "projectPath": element.path.replace(project_path, "")[1:],
                 "gitHash": str(int(round(time.time() * 1000))),
@@ -281,6 +309,31 @@ class WikifactoryExporter(Exporter):
             return result
         """
 
+    def get_project_details(self, space, slug, export_token):
+        transport = AIOHTTPTransport(
+            url=endpoint_url,
+            headers={
+                "CLIENT-USERNAME": client_username,
+                "Cookie": "session={}".format(export_token),
+            },
+        )
+        session = Client(transport=transport, fetch_schema_from_transport=True)
+        variables = {"space": space, "slug": slug}
+
+        result = session.execute(
+            WikifactoryMutations.project_query, variable_values=variables
+        )
+
+        if "userErrors" not in result:
+            p_id = result["project"]["result"]["id"]
+            sp_id = result["project"]["result"]["inSpace"]["id"]
+
+            return (p_id, sp_id)
+        else:
+            print("PROJECT NOT FOUND INSIDE WIKIFACTORY")
+            # TODO: Raise custom exception
+            return None
+
     def perform_mutation_operation(self, element, file_id, project_path, export_token):
         transport = AIOHTTPTransport(
             url=endpoint_url,
@@ -296,7 +349,7 @@ class WikifactoryExporter(Exporter):
                 "fileId": file_id,
                 "opType": "ADD",
                 "path": element.path.replace(project_path, "")[1:],
-                "projectId": project_id,
+                "projectId": self.project_id,
             }
         }
 
@@ -394,7 +447,7 @@ class WikifactoryExporter(Exporter):
         session = Client(transport=transport, fetch_schema_from_transport=True)
         variables = {
             "commitData": {
-                "projectId": project_id,
+                "projectId": self.project_id,
                 "title": "Test",
                 "description": "descrp",
             }
