@@ -6,8 +6,11 @@ from app.model.exporter import ExporterStatus, NotValidManifest
 
 import requests
 import magic
-import time
+
 import os
+
+import sys
+import hashlib
 
 
 user_id = "testuseradmin"  # QUESTION: Where do I get this?
@@ -261,15 +264,16 @@ class WikifactoryExporter(Exporter):
         )
 
         session = Client(transport=transport, fetch_schema_from_transport=True)
-        # FIX: the projectPath should be the path using the folders,
-        # not the name
+
+        # TODO: Calculate the git hash of the file at element.path
+
         variables = {
             "fileInput": {
                 "filename": file_name,
                 "spaceId": self.space_id,
                 "size": os.path.getsize(element.path),
                 "projectPath": element.path.replace(project_path, "")[1:],
-                "gitHash": str(int(round(time.time() * 1000))),
+                "gitHash": self.calculate_githash_for_element(element),
                 "completed": "false",
                 "contentType": magic.from_file(element.path, mime=True),
             }
@@ -493,4 +497,23 @@ class WikifactoryExporter(Exporter):
             for addres in emails_list:
 
                 print(addres)
+
+    def calculate_githash_for_element(self, element):
+        return self.calculate_sha1_for_element(element)
+
+    def calculate_sha1_for_element(self, element):
+        sha1sum = hashlib.sha1()
+
+        try:
+            with open(element.path, "rb") as source:
+                block = source.read(2 ** 16)
+
+                while len(block) != 0:
+                    sha1sum.update(block)
+                    block = source.read(2 ** 16)
+
+            return sha1sum.hexdigest()
+        except Exception as e:
+            print(e)
+            return ""
 
