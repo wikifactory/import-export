@@ -15,7 +15,7 @@ class Exporter:
 
     hooks_for_status = {}
 
-    def __init__(self, request_id):
+    def __init__(self, job_id):
         raise NotImplementedError
 
     def export_manifest(self, manifest, export_url, export_token):

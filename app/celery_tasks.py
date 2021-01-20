@@ -10,12 +10,12 @@ import time
 logger = get_task_logger(__name__)
 
 
-def generate_request_id():
+def generate_job_id():
     return str(int(round(time.time() * 1000)))
 
 
 @celery_app.task
-def handle_post_manifest(body: dict):
+def handle_post_manifest(body: dict, job_id):
 
     logger.info("BEFORE")
     if (
@@ -26,11 +26,10 @@ def handle_post_manifest(body: dict):
         raise HTTPException(status_code=500, detail="Missing fields")
 
     else:
-        request_id = generate_request_id()
 
         logger.info(body)
 
-        processing_prx = ImporterProxy(request_id)
+        processing_prx = ImporterProxy(job_id)
         manifest = processing_prx.handle_request(body)
         return manifest
 
@@ -38,7 +37,7 @@ def handle_post_manifest(body: dict):
 
 
 @celery_app.task
-def handle_post_export(body: dict):
+def handle_post_export(body: dict, job_id):
 
     if (
         "import_url" not in body
@@ -52,20 +51,28 @@ def handle_post_export(body: dict):
         return ""
 
     else:
-        request_id = generate_request_id()
 
         # body contains the parameters for this request (tokens and so on)
 
         logger.info("Starting the import process...")
-        processing_prx = ImporterProxy(request_id)
+
+        # Configure the importer
+        processing_prx = ImporterProxy(job_id)
         manifest = processing_prx.handle_request(body)
         logger.info("Importing process finished!")
-        logger.info(manifest)
+        # logger.info(manifest)
         logger.info("Starting the export Process...")
-        export_proxy = ExporterProxy(request_id)
 
+        # Configure the exporter
+        export_proxy = ExporterProxy(job_id)
         result = export_proxy.export_manifest(manifest, body)
 
         logger.info("Process done!")
 
         return result
+
+
+def handle_get_job(job_id):
+
+    # TODO: Search in the database for that job_id
+    pass

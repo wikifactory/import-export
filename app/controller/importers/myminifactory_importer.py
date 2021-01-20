@@ -6,8 +6,8 @@ from app.model.thing import Thing
 
 
 class MyMiniFactoryImporter(Importer):
-    def __init__(self, request_id):
-        self.request_id = request_id
+    def __init__(self, job_id):
+        self.job_id = job_id
 
     def process_url(self, url, auth_token):
         print("Myminifactory: Starting process of URL:")

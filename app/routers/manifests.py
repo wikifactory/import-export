@@ -1,5 +1,12 @@
 from fastapi import APIRouter
-from app.celery_tasks import handle_post_manifest, handle_post_export
+from fastapi.responses import JSONResponse
+
+from app.celery_tasks import (
+    handle_post_manifest,
+    handle_post_export,
+    handle_get_job,
+    generate_job_id,
+)
 
 router = APIRouter()
 
@@ -29,10 +36,23 @@ The body must contain the following parameters:
 
 @router.post("/manifest")
 def post_manifest(body: dict):
-    return handle_post_manifest.delay(body).get()
+    job_id = generate_job_id()
+    handle_post_manifest.delay(body, job_id)
+    return JSONResponse(
+        status_code=200,
+        content={"message": "Manifest generation process started", "job_id": job_id},
+    )
 
 
 @router.post("/export")
 def export(body: dict):
-    return handle_post_export.delay(body).get()
+    job_id = generate_job_id()
+    handle_post_export.delay(body, job_id)
+    return JSONResponse(
+        status_code=200, content={"message": "Export process started", "job_id": job_id}
+    )
 
+
+@router.get("/job/{job_id}")
+def get_job(job_id):
+    return handle_get_job(job_id)

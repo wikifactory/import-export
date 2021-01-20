@@ -21,6 +21,8 @@ asyncio = "*"
 gql = "*"
 celery = "*"
 redis = "*"
+dropbox = "*"
+sqlalchemy = "*"
 
 [dev-packages]
 

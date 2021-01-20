@@ -14,9 +14,9 @@ class AppTokenError(Exception):
 
 
 class ThingiverseImporter(Importer):
-    def __init__(self, request_id):
+    def __init__(self, job_id):
         self.app_token = os.getenv("THINGIVERSE_APP_TOKEN")
-        self.request_id = request_id
+        self.job_id = job_id
         if self.app_token is None:
             raise AppTokenError()
         else:

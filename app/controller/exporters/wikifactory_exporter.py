@@ -9,15 +9,14 @@ import magic
 
 import os
 
-import sys
+import base64
 import hashlib
 
 
-user_id = "testuseradmin"  # QUESTION: Where do I get this?
-client_username = "dGVzdHVzZXJhZG1pbg=="  # QUESTION: Where do I get this?
-project_name = "testproject2"  # QUESTION: Where do I get this?
-
-export_url = "http://192.168.50.102:8080/@{}/{}".format(user_id, project_name)
+user_id = "testuser3"  # QUESTION: Where do I get this?
+client_username = base64.b64encode(bytes(user_id, "ascii")).decode(
+    "ascii"
+)  # QUESTION: Where do I get this?
 
 
 endpoint_url = "http://192.168.50.102:8080/api/graphql"
@@ -125,11 +124,11 @@ class WikifactoryMutations:
 
 
 class WikifactoryExporter(Exporter):
-    def __init__(self, request_id):
+    def __init__(self, job_id):
 
         # Assign this import process a unique id
         # This id will identify the tmp folder
-        self.request_id = request_id
+        self.job_id = job_id
         self.set_status(ExporterStatus.INITIALIZED)
 
         self.manifest = None
@@ -452,8 +451,8 @@ class WikifactoryExporter(Exporter):
         variables = {
             "commitData": {
                 "projectId": self.project_id,
-                "title": "Test",
-                "description": "descrp",
+                "title": "Import files",
+                "description": "",
             }
         }
 

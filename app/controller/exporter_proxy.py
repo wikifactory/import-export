@@ -5,8 +5,8 @@ from app.controller.exporters.google_drive_exporter import GoogleDriveExporter
 
 
 class ExporterProxy:
-    def __init__(self, request_id):
-        self.request_id = request_id
+    def __init__(self, job_id):
+        self.job_id = job_id
 
     def export_manifest(self, manifest, json_request):
 
@@ -16,7 +16,7 @@ class ExporterProxy:
                     manifest,
                     json_request[EXPORT_URL],
                     json_request[EXPORT_TOKEN],
-                    self.request_id,
+                    self.job_id,
                 )
 
             elif json_request[EXPORT_SERVICE].lower() == GOOGLEDRIVE_SERVICE:
@@ -24,15 +24,15 @@ class ExporterProxy:
                     manifest,
                     json_request[EXPORT_URL],
                     json_request[EXPORT_TOKEN],
-                    self.request_id,
+                    self.job_id,
                 )
         except Exception as e:
             print(e)
 
-    def handle_wikifactory(self, manifest, export_url, export_token, request_id):
-        exporter = WikifactoryExporter(request_id)
+    def handle_wikifactory(self, manifest, export_url, export_token, job_id):
+        exporter = WikifactoryExporter(job_id)
         return exporter.export_manifest(manifest, export_url, export_token)
 
-    def handle_google_drive(self, manifest, export_url, export_token, request_id):
-        exporter = GoogleDriveExporter(request_id)
+    def handle_google_drive(self, manifest, export_url, export_token, job_id):
+        exporter = GoogleDriveExporter(job_id)
         return exporter.export_manifest(manifest, export_url, export_token)

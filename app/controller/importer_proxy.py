@@ -15,8 +15,8 @@ from app.controller.importers.wikifactory_importer import WikifactoryImporter
 
 
 class ImporterProxy:
-    def __init__(self, request_id):
-        self.request_id = request_id
+    def __init__(self, job_id):
+        self.job_id = job_id
 
     def handle_request(self, json_request):
 
@@ -25,58 +25,48 @@ class ImporterProxy:
             if json_request[IMPORT_SERVICE].lower() == THINGIVERSE_SERVICE:
 
                 return self.handle_thingiverse(
-                    json_request[IMPORT_URL],
-                    json_request[IMPORT_TOKEN],
-                    self.request_id,
+                    json_request[IMPORT_URL], json_request[IMPORT_TOKEN], self.job_id
                 )
 
             elif json_request[IMPORT_SERVICE].lower() == GIT_SERVICE:
                 return self.handle_git(
-                    json_request[IMPORT_URL],
-                    json_request[IMPORT_TOKEN],
-                    self.request_id,
+                    json_request[IMPORT_URL], json_request[IMPORT_TOKEN], self.job_id
                 )
 
             elif json_request[IMPORT_SERVICE].lower() == MYMINIFACTORY_SERVICE:
                 return self.handle_myminifactory(
-                    json_request[IMPORT_URL],
-                    json_request[IMPORT_TOKEN],
-                    self.request_id,
+                    json_request[IMPORT_URL], json_request[IMPORT_TOKEN], self.job_id
                 )
 
             elif json_request[IMPORT_SERVICE].lower() == GOOGLEDRIVE_SERVICE:
                 return self.handle_googledrive(
-                    json_request[IMPORT_URL],
-                    json_request[IMPORT_TOKEN],
-                    self.request_id,
+                    json_request[IMPORT_URL], json_request[IMPORT_TOKEN], self.job_id
                 )
             elif json_request[IMPORT_SERVICE].lower() == WIKIFACTORY_SERVICE:
                 return self.handle_wikifactory(
-                    json_request[IMPORT_URL],
-                    json_request[IMPORT_TOKEN],
-                    self.request_id,
+                    json_request[IMPORT_URL], json_request[IMPORT_TOKEN], self.job_id
                 )
             else:
                 raise NotImplementedError()
         except Exception as e:
             print(e)
 
-    def handle_thingiverse(self, url, auth_token, request_id):
-        imp = ThingiverseImporter(request_id)
+    def handle_thingiverse(self, url, auth_token, job_id):
+        imp = ThingiverseImporter(job_id)
         return imp.process_url(url, auth_token)
 
-    def handle_git(self, url, auth_token, request_id):
-        imp = GitImporter(request_id)
+    def handle_git(self, url, auth_token, job_id):
+        imp = GitImporter(job_id)
         return imp.process_url(url, auth_token)
 
-    def handle_googledrive(self, url, auth_token, request_id):
-        imp = GoogleDriveImporter(request_id)
+    def handle_googledrive(self, url, auth_token, job_id):
+        imp = GoogleDriveImporter(job_id)
         return imp.process_url(url, auth_token)
 
-    def handle_myminifactory(self, url, auth_token, request_id):
-        imp = MyMiniFactoryImporter(request_id)
+    def handle_myminifactory(self, url, auth_token, job_id):
+        imp = MyMiniFactoryImporter(job_id)
         return imp.process_url(url, auth_token)
 
-    def handle_wikifactory(self, url, auth_token, request_id):
-        imp = WikifactoryImporter(request_id)
+    def handle_wikifactory(self, url, auth_token, job_id):
+        imp = WikifactoryImporter(job_id)
         return imp.process_url(url, auth_token)

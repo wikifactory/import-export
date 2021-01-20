@@ -13,8 +13,8 @@ SCOPES = ["https://www.googleapis.com/auth/drive"]
 
 
 class GoogleDriveExporter(Exporter):
-    def __init__(self, request_id):
-        self.request_id = request_id
+    def __init__(self, job_id):
+        self.job_id = job_id
         self.set_status(ExporterStatus.INITIALIZED)
 
         self.manifest = None

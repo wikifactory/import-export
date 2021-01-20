@@ -60,11 +60,11 @@ class WikifactoryImporterQuerys:
 
 
 class WikifactoryImporter(Importer):
-    def __init__(self, request_id):
+    def __init__(self, job_id):
 
         # Assign this import process a unique id
         # This id will identify the tmp folder
-        self.request_id = request_id
+        self.job_id = job_id
 
         self.path = None
 
@@ -74,7 +74,7 @@ class WikifactoryImporter(Importer):
                 print("Creating tmp folder")
                 os.makedirs(temp_folder_path)
 
-            self.path = temp_folder_path + self.request_id
+            self.path = temp_folder_path + self.job_id
 
             if not os.path.exists(temp_zip_folder_path):
                 print("Creating tmp zip folder")
@@ -190,7 +190,7 @@ class WikifactoryImporter(Importer):
 
         response = requests.get(zip_url)
 
-        local_zip_path = temp_zip_folder_path + self.request_id
+        local_zip_path = temp_zip_folder_path + self.job_id
 
         # Write the zip file
         try:
@@ -204,7 +204,7 @@ class WikifactoryImporter(Importer):
         # Now extract the zip file to the tmp folder and delete the zip
 
         try:
-            # FIX: We are now unzipping to /tmp/wikifactoryimports/REQUEST_ID/SLUG
+            # FIX: We are now unzipping to /tmp/wikifactoryimports/job_id/SLUG
             with zipfile.ZipFile(local_zip_path, "r") as zip_ref:
                 zip_ref.extractall(self.path)
 

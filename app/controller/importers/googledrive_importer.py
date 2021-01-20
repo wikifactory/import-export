@@ -64,9 +64,9 @@ class SingletonAiohttp:
 
 
 class GoogleDriveImporter(Importer):
-    def __init__(self, request_id):
+    def __init__(self, job_id):
 
-        self.request_id = request_id
+        self.job_id = job_id
         self.path = None
 
         self.elements_list = []
@@ -77,7 +77,7 @@ class GoogleDriveImporter(Importer):
                 print("Creating tmp folder")
                 os.makedirs(temp_folder_path)
 
-            self.path = temp_folder_path + self.request_id
+            self.path = temp_folder_path + self.job_id
 
         except Exception as e:
             print(e)
