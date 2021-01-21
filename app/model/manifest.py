@@ -1,6 +1,6 @@
 from .manifest_metadata import ManifestMetadata
 from app.model.element import ElementType
-from app.model.exporter import ExporterStatus
+from app.models import StatusEnum
 import json
 
 
@@ -26,7 +26,7 @@ class Manifest:
         # Init the queue for the files
         elements_queue = []
 
-        handler_exporter.set_status(ExporterStatus.UPLOADING_FILES)
+        handler_exporter.set_status(StatusEnum.exporting.value)
 
         # for e in root_element.children:
         #    elements_queue.append(e)
@@ -55,7 +55,7 @@ class Manifest:
                     on_file_cb(element)
 
         # Once finished with all the contributions
-        handler_exporter.set_status(ExporterStatus.FILES_UPLOADED)
+        handler_exporter.set_status(StatusEnum.exporting_succeded.value)
 
         if on_finished_cb is not None:
             on_finished_cb()

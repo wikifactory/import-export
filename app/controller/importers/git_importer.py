@@ -4,7 +4,7 @@ import git
 import time
 from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
-
+from app.models import StatusEnum
 
 temp_folder_path = "/tmp/gitimports/"
 
@@ -28,6 +28,8 @@ class GitImporter(Importer):
 
         self.path = None
 
+        self.set_status(StatusEnum.importing.value)
+
         # Check if the tmp folder exists
         try:
             if not os.path.exists(temp_folder_path):
@@ -38,6 +40,7 @@ class GitImporter(Importer):
 
         except Exception as e:
             print(e)
+            self.set_status(StatusEnum.importing_error_data_unreachable.value)
 
     def validate_url():
         pass
@@ -54,6 +57,7 @@ class GitImporter(Importer):
 
         try:
             repo = git.Repo.clone_from(url, self.path, progress=Progress())
+            print("REPO")
 
             # Create the manifest instance
             manifest = Manifest()
@@ -61,6 +65,8 @@ class GitImporter(Importer):
             # Fill some basic information of the project
             manifest.project_name = os.path.basename(os.path.normpath(url))
             manifest.source_url = url
+
+            print("I WILL POPULATE")
 
             # Populate the manifest from the directory
             self.populate_manifest_from_repository_path(manifest, self.path)
@@ -71,7 +77,7 @@ class GitImporter(Importer):
             return manifest
 
         except Exception as e:
-
+            self.set_status(StatusEnum.importing_error_data_unreachable.value)
             print(e)
             return None
 

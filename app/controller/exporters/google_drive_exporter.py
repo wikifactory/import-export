@@ -1,13 +1,14 @@
 import os
 
 from app.model.exporter import Exporter
-from app.model.exporter import ExporterStatus, NotValidManifest
+from app.model.exporter import NotValidManifest
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 import httplib2
 from oauth2client.client import AccessTokenCredentials
 from mimetypes import MimeTypes
 from googleapiclient.errors import HttpError
+from app.models import StatusEnum
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
@@ -15,7 +16,7 @@ SCOPES = ["https://www.googleapis.com/auth/drive"]
 class GoogleDriveExporter(Exporter):
     def __init__(self, job_id):
         self.job_id = job_id
-        self.set_status(ExporterStatus.INITIALIZED)
+        self.set_status(StatusEnum.exporting.value)
 
         self.manifest = None
 

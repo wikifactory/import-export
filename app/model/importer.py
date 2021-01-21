@@ -1,16 +1,9 @@
-from enum import Enum
-
-
-class ImporterStatus(Enum):
-    INITIALIZED = 0
-    STARTED = 1
-    URL_PROCESSED = 2
-    ABORTED = -1
+from app.models import StatusEnum
 
 
 class Importer:
 
-    status = ImporterStatus.INITIALIZED
+    status = StatusEnum.importing.value
 
     hooks_for_status = {}
 

@@ -23,6 +23,7 @@ celery = "*"
 redis = "*"
 dropbox = "*"
 sqlalchemy = "*"
+psycopg2-binary = "*"
 
 [dev-packages]
 

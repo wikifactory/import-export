@@ -1,11 +1,12 @@
 from app.model.exporter import Exporter
-from app.model.exporter import ExporterStatus, NotValidManifest
+from app.model.exporter import NotValidManifest
+from app.models import StatusEnum
 
 
 class GitExporter(Exporter):
     def __init__(self, job_id):
         self.job_id = job_id
-        self.set_status(ExporterStatus.INITIALIZED)
+        self.set_status(StatusEnum.exporting.value)
 
         self.manifest = None
 

@@ -2,7 +2,8 @@ from app.model.exporter import Exporter
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 
-from app.model.exporter import ExporterStatus, NotValidManifest
+from app.model.exporter import NotValidManifest
+from app.models import StatusEnum
 
 import requests
 import magic
@@ -129,13 +130,15 @@ class WikifactoryExporter(Exporter):
         # Assign this import process a unique id
         # This id will identify the tmp folder
         self.job_id = job_id
-        self.set_status(ExporterStatus.INITIALIZED)
+        self.set_status(StatusEnum.exporting.value)
 
         self.manifest = None
 
-        self.add_hook_for_status(ExporterStatus.FILES_UPLOADED, self.on_files_uploaded)
         self.add_hook_for_status(
-            ExporterStatus.FILES_UPLOADED, self.invite_collaborators
+            StatusEnum.exporting_succeded.value, self.on_files_uploaded
+        )
+        self.add_hook_for_status(
+            StatusEnum.exporting_succeded.value, self.invite_collaborators
         )
 
         self.space_id = ""

@@ -1,17 +1,9 @@
-from enum import Enum
-
-
-class ExporterStatus(Enum):
-    INITIALIZED = 0
-    STARTED = 1
-    UPLOADING_FILES = 2
-    FILES_UPLOADED = 3
-    ABORTED = -1
+from app.models import StatusEnum
 
 
 class Exporter:
 
-    status = ExporterStatus.INITIALIZED
+    status = StatusEnum.exporting.value
 
     hooks_for_status = {}
 

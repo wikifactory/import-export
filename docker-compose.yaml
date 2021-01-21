@@ -5,10 +5,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - ./database.env 
     ports: 
       - "8000:8000"
     depends_on: 
       - "redis"
+      - "postgres-db"
 
   redis: 
     image: "redis:alpine"
@@ -24,16 +27,19 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - ./database.env # Used to configure postgres
     command: celery -A app.celery_entrypoint worker --loglevel=info
     depends_on: 
       - "redis"
+      - "postgres-db"
     ports:
       - "8003:8000"
 
   postgres-db:
     image: "postgres"
     env_file:
-      - database.env # Used to configure postgres
+      - ./database.env # Used to configure postgres
     volumes:
       - ./database-data:/var/lib/postgresql/data # To persist content
       - ./db_init_scripts/database_script.sql:/docker-entrypoint-initdb.d/start.sql
