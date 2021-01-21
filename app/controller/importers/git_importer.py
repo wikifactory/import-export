@@ -47,7 +47,6 @@ class GitImporter(Importer):
 
     def process_url(self, url, auth_token):
         print("GIT: Starting process")
-
         # TODO: Check if the repo url is valid
 
         # TODO: Check if the repo is local?
@@ -74,6 +73,8 @@ class GitImporter(Importer):
             # Find the contributors
             self.fill_contributors(manifest, repo)
 
+            # Finally, set the status
+            self.set_status(StatusEnum.importing_successfully.value)
             return manifest
 
         except Exception as e:

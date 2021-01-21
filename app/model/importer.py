@@ -1,5 +1,7 @@
 from app.models import StatusEnum
 
+from app.models import set_job_status
+
 
 class Importer:
 
@@ -7,17 +9,21 @@ class Importer:
 
     hooks_for_status = {}
 
+    job_id = ""
+
     def __init__(self, job_id):
         raise NotImplementedError
 
     def process_url(self, url):
-        raise NotImplementedError
+        self.set_status(StatusEnum.importing)
 
     def validate_url(url):
         raise NotImplementedError
 
     def set_status(self, new_status):
         self.status = new_status
+
+        set_job_status(self.job_id, new_status)
 
         # Callbacks for the change
         if self.status in self.hooks_for_status:

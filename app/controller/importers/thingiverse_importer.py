@@ -6,6 +6,7 @@ import aiohttp
 from app.model.constants import THINGIVERSE_URL, THINGIVERSE_THINGS_PATH
 from app.model.manifest import Manifest
 from app.model.thing import Thing
+from app.models import StatusEnum
 
 
 class AppTokenError(Exception):
@@ -24,14 +25,11 @@ class ThingiverseImporter(Importer):
 
     def process_url(self, url, auth_token):
         print("THINGIVERSE: Starting process of URL:")
-        print(url)
 
         # TODO: validate the URL
 
         basic_thing_info = self.retrieve_basic_thing_info(url, auth_token)
         # TODO: Check for empty values (None)
-        print("->")
-        print(basic_thing_info.keys())
 
         # Create the Manifest that will be later exported
         manifest = Manifest()
@@ -41,6 +39,8 @@ class ThingiverseImporter(Importer):
         # thing of the manifest
         self.populate_manifest_with_things(manifest, [basic_thing_info])
 
+        # Finally, set the status
+        self.set_status(StatusEnum.importing_successfully.value)
         return manifest
 
     def retrieve_basic_thing_info(self, url, auth_token):

@@ -26,6 +26,5 @@ class DropboxImporter(Importer):
     def process_url(self, url, auth_token):
 
         print("Dropbox: Starting process of URL: {}".format(url))
-
         # Create the manifest instance
         manifest = Manifest()

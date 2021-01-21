@@ -26,10 +26,6 @@ class Manifest:
         # Init the queue for the files
         elements_queue = []
 
-        handler_exporter.set_status(StatusEnum.exporting.value)
-
-        # for e in root_element.children:
-        #    elements_queue.append(e)
         elements_queue.append(root_element)
 
         while len(elements_queue) > 0:
@@ -55,7 +51,6 @@ class Manifest:
                     on_file_cb(element)
 
         # Once finished with all the contributions
-        handler_exporter.set_status(StatusEnum.exporting_succeded.value)
 
         if on_finished_cb is not None:
             on_finished_cb()

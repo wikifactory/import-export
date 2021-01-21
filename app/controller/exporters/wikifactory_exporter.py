@@ -129,20 +129,23 @@ class WikifactoryExporter(Exporter):
 
         # Assign this import process a unique id
         # This id will identify the tmp folder
+
         self.job_id = job_id
         self.set_status(StatusEnum.exporting.value)
 
         self.manifest = None
 
-        self.add_hook_for_status(
-            StatusEnum.exporting_succeded.value, self.on_files_uploaded
-        )
-        self.add_hook_for_status(
-            StatusEnum.exporting_succeded.value, self.invite_collaborators
-        )
-
-        self.space_id = ""
-        self.project_id = ""
+        try:
+            self.add_hook_for_status(
+                StatusEnum.exporting_succeded.value, self.on_files_uploaded
+            )
+            self.add_hook_for_status(
+                StatusEnum.exporting_succeded.value, self.invite_collaborators
+            )
+            self.space_id = ""
+            self.project_id = ""
+        except Exception as e:
+            print(e)
 
     def validate_url(url):
 
@@ -188,15 +191,15 @@ class WikifactoryExporter(Exporter):
             manifest.iterate_through_elements(
                 self, self.on_file_cb, self.on_folder_cb, self.on_finished_cb
             )
+
+            self.set_status(StatusEnum.exporting_succeded.value)
+
             return {"exported": "true", "manifest": manifest.toJson()}
 
         else:
             raise NotValidManifest()
 
     def on_file_cb(self, file_element):
-
-        print("FILE!")
-        print(file_element.path)
 
         file_name = file_element.path.split("/")[-1]
 
@@ -422,7 +425,6 @@ class WikifactoryExporter(Exporter):
         result = session.execute(
             WikifactoryMutations.complete_file_mutation, variable_values=variables
         )
-        print("Complete file mutation done")
         print(result)
         """
         async with Client(
@@ -462,7 +464,6 @@ class WikifactoryExporter(Exporter):
         result = session.execute(
             WikifactoryMutations.commit_contribution_mutation, variable_values=variables
         )
-        print("Commit mutation done")
         print(result)
         """
         async with Client(

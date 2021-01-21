@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 import httplib2
 from oauth2client.client import AccessTokenCredentials
-
+from app.models import StatusEnum
 import aiohttp
 from socket import AF_INET
 
@@ -106,6 +106,8 @@ class GoogleDriveImporter(Importer):
 
         self.download_all_files(drive_service, self.elements_list)
 
+        # Finally, set the status
+        self.set_status(StatusEnum.importing_successfully.value)
         return manifest
 
     def create_folder_structure_sync(self, elements):

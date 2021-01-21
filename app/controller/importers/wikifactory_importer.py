@@ -7,6 +7,8 @@ from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 import requests
 import zipfile
+from app.models import StatusEnum
+
 
 temp_folder_path = "/tmp/wikifactoryimports/"
 temp_zip_folder_path = "/tmp/wikifactoryzips/"
@@ -99,6 +101,8 @@ class WikifactoryImporter(Importer):
         # Populate the manifest from the directory
         self.populate_manifest_from_folder_path(manifest, self.path)
 
+        # Finally, set the status
+        self.set_status(StatusEnum.importing_successfully.value)
         return manifest
 
     def get_project_details(self, import_url, import_token):
@@ -106,8 +110,6 @@ class WikifactoryImporter(Importer):
         url_components = import_url.split("/")
         project_space = url_components[len(url_components) - 2]
         project_slug = url_components[len(url_components) - 1]
-
-        print(endpoint_url)
 
         transport = AIOHTTPTransport(
             url=endpoint_url,
@@ -120,7 +122,6 @@ class WikifactoryImporter(Importer):
         session = Client(transport=transport, fetch_schema_from_transport=True)
 
         variables = {"space": project_space, "slug": project_slug}
-        print(variables)
 
         result = session.execute(
             WikifactoryImporterQuerys.repository_zip_query, variable_values=variables
