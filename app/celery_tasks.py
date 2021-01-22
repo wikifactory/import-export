@@ -72,4 +72,8 @@ def handle_post_export(body: dict, job_id):
 
 def handle_get_job(job_id):
     job = get_job(job_id)
-    return {"job": job}
+
+    if job is None:
+        return {"error": "Job not found in the DB"}
+    else:
+        return {"job": job}

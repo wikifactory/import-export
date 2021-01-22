@@ -129,6 +129,10 @@ def get_job(job_id):
         .limit(1)
         .all()
     )
+
+    if len(result) == 0:
+        return None
+
     result = result[0]
 
     job_dict = {
