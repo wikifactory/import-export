@@ -5,6 +5,8 @@ from app.controller.importer_proxy import ImporterProxy
 from app.controller.exporter_proxy import ExporterProxy
 import uuid
 
+from app.models import get_job
+
 
 logger = get_task_logger(__name__)
 
@@ -69,6 +71,5 @@ def handle_post_export(body: dict, job_id):
 
 
 def handle_get_job(job_id):
-
-    # TODO: Search in the database for that job_id
-    pass
+    job = get_job(job_id)
+    return {"job": job}

@@ -176,8 +176,10 @@ class GoogleDriveImporter(Importer):
             # For each file
             for f in files:
 
-                # Create the element
+                # IMPORTANT: Increment the number of files for the manifest
+                manifest.file_elements += 1
 
+                # Create the element
                 ch_element = Element()
                 ch_element.id = f.get("id")
                 ch_element.path = element.path + "/" + f.get("name")

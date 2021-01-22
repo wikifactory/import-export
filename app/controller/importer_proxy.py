@@ -13,6 +13,8 @@ from app.controller.importers.googledrive_importer import GoogleDriveImporter
 from app.controller.importers.myminifactory_importer import MyMiniFactoryImporter
 from app.controller.importers.wikifactory_importer import WikifactoryImporter
 
+from app.models import set_number_of_files_for_job_id
+
 
 class ImporterProxy:
     def __init__(self, job_id):
@@ -20,36 +22,48 @@ class ImporterProxy:
 
     def handle_request(self, json_request):
 
+        result_manifest = None
         try:
 
             if json_request[IMPORT_SERVICE].lower() == THINGIVERSE_SERVICE:
 
-                return self.handle_thingiverse(
+                result_manifest = self.handle_thingiverse(
                     json_request[IMPORT_URL], json_request[IMPORT_TOKEN], self.job_id
                 )
 
             elif json_request[IMPORT_SERVICE].lower() == GIT_SERVICE:
-                return self.handle_git(
+                result_manifest = self.handle_git(
                     json_request[IMPORT_URL], json_request[IMPORT_TOKEN], self.job_id
                 )
 
             elif json_request[IMPORT_SERVICE].lower() == MYMINIFACTORY_SERVICE:
-                return self.handle_myminifactory(
+                result_manifest = self.handle_myminifactory(
                     json_request[IMPORT_URL], json_request[IMPORT_TOKEN], self.job_id
                 )
 
             elif json_request[IMPORT_SERVICE].lower() == GOOGLEDRIVE_SERVICE:
-                return self.handle_googledrive(
+                result_manifest = self.handle_googledrive(
                     json_request[IMPORT_URL], json_request[IMPORT_TOKEN], self.job_id
                 )
             elif json_request[IMPORT_SERVICE].lower() == WIKIFACTORY_SERVICE:
-                return self.handle_wikifactory(
+                result_manifest = self.handle_wikifactory(
                     json_request[IMPORT_URL], json_request[IMPORT_TOKEN], self.job_id
                 )
             else:
                 raise NotImplementedError()
+
+            if result_manifest is not None:
+                # TODO: Store the manifest in the DB
+                # Store the manifest.file_elements associated to the job_id
+                set_number_of_files_for_job_id(
+                    self.job_id, result_manifest.file_elements
+                )
+
+                return result_manifest
+
         except Exception as e:
             print(e)
+            return {"error": "Manifest is None"}
 
     def handle_thingiverse(self, url, auth_token, job_id):
         imp = ThingiverseImporter(job_id)

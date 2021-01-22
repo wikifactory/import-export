@@ -25,7 +25,7 @@ class StatusEnum(enum.Enum):
     exporting = "exporting"
     exporting_error_authorization_required = "exporting_error_authorization_required"
     exporting_error_data_unreachable = "exporting_error_data_unreachable"
-    exporting_succeded = "exporting_succeded"
+    exporting_successfully = "exporting_successfully"
     finished_successfully = "finished_successfully"
     cancelled = "cancelled"
 
@@ -42,6 +42,9 @@ class Job(Base):
     export_service = Column(String)
     export_token = Column(String)
     export_url = Column(String)
+
+    file_elements = Column(Integer)
+    processed_elements = Column(Integer)
 
     job_status = relationship("JobStatus", uselist=False, backref="jobs")
 
@@ -67,6 +70,9 @@ def add_job_to_db(options, job_id):
     new_job.export_token = options["export_token"]
     new_job.export_url = options["export_url"]
 
+    new_job.processed_elements = 0
+    new_job.file_elements = 0
+
     new_status = JobStatus()
     new_status.job_id = new_job.job_id
     new_status.job_status = StatusEnum.pending.value
@@ -86,3 +92,52 @@ def set_job_status(job_id, status: str):
     session.add(new_status)
     session.commit()
 
+
+def increment_processed_element_for_job(job_id):
+    session = Session()
+    # Find the job and update
+    for j in session.query(Job).filter(Job.job_id == job_id).all():
+        j.processed_elements = j.processed_elements + 1
+
+    session.commit()
+
+
+def set_number_of_files_for_job_id(job_id, files):
+    session = Session()
+
+    # Find the job and update
+    session.query(Job).filter(Job.job_id == job_id).update({"file_elements": files})
+
+    session.commit()
+
+
+def get_job(job_id):
+    session = Session()
+
+    result = (
+        session.query(
+            Job.job_id,
+            Job.import_service,
+            Job.export_service,
+            Job.import_url,
+            Job.export_url,
+            JobStatus.job_status,
+            JobStatus.t,
+        )
+        .filter(Job.job_id == JobStatus.job_id and Job.job_id == job_id)
+        .order_by(JobStatus.t.desc())
+        .limit(1)
+        .all()
+    )
+    result = result[0]
+
+    job_dict = {
+        "job_id": result[0],
+        "import_service": result[1],
+        "export_service": result[2],
+        "import_url": result[3],
+        "export_url": result[4],
+        "job_status": result[5],
+        "t": result[6],
+    }
+    return job_dict

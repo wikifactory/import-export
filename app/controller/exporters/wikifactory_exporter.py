@@ -4,6 +4,7 @@ from gql.transport.aiohttp import AIOHTTPTransport
 
 from app.model.exporter import NotValidManifest
 from app.models import StatusEnum
+from app.models import increment_processed_element_for_job
 
 import requests
 import magic
@@ -137,10 +138,10 @@ class WikifactoryExporter(Exporter):
 
         try:
             self.add_hook_for_status(
-                StatusEnum.exporting_succeded.value, self.on_files_uploaded
+                StatusEnum.exporting_successfully.value, self.on_files_uploaded
             )
             self.add_hook_for_status(
-                StatusEnum.exporting_succeded.value, self.invite_collaborators
+                StatusEnum.exporting_successfully.value, self.invite_collaborators
             )
             self.space_id = ""
             self.project_id = ""
@@ -182,22 +183,22 @@ class WikifactoryExporter(Exporter):
 
         self.project_id = details[0]
         self.space_id = details[1]
-
         # Check if we have a manifest
-        if manifest is not None:
+        if self.manifest is not None:
 
             self.project_path = manifest.elements[0].path
 
-            manifest.iterate_through_elements(
+            self.manifest.iterate_through_elements(
                 self, self.on_file_cb, self.on_folder_cb, self.on_finished_cb
             )
 
-            self.set_status(StatusEnum.exporting_succeded.value)
+            self.set_status(StatusEnum.exporting_successfully.value)
 
-            return {"exported": "true", "manifest": manifest.toJson()}
+            return {"exported": "true", "manifest": self.manifest.toJson()}
 
         else:
             raise NotValidManifest()
+            return {"error": "Manifest not valid"}
 
     def on_file_cb(self, file_element):
 
@@ -240,6 +241,9 @@ class WikifactoryExporter(Exporter):
                 self.complete_file(
                     self.space_id, wikifactory_file_id, self.export_token
                 )
+
+                # Increment the processed elements in the database
+                increment_processed_element_for_job(self.job_id)
 
             else:
                 print("WARNING: There is no S3 url")

@@ -139,6 +139,9 @@ class GitImporter(Importer):
                 if current_path in elements_dic:
                     elements_dic[current_path].children.append(file_element)
 
+                    # IMPORTANT: Increment the number of files for the manifest
+                    manifest.file_elements += 1
+
                 # If we are at root level and the file is the readme, use it
                 # for the description of the manifest
                 if full_path == repo_path and filename.lower() == "readme.md":

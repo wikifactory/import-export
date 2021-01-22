@@ -249,6 +249,9 @@ class WikifactoryImporter(Importer):
             # For each children file
             for filename in files:
 
+                # IMPORTANT: Increment the number of files for the manifest
+                manifest.file_elements += 1
+
                 # Create a child element
                 file_element = Element()
                 file_element.type = ElementType.FILE

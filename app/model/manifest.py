@@ -1,6 +1,6 @@
 from .manifest_metadata import ManifestMetadata
 from app.model.element import ElementType
-from app.models import StatusEnum
+
 import json
 
 
@@ -13,6 +13,7 @@ class Manifest:
         self.elements = []
         self.collaborators = []
         self.source_url = ""
+        self.file_elements = 0
 
     def toJson(self):
         return json.dumps(self, default=lambda o: o.__dict__)
