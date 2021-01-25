@@ -4,9 +4,23 @@ DROP TABLE IF EXISTS jobs;
 
 DROP TABLE IF EXISTS job_status;
 
+CREATE TYPE status_type AS ENUM (
+    'pending',
+    'importing',
+    'importing_error_authorization_required',
+    'importing_error_data_unreachable',
+    'importing_successfully',
+    'exporting',
+    'exporting_error_authorization_required',
+    'exporting_error_data_unreachable',
+    'exporting_successfully',
+    'finished_successfully',
+    'cancelled'
+);
+
 
 CREATE TABLE Jobs(
-    job_id TEXT NOT NULL, -- Type of id TBD
+    job_id UUID NOT NULL, -- Type of id TBD
     import_service TEXT NOT NULL,
     import_token TEXT,
     import_url TEXT NOT NULL,
@@ -15,16 +29,14 @@ CREATE TABLE Jobs(
     export_url TEXT NOT NULL,
     file_elements INT DEFAULT 0,
     processed_elements INT DEFAULT 0,
-    --current_status TEXT NOT NULL,
-    --status INT REFERENCES job_status(status_id),
     PRIMARY KEY (job_id)
 );
 
 CREATE TABLE job_status(
     status_id SERIAL,
-    job_id TEXT NOT NULL,
-    job_status TEXT,
-    t TIMESTAMP NOT NULL DEFAULT NOW(),
+    job_id UUID NOT NULL,
+    job_status status_type,
+    timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
     PRIMARY KEY (status_id),
     FOREIGN KEY (job_id) REFERENCES Jobs (job_id)
     ON DELETE CASCADE 
@@ -32,3 +44,5 @@ CREATE TABLE job_status(
 
 CREATE INDEX idx_jobs_jobid ON Jobs(job_id);
 CREATE INDEX idx_jobsstatus_job_id ON job_status(job_id);
+
+ALTER TABLE Jobs ADD CONSTRAINT positive_number CHECK (file_elements >= 0 AND processed_elements >= 0)

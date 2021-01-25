@@ -1,11 +1,13 @@
-import enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, ForeignKey, Integer, DateTime
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.config import db_string
 import datetime
+from sqlalchemy.dialects.postgresql import ENUM
+import enum
 
 engine = create_engine(db_string)
 
@@ -13,9 +15,8 @@ Session = sessionmaker(bind=engine)
 
 Base = declarative_base()
 
+
 # Create the connection with the DB here
-
-
 class StatusEnum(enum.Enum):
     pending = "pending"
     importing = "importing"
@@ -30,10 +31,21 @@ class StatusEnum(enum.Enum):
     cancelled = "cancelled"
 
 
+status_list = []
+
+for entry in StatusEnum:
+    status_list.append(entry.value)
+
+status_list = tuple(status_list)
+
+
+status_types_enum = ENUM(*status_list, name="job_status")
+
+
 class Job(Base):
     __tablename__ = "jobs"
 
-    job_id = Column(String, primary_key=True)
+    job_id = Column(UUID(as_uuid=True), primary_key=True)
 
     import_service = Column(String)
     import_token = Column(String)
@@ -52,9 +64,9 @@ class Job(Base):
 class JobStatus(Base):
     __tablename__ = "job_status"
     status_id = Column(Integer, primary_key=True)
-    job_id = Column(String, ForeignKey("jobs.job_id"))
-    job_status = Column(String)
-    t = Column(DateTime, default=datetime.datetime.utcnow)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.job_id"))
+    job_status = Column(status_types_enum)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 def add_job_to_db(options, job_id):
@@ -122,10 +134,10 @@ def get_job(job_id):
             Job.import_url,
             Job.export_url,
             JobStatus.job_status,
-            JobStatus.t,
+            JobStatus.timestamp,
         )
         .filter(Job.job_id == JobStatus.job_id and Job.job_id == job_id)
-        .order_by(JobStatus.t.desc())
+        .order_by(JobStatus.timestamp.desc())
         .limit(1)
         .all()
     )

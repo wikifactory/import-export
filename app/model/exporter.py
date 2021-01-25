@@ -12,13 +12,13 @@ class Exporter:
     job_id = ""
 
     def __init__(self, job_id):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def export_manifest(self, manifest, export_url, export_token):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def validate_url(url):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def set_status(self, new_status: str):
         self.status = new_status
@@ -46,9 +46,9 @@ class Exporter:
             self.hooks_for_status[status].remove(action)
 
 
-class NotValidURLForExportException(Exception):
+class NotValidURLForExportException(ValueError):
     pass
 
 
-class NotValidManifest(Exception):
+class NotValidManifest(ValueError):
     pass

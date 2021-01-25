@@ -8,6 +8,7 @@ from gql.transport.aiohttp import AIOHTTPTransport
 import requests
 import zipfile
 from app.models import StatusEnum
+from enum import Enum
 
 
 temp_folder_path = "/tmp/wikifactoryimports/"
@@ -17,7 +18,7 @@ endpoint_url = "http://192.168.50.102:8080/api/graphql"
 client_username = "dGVzdHVzZXJhZG1pbg=="  # QUESTION: Where do I get this?
 
 
-class WikifactoryImporterQuerys:
+class WikifactoryImporterQuerys(Enum):
 
     repository_zip_query = gql(
         """

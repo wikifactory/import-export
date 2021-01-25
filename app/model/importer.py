@@ -12,13 +12,13 @@ class Importer:
     job_id = ""
 
     def __init__(self, job_id):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def process_url(self, url):
         self.set_status(StatusEnum.importing)
 
     def validate_url(url):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def set_status(self, new_status):
         self.status = new_status
@@ -46,5 +46,5 @@ class Importer:
             self.hooks_for_status[status].remove(action)
 
 
-class NotValidURLForImportException(Exception):
+class NotValidURLForImportException(ValueError):
     pass

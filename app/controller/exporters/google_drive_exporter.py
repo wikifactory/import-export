@@ -24,7 +24,7 @@ class GoogleDriveExporter(Exporter):
         self.folder_id = ""
 
     def validate_url(url):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def export_manifest(self, manifest, export_url, export_token):
 

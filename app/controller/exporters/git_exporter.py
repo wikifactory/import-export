@@ -14,7 +14,7 @@ class GitExporter(Exporter):
         self.folder_id = ""
 
     def validate_url(url):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def export_manifest(self, manifest, export_url, export_token):
 
@@ -23,5 +23,5 @@ class GitExporter(Exporter):
         self.manifest = manifest
         self.export_token = export_token
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
