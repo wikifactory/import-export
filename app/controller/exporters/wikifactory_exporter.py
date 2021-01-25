@@ -248,6 +248,9 @@ class WikifactoryExporter(Exporter):
             else:
                 print("WARNING: There is no S3 url")
 
+                # Increment in any case the processed element
+                increment_processed_element_for_job(self.job_id)
+
         else:
             print("WARNING: For some reason, we don't ")
             pass

@@ -135,6 +135,8 @@ def get_job(job_id):
             Job.export_url,
             JobStatus.job_status,
             JobStatus.timestamp,
+            Job.file_elements,
+            Job.processed_elements,
         )
         .filter(Job.job_id == JobStatus.job_id, Job.job_id == job_id)
         .order_by(JobStatus.timestamp.desc())
@@ -147,6 +149,11 @@ def get_job(job_id):
 
     result = result[0]
 
+    if result[7] == 0:
+        percentage = 0.0
+    else:
+        percentage = round((result[8] * 100.0) / result[7], 2)
+
     job_dict = {
         "job_id": result[0],
         "import_service": result[1],
@@ -155,5 +162,6 @@ def get_job(job_id):
         "export_url": result[4],
         "job_status": result[5],
         "timestamp": result[6],
+        "job_progress": percentage,
     }
     return job_dict
