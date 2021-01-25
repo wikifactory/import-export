@@ -165,3 +165,30 @@ def get_job(job_id):
         "job_progress": percentage,
     }
     return job_dict
+
+
+def get_unfinished_jobs():
+    session = Session()
+
+    result = (
+        session.query(JobStatus.job_id, JobStatus.job_status)
+        .order_by(JobStatus.timestamp.desc())
+        .all()
+    )
+
+    jobs_dict = {}
+    for row in result:
+        if row[0] not in jobs_dict:
+            jobs_dict[row[0]] = []
+        jobs_dict[row[0]].append(row[1])
+
+    unfinished = []
+
+    for key_job in jobs_dict:
+        if (
+            StatusEnum.importing_successfully.value not in jobs_dict[key_job]
+            or StatusEnum.exporting_successfully.value not in jobs_dict[key_job]
+        ):
+            unfinished.append(key_job)
+
+    return {"unfinished_jobs": unfinished}

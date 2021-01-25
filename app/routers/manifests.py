@@ -8,6 +8,7 @@ from app.celery_tasks import (
     handle_post_export,
     handle_get_job,
     generate_job_id,
+    handle_get_unfinished_jobs,
 )
 
 router = APIRouter()
@@ -60,3 +61,8 @@ def export(body: dict):
 @router.get("/job/{job_id}")
 def get_job(job_id):
     return handle_get_job(job_id)
+
+
+@router.get("/unfinished_jobs")
+def get_unfinished_jobs():
+    return handle_get_unfinished_jobs()

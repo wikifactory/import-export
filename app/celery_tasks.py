@@ -5,7 +5,7 @@ from app.controller.importer_proxy import ImporterProxy
 from app.controller.exporter_proxy import ExporterProxy
 import uuid
 
-from app.models import get_job
+from app.models import get_job, get_unfinished_jobs
 
 
 logger = get_task_logger(__name__)
@@ -77,3 +77,7 @@ def handle_get_job(job_id):
         return {"error": "Job not found in the DB"}
     else:
         return {"job": job}
+
+
+def handle_get_unfinished_jobs():
+    return get_unfinished_jobs()
