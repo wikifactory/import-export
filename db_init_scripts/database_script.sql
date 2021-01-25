@@ -30,3 +30,5 @@ CREATE TABLE job_status(
     ON DELETE CASCADE 
 );
 
+CREATE INDEX idx_jobs_jobid ON Jobs(job_id);
+CREATE INDEX idx_jobsstatus_job_id ON job_status(job_id);
