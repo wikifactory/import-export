@@ -136,7 +136,7 @@ def get_job(job_id):
             JobStatus.job_status,
             JobStatus.timestamp,
         )
-        .filter(Job.job_id == JobStatus.job_id and Job.job_id == job_id)
+        .filter(Job.job_id == JobStatus.job_id, Job.job_id == job_id)
         .order_by(JobStatus.timestamp.desc())
         .limit(1)
         .all()
