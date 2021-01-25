@@ -154,6 +154,6 @@ def get_job(job_id):
         "import_url": result[3],
         "export_url": result[4],
         "job_status": result[5],
-        "t": result[6],
+        "timestamp": result[6],
     }
     return job_dict
