@@ -18,12 +18,6 @@ import hashlib
 from enum import Enum
 
 
-user_id = "testuser3"  # QUESTION: Where do I get this?
-client_username = base64.b64encode(bytes(user_id, "ascii")).decode(
-    "ascii"
-)  # QUESTION: Where do I get this?
-
-
 endpoint_url = wikifactory_connection_url
 
 
@@ -173,12 +167,20 @@ class WikifactoryExporter(Exporter):
         space = url_parts[-2]
         slug = url_parts[-1]
 
+        user_id = space.replace("+", "").replace("@", "")
+        self.client_username = base64.b64encode(
+            bytes(user_id, "ascii")
+        ).decode("ascii")
+
         self.manifest = manifest
         self.export_token = export_token
 
         # TODO: Get the details of the project: project_id, space_id
 
         details = self.get_project_details(space, slug, export_token)
+        print("++++++++++++++++++++")
+        print(details)
+        print("____________________")
 
         if details is None:
             return {}
@@ -248,7 +250,7 @@ class WikifactoryExporter(Exporter):
                 increment_processed_element_for_job(self.job_id)
 
             else:
-                print("WARNING: There is no S3 url")
+                raise ("WARNING: There is no S3 url")
 
                 # Increment in any case the processed element
                 increment_processed_element_for_job(self.job_id)
@@ -272,7 +274,7 @@ class WikifactoryExporter(Exporter):
         transport = AIOHTTPTransport(
             url=endpoint_url,
             headers={
-                "CLIENT-USERNAME": client_username,
+                "CLIENT-USERNAME": self.client_username,
                 "Cookie": "session={}".format(export_token),
             },
         )
@@ -296,7 +298,7 @@ class WikifactoryExporter(Exporter):
         print(variables)
 
         result = session.execute(
-            WikifactoryMutations.file_mutation, variable_values=variables
+            WikifactoryMutations.file_mutation.value, variable_values=variables
         )
 
         return result
@@ -321,7 +323,7 @@ class WikifactoryExporter(Exporter):
             print(variables)
 
             result = await session.execute(
-                WikifactoryMutations.file_mutation, variable_values=variables
+                WikifactoryMutations.value.file_mutation, variable_values=variables
             )
 
             return result
@@ -331,7 +333,7 @@ class WikifactoryExporter(Exporter):
         transport = AIOHTTPTransport(
             url=endpoint_url,
             headers={
-                "CLIENT-USERNAME": client_username,
+                "CLIENT-USERNAME": self.client_username,
                 "Cookie": "session={}".format(export_token),
             },
         )
@@ -339,7 +341,7 @@ class WikifactoryExporter(Exporter):
         variables = {"space": space, "slug": slug}
 
         result = session.execute(
-            WikifactoryMutations.project_query, variable_values=variables
+            WikifactoryMutations.project_query.value, variable_values=variables
         )
 
         if "userErrors" not in result:
@@ -348,7 +350,7 @@ class WikifactoryExporter(Exporter):
 
             return (p_id, sp_id)
         else:
-            print("PROJECT NOT FOUND INSIDE WIKIFACTORY")
+            raise ("PROJECT NOT FOUND INSIDE WIKIFACTORY")
             # TODO: Raise custom exception
             return None
 
@@ -358,7 +360,7 @@ class WikifactoryExporter(Exporter):
         transport = AIOHTTPTransport(
             url=endpoint_url,
             headers={
-                "CLIENT-USERNAME": client_username,
+                "CLIENT-USERNAME": self.client_username,
                 "Cookie": "session={}".format(export_token),
             },
         )
@@ -374,7 +376,8 @@ class WikifactoryExporter(Exporter):
         }
 
         result = session.execute(
-            WikifactoryMutations.operation_mutation, variable_values=variables
+            WikifactoryMutations.operation_mutation.value,
+            variable_values=variables,
         )
         print("OPERATION ADD done")
         print(result)
@@ -394,7 +397,7 @@ class WikifactoryExporter(Exporter):
             }
 
             result = await session.execute(
-                WikifactoryMutations.operation_mutation, variable_values=variables
+                WikifactoryMutations.operation_mutation.value, variable_values=variables
             )
             print("OPERATION ADD done")
             print(result)
@@ -423,7 +426,7 @@ class WikifactoryExporter(Exporter):
         transport = AIOHTTPTransport(
             url=endpoint_url,
             headers={
-                "CLIENT-USERNAME": client_username,
+                "CLIENT-USERNAME": self.client_username,
                 "Cookie": "session={}".format(export_token),
             },
         )
@@ -438,7 +441,7 @@ class WikifactoryExporter(Exporter):
         }
 
         result = session.execute(
-            WikifactoryMutations.complete_file_mutation,
+            WikifactoryMutations.complete_file_mutation.value,
             variable_values=variables,
         )
         print(result)
@@ -452,7 +455,7 @@ class WikifactoryExporter(Exporter):
             }
 
             result = await session.execute(
-                WikifactoryMutations.complete_file_mutation, variable_values=variables
+                WikifactoryMutations.complete_file_mutation.value, variable_values=variables
             )
             print("Complete file mutation done")
             print(result)
@@ -463,7 +466,7 @@ class WikifactoryExporter(Exporter):
         transport = AIOHTTPTransport(
             url=endpoint_url,
             headers={
-                "CLIENT-USERNAME": client_username,
+                "CLIENT-USERNAME": self.client_username,
                 "Cookie": "session={}".format(export_token),
             },
         )
@@ -478,7 +481,7 @@ class WikifactoryExporter(Exporter):
         }
 
         result = session.execute(
-            WikifactoryMutations.commit_contribution_mutation,
+            WikifactoryMutations.commit_contribution_mutation.value,
             variable_values=variables,
         )
         print(result)
@@ -496,7 +499,7 @@ class WikifactoryExporter(Exporter):
             }
 
             result = await session.execute(
-                WikifactoryMutations.commit_contribution_mutation,
+                WikifactoryMutations.commit_contribution_mutation.value,
                 variable_values=variables,
             )
             print("Commit mutation done")
