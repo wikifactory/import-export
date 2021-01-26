@@ -23,6 +23,9 @@ redis = "*"
 dropbox = "*"
 sqlalchemy = "*"
 psycopg2-binary = "*"
+pre-commit = "*"
+flake8 = "*"
+black = "==20.8b1"
 
 [dev-packages]
 
