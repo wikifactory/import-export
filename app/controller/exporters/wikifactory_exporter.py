@@ -15,6 +15,8 @@ import os
 import base64
 import hashlib
 
+from enum import Enum
+
 
 user_id = "testuser3"  # QUESTION: Where do I get this?
 client_username = base64.b64encode(bytes(user_id, "ascii")).decode(
@@ -25,7 +27,7 @@ client_username = base64.b64encode(bytes(user_id, "ascii")).decode(
 endpoint_url = wikifactory_connection_url
 
 
-class WikifactoryMutations:
+class WikifactoryMutations(Enum):
     file_mutation = gql(
         """
         mutation File($fileInput: FileInput) {
