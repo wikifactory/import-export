@@ -1,7 +1,7 @@
 from app.model.importer import Importer
 import os
 import git
-import time
+
 from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
 from app.models import StatusEnum
@@ -119,7 +119,9 @@ class GitImporter(Importer):
                     folder_element = Element()
                     folder_element.type = ElementType.FOLDER
 
-                    current_folder_path = os.path.join(current_path, folder_name)
+                    current_folder_path = os.path.join(
+                        current_path, folder_name
+                    )
 
                     folder_element.path = current_folder_path
 

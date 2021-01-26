@@ -141,7 +141,8 @@ class WikifactoryExporter(Exporter):
                 StatusEnum.exporting_successfully.value, self.on_files_uploaded
             )
             self.add_hook_for_status(
-                StatusEnum.exporting_successfully.value, self.invite_collaborators
+                StatusEnum.exporting_successfully.value,
+                self.invite_collaborators,
             )
             self.space_id = ""
             self.project_id = ""
@@ -150,9 +151,7 @@ class WikifactoryExporter(Exporter):
 
     def validate_url(url):
 
-        pattern = (
-            "^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(\@|\+)[\w\-º_]*\/[\w\-\_]+$"
-        )
+        pattern = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(\@|\+)[\w\-º_]*\/[\w\-\_]+$"
         import re
 
         result = re.search(pattern, url)
@@ -350,7 +349,9 @@ class WikifactoryExporter(Exporter):
             # TODO: Raise custom exception
             return None
 
-    def perform_mutation_operation(self, element, file_id, project_path, export_token):
+    def perform_mutation_operation(
+        self, element, file_id, project_path, export_token
+    ):
         transport = AIOHTTPTransport(
             url=endpoint_url,
             headers={
@@ -426,11 +427,16 @@ class WikifactoryExporter(Exporter):
 
         session = Client(transport=transport, fetch_schema_from_transport=True)
         variables = {
-            "fileInput": {"spaceId": space_id, "id": file_id, "completed": True}
+            "fileInput": {
+                "spaceId": space_id,
+                "id": file_id,
+                "completed": True,
+            }
         }
 
         result = session.execute(
-            WikifactoryMutations.complete_file_mutation, variable_values=variables
+            WikifactoryMutations.complete_file_mutation,
+            variable_values=variables,
         )
         print(result)
         """
@@ -469,7 +475,8 @@ class WikifactoryExporter(Exporter):
         }
 
         result = session.execute(
-            WikifactoryMutations.commit_contribution_mutation, variable_values=variables
+            WikifactoryMutations.commit_contribution_mutation,
+            variable_values=variables,
         )
         print(result)
         """
@@ -526,4 +533,3 @@ class WikifactoryExporter(Exporter):
         except Exception as e:
             print(e)
             return ""
-

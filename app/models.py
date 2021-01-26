@@ -20,11 +20,15 @@ Base = declarative_base()
 class StatusEnum(enum.Enum):
     pending = "pending"
     importing = "importing"
-    importing_error_authorization_required = "importing_error_authorization_required"
+    importing_error_authorization_required = (
+        "importing_error_authorization_required"
+    )
     importing_error_data_unreachable = "importing_error_data_unreachable"
     importing_successfully = "importing_successfully"
     exporting = "exporting"
-    exporting_error_authorization_required = "exporting_error_authorization_required"
+    exporting_error_authorization_required = (
+        "exporting_error_authorization_required"
+    )
     exporting_error_data_unreachable = "exporting_error_data_unreachable"
     exporting_successfully = "exporting_successfully"
     finished_successfully = "finished_successfully"
@@ -58,8 +62,6 @@ class Job(Base):
     file_elements = Column(Integer)
     processed_elements = Column(Integer)
 
-    job_status = relationship("JobStatus", uselist=False, backref="jobs")
-
 
 class JobStatus(Base):
     __tablename__ = "job_status"
@@ -67,6 +69,8 @@ class JobStatus(Base):
     job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.job_id"))
     job_status = Column(status_types_enum)
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+
+    job = relationship("Job", uselist=False, backref="statuses")
 
 
 def add_job_to_db(options, job_id):
@@ -118,7 +122,9 @@ def set_number_of_files_for_job_id(job_id, files):
     session = Session()
 
     # Find the job and update
-    session.query(Job).filter(Job.job_id == job_id).update({"file_elements": files})
+    session.query(Job).filter(Job.job_id == job_id).update(
+        {"file_elements": files}
+    )
 
     session.commit()
 
@@ -170,6 +176,18 @@ def get_job(job_id):
 def get_unfinished_jobs():
     session = Session()
 
+    # session.query(Job).filter(Job.statuses.any(JobStatus.job_
+
+    """result = session.query(Job).filter(
+        Job.statuses.any(
+            JobStatus.job_status.in_(
+                [
+                    StatusEnum.importing_successfully.value,
+                    StatusEnum.exporting_successfully.value,
+                ]
+            )
+        )
+    )"""
     result = (
         session.query(JobStatus.job_id, JobStatus.job_status)
         .order_by(JobStatus.timestamp.desc())
@@ -177,6 +195,7 @@ def get_unfinished_jobs():
     )
 
     jobs_dict = {}
+
     for row in result:
         if row[0] not in jobs_dict:
             jobs_dict[row[0]] = []
@@ -187,7 +206,8 @@ def get_unfinished_jobs():
     for key_job in jobs_dict:
         if (
             StatusEnum.importing_successfully.value not in jobs_dict[key_job]
-            or StatusEnum.exporting_successfully.value not in jobs_dict[key_job]
+            or StatusEnum.exporting_successfully.value
+            not in jobs_dict[key_job]
         ):
             unfinished.append(key_job)
 

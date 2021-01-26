@@ -10,7 +10,9 @@ from app.model.constants import GOOGLEDRIVE_SERVICE
 from app.controller.importers.thingiverse_importer import ThingiverseImporter
 from app.controller.importers.git_importer import GitImporter
 from app.controller.importers.googledrive_importer import GoogleDriveImporter
-from app.controller.importers.myminifactory_importer import MyMiniFactoryImporter
+from app.controller.importers.myminifactory_importer import (
+    MyMiniFactoryImporter,
+)
 from app.controller.importers.wikifactory_importer import WikifactoryImporter
 
 from app.models import set_number_of_files_for_job_id
@@ -28,26 +30,36 @@ class ImporterProxy:
             if json_request[IMPORT_SERVICE].lower() == THINGIVERSE_SERVICE:
 
                 result_manifest = self.handle_thingiverse(
-                    json_request[IMPORT_URL], json_request[IMPORT_TOKEN], self.job_id
+                    json_request[IMPORT_URL],
+                    json_request[IMPORT_TOKEN],
+                    self.job_id,
                 )
 
             elif json_request[IMPORT_SERVICE].lower() == GIT_SERVICE:
                 result_manifest = self.handle_git(
-                    json_request[IMPORT_URL], json_request[IMPORT_TOKEN], self.job_id
+                    json_request[IMPORT_URL],
+                    json_request[IMPORT_TOKEN],
+                    self.job_id,
                 )
 
             elif json_request[IMPORT_SERVICE].lower() == MYMINIFACTORY_SERVICE:
                 result_manifest = self.handle_myminifactory(
-                    json_request[IMPORT_URL], json_request[IMPORT_TOKEN], self.job_id
+                    json_request[IMPORT_URL],
+                    json_request[IMPORT_TOKEN],
+                    self.job_id,
                 )
 
             elif json_request[IMPORT_SERVICE].lower() == GOOGLEDRIVE_SERVICE:
                 result_manifest = self.handle_googledrive(
-                    json_request[IMPORT_URL], json_request[IMPORT_TOKEN], self.job_id
+                    json_request[IMPORT_URL],
+                    json_request[IMPORT_TOKEN],
+                    self.job_id,
                 )
             elif json_request[IMPORT_SERVICE].lower() == WIKIFACTORY_SERVICE:
                 result_manifest = self.handle_wikifactory(
-                    json_request[IMPORT_URL], json_request[IMPORT_TOKEN], self.job_id
+                    json_request[IMPORT_URL],
+                    json_request[IMPORT_TOKEN],
+                    self.job_id,
                 )
             else:
                 raise NotImplementedError()

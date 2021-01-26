@@ -1,5 +1,6 @@
 from app.model.exporter import Exporter
-from app.model.exporter import NotValidManifest
+
+# from app.model.exporter import NotValidManifest
 from app.models import StatusEnum
 
 
@@ -24,4 +25,3 @@ class GitExporter(Exporter):
         self.export_token = export_token
 
         raise NotImplementedError()
-

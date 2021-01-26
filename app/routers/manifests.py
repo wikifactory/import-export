@@ -42,7 +42,10 @@ def post_manifest(body: dict):
     handle_post_manifest.delay(body, job_id)
     return JSONResponse(
         status_code=200,
-        content={"message": "Manifest generation process started", "job_id": job_id},
+        content={
+            "message": "Manifest generation process started",
+            "job_id": job_id,
+        },
     )
 
 
@@ -50,11 +53,14 @@ def post_manifest(body: dict):
 def export(body: dict):
     job_id = generate_job_id()
 
+    print(job_id)
+
     add_job_to_db(body, job_id)
 
     handle_post_export.delay(body, job_id)
     return JSONResponse(
-        status_code=200, content={"message": "Export process started", "job_id": job_id}
+        status_code=200,
+        content={"message": "Export process started", "job_id": job_id},
     )
 
 

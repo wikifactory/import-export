@@ -13,7 +13,6 @@ logger = get_task_logger(__name__)
 
 def generate_job_id():
     return str(uuid.uuid4())
-    # return str(int(round(time.time() * 1000)))
 
 
 @celery_app.task

@@ -1,4 +1,3 @@
-
 from enum import Enum
 import json
 
@@ -10,7 +9,6 @@ class ElementType(str, Enum):
 
 
 class Element:
-
     def __init__(self):
         self.id = ""
         self.type = ElementType.UNKNOWN

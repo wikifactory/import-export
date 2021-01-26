@@ -1,9 +1,9 @@
 from app.model.importer import Importer
 import os
-import aiohttp
 
+# import aiohttp
+# from app.model.constants import THINGIVERSE_URL, THINGIVERSE_THINGS_PATH
 
-from app.model.constants import THINGIVERSE_URL, THINGIVERSE_THINGS_PATH
 from app.model.manifest import Manifest
 from app.model.thing import Thing
 from app.models import StatusEnum
@@ -78,4 +78,3 @@ class ThingiverseImporter(Importer):
             new_thing.description = thing["description"]
 
             manifest.things.append(new_thing)
-

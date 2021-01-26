@@ -37,7 +37,8 @@ class GoogleDriveExporter(Exporter):
 
         try:
             creds = AccessTokenCredentials(
-                export_token, user_agent="https://www.googleapis.com/oauth2/v1/certs"
+                export_token,
+                user_agent="https://www.googleapis.com/oauth2/v1/certs",
             )
             http = httplib2.Http()
             http = creds.authorize(http)

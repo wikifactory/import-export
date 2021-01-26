@@ -4,7 +4,6 @@ import json
 
 
 class ManifestMetadata:
-
     def __init__(self, populate=True):
         self.date_created = ""
         self.last_date_updated = ""
@@ -12,7 +11,7 @@ class ManifestMetadata:
         self.language = ""
         self.documentation_language = ""
 
-        if(populate is True):
+        if populate is True:
             self.default_populate()
 
     def default_populate(self):

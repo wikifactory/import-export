@@ -55,4 +55,3 @@ class Manifest:
 
         if on_finished_cb is not None:
             on_finished_cb()
-

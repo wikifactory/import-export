@@ -28,3 +28,4 @@ class DropboxImporter(Importer):
         print("Dropbox: Starting process of URL: {}".format(url))
         # Create the manifest instance
         manifest = Manifest()
+        return manifest
