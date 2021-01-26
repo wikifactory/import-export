@@ -1,4 +1,5 @@
 from app.model.exporter import Exporter
+from app.config import wikifactory_connection_url
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 
@@ -21,7 +22,7 @@ client_username = base64.b64encode(bytes(user_id, "ascii")).decode(
 )  # QUESTION: Where do I get this?
 
 
-endpoint_url = "http://192.168.50.102:8080/api/graphql"
+endpoint_url = wikifactory_connection_url
 
 
 class WikifactoryMutations:

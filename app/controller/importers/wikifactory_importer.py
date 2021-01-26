@@ -1,4 +1,5 @@
 from app.model.importer import Importer
+from app.config import wikifactory_connection_url
 import os
 
 from app.model.manifest import Manifest
@@ -14,7 +15,7 @@ from enum import Enum
 temp_folder_path = "/tmp/wikifactoryimports/"
 temp_zip_folder_path = "/tmp/wikifactoryzips/"
 
-endpoint_url = "http://192.168.50.102:8080/api/graphql"
+endpoint_url = wikifactory_connection_url
 client_username = "dGVzdHVzZXJhZG1pbg=="  # QUESTION: Where do I get this?
 
 
