@@ -23,6 +23,7 @@ redis = "*"
 dropbox = "*"
 sqlalchemy = "*"
 psycopg2-binary = "*"
+sqlalchemy-utils = "*"
 
 [dev-packages]
 

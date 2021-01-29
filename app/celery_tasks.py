@@ -31,7 +31,7 @@ def handle_post_manifest(body: dict, job_id):
 
         processing_prx = ImporterProxy(job_id)
         manifest = processing_prx.handle_request(body)
-        return manifest
+        return manifest.toJson()
 
 
 @celery_app.task

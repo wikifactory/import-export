@@ -9,11 +9,17 @@ import datetime
 from sqlalchemy.dialects.postgresql import ENUM
 import enum
 
-engine = create_engine(db_string)
-
-Session = sessionmaker(bind=engine)
 
 Base = declarative_base()
+
+
+def connect_to_db(db_connection_string):
+    engine = create_engine(db_connection_string)
+    Session = sessionmaker(bind=engine)
+    return (engine, Session)
+
+
+(engine, Session) = connect_to_db(db_string)
 
 
 # Create the connection with the DB here

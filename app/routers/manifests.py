@@ -39,12 +39,13 @@ def post_manifest(body: dict):
 
     add_job_to_db(body, job_id)
 
-    handle_post_manifest.delay(body, job_id)
+    manifest = handle_post_manifest.delay(body, job_id).get()
     return JSONResponse(
         status_code=200,
         content={
             "message": "Manifest generation process started",
             "job_id": job_id,
+            "manifest": manifest,
         },
     )
 
