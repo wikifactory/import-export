@@ -132,5 +132,4 @@ dmypy.json
 
 config/credentials.json
 /app/credentials.py
-/app/config.py
 /database.env

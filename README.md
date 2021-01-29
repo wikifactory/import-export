@@ -13,7 +13,7 @@ By performing the import-export process, the user will have a copy of the projec
 
 # Overview of the Import-Export process
 
-First, the user must select the import service, from which she will import the project. In order to abstract the process as much as possible, the service requires the URL of the project. This URL will have different meanings given the associated service (e.g. the web address of a github repository or the addres of a project from the Wikifactory platform). At this point, it may be required to perform some authentication or authorization steps, to give the service access to the original files. As the result of this authorization step, a new piece of information is added to the request: the **import_token** and **export_token** .
+First, the user must select the import service, from where the project will be imported. In order to abstract the process as much as possible, the service requires the URL of the project. This URL will have different meanings given the associated service (e.g. the web address of a github repository or the addres of a project from the Wikifactory platform). At this point, it may be required to perform some authentication or authorization steps, to give the service access to the original files. As the result of this authorization step, a new piece of information is added to the request: the **import_token** and **export_token** .
 
 Next we can see a schema of the request as sent to the ImportExport service, in JSON format:
   
