@@ -1,6 +1,7 @@
 from app.models import StatusEnum
 
 from app.models import set_job_status
+from app.config import database_enabled
 
 
 class Exporter:
@@ -23,7 +24,8 @@ class Exporter:
     def set_status(self, new_status: str):
         self.status = new_status
 
-        set_job_status(self.job_id, new_status)
+        if database_enabled is True:
+            set_job_status(self.job_id, new_status)
 
         # Callbacks for the change
         if self.status in self.hooks_for_status:

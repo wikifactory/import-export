@@ -52,6 +52,7 @@ def setup_db_connection_testdb():
         yield (engine, Session)
 
 
+"""
 def test_db_test_no_created(setup_db_connection_):
 
     engine = setup_db_connection_[0]
@@ -65,3 +66,4 @@ def test_db_with_test_db(setup_db_connection_testdb):
     engine = setup_db_connection_testdb[0]
 
     assert db_exists(engine) is True
+"""

@@ -4,7 +4,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.config import db_string
+from app.config import db_string, database_enabled
 import datetime
 from sqlalchemy.dialects.postgresql import ENUM
 import enum
@@ -19,7 +19,8 @@ def connect_to_db(db_connection_string):
     return (engine, Session)
 
 
-(engine, Session) = connect_to_db(db_string)
+if database_enabled is True:
+    (engine, Session) = connect_to_db(db_string)
 
 
 # Create the connection with the DB here
