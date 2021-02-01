@@ -14,6 +14,7 @@ class Element:
         self.type = ElementType.UNKNOWN
         self.children = []
         self.path = ""
+        self.name = ""
 
     def toJson(self):
         return json.dumps(self, default=lambda o: o.__dict__)

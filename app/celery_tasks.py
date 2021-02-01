@@ -31,7 +31,8 @@ def handle_post_manifest(body: dict, job_id):
 
         processing_prx = ImporterProxy(job_id)
         manifest = processing_prx.handle_request(body)
-        return manifest
+        print(manifest)
+        return manifest.toJson()
 
 
 @celery_app.task
@@ -57,6 +58,10 @@ def handle_post_export(body: dict, job_id):
         # Configure the importer
         processing_prx = ImporterProxy(job_id)
         manifest = processing_prx.handle_request(body)
+
+        if manifest is None:
+            return {"error": "The manifest could not be generated"}
+
         logger.info("Importing process finished!")
         # logger.info(manifest)
         logger.info("Starting the export Process...")

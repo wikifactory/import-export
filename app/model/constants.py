@@ -7,6 +7,7 @@ GITHUB_SERVICE: Final = "github"
 GOOGLEDRIVE_SERVICE: Final = "googledrive"
 GIT_SERVICE: Final = "git"
 MYMINIFACTORY_SERVICE: Final = "mtminifactory"
+DROPBOX_SERVICE: Final = "dropbox"
 
 
 IMPORT_URL: Final = "import_url"
