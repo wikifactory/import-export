@@ -7,11 +7,15 @@ GITHUB_SERVICE: Final = "github"
 GOOGLEDRIVE_SERVICE: Final = "googledrive"
 GIT_SERVICE: Final = "git"
 MYMINIFACTORY_SERVICE: Final = "mtminifactory"
+DROPBOX_SERVICE: Final = "dropbox"
 
 
-SOURCE_URL: Final = "source_url"
-SERVICE: Final = "service"
-AUTH_TOKEN: Final = "auth_token"
+IMPORT_URL: Final = "import_url"
+IMPORT_TOKEN: Final = "import_token"
+IMPORT_SERVICE: Final = "import_service"
+EXPORT_URL: Final = "export_url"
+EXPORT_TOKEN: Final = "export_token"
+EXPORT_SERVICE: Final = "export_service"
 
 
 THINGIVERSE_URL: Final = "https://api.thingiverse.com/"

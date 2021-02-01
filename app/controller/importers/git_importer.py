@@ -1,10 +1,10 @@
-from ..importer import Importer
+from app.model.importer import Importer
 import os
 import git
-import time
-from ..manifest import Manifest
-from ..element import Element, ElementType
 
+from app.model.manifest import Manifest
+from app.model.element import Element, ElementType
+from app.models import StatusEnum
 
 temp_folder_path = "/tmp/gitimports/"
 
@@ -13,17 +13,22 @@ ignored_folders = [".git"]
 
 class Progress(git.remote.RemoteProgress):
     def update(self, op_code, cur_count, max_count=None, message=""):
-        print("update({}, {}, {}, {})".format(op_code, cur_count, max_count, message))
+
+        # INFO: Uncomment this line to show the progress of the cloning process
+        # print("update({}, {}, {}, {})".format(op_code, cur_count, max_count, message))
+        pass
 
 
 class GitImporter(Importer):
-    def __init__(self, request_id):
+    def __init__(self, job_id):
 
         # Assign this import process a unique id
         # This id will identify the tmp folder
-        self.request_id = request_id
+        self.job_id = job_id
 
         self.path = None
+
+        self.set_status(StatusEnum.importing.value)
 
         # Check if the tmp folder exists
         try:
@@ -31,36 +36,51 @@ class GitImporter(Importer):
                 print("Creating tmp folder")
                 os.makedirs(temp_folder_path)
 
-            self.path = temp_folder_path + self.request_id
+            self.path = temp_folder_path + self.job_id
 
         except Exception as e:
             print(e)
+            self.set_status(StatusEnum.importing_error_data_unreachable.value)
 
-    async def process_url(self, url, auth_token):
+    def validate_url():
+        pass
+
+    def process_url(self, url, auth_token):
         print("GIT: Starting process")
-
         # TODO: Check if the repo url is valid
 
         # TODO: Check if the repo is local?
 
         # If the url / path is valid, start the process
         # First, we clone the repo into the tmp folder
-        repo = git.Repo.clone_from(url, self.path, progress=Progress())
 
-        # Create the manifest instance
-        manifest = Manifest()
+        try:
+            repo = git.Repo.clone_from(url, self.path, progress=Progress())
+            print("REPO")
 
-        # Fill some basic information of the project
-        manifest.project_name = os.path.basename(os.path.normpath(url))
-        manifest.source_url = url
+            # Create the manifest instance
+            manifest = Manifest()
 
-        # Populate the manifest from the directory
-        self.populate_manifest_from_repository_path(manifest, self.path)
+            # Fill some basic information of the project
+            manifest.project_name = os.path.basename(os.path.normpath(url))
+            manifest.source_url = url
 
-        # Find the contributors
-        self.fill_contributors(manifest, repo)
+            print("I WILL POPULATE")
 
-        return manifest.toJson()
+            # Populate the manifest from the directory
+            self.populate_manifest_from_repository_path(manifest, self.path)
+
+            # Find the contributors
+            self.fill_contributors(manifest, repo)
+
+            # Finally, set the status
+            self.set_status(StatusEnum.importing_successfully.value)
+            return manifest
+
+        except Exception as e:
+            self.set_status(StatusEnum.importing_error_data_unreachable.value)
+            print(e)
+            return None
 
     def fill_contributors(self, manifest, repo):
         branch = repo.active_branch
@@ -88,6 +108,7 @@ class GitImporter(Importer):
                 root_element = Element()
                 root_element.id = "root"
                 root_element.path = full_path
+                root_element.type = ElementType.FOLDER
 
                 elements_dic[full_path] = root_element
 
@@ -98,7 +119,9 @@ class GitImporter(Importer):
                     folder_element = Element()
                     folder_element.type = ElementType.FOLDER
 
-                    current_folder_path = os.path.join(current_path, folder_name)
+                    current_folder_path = os.path.join(
+                        current_path, folder_name
+                    )
 
                     folder_element.path = current_folder_path
 
@@ -117,6 +140,9 @@ class GitImporter(Importer):
 
                 if current_path in elements_dic:
                     elements_dic[current_path].children.append(file_element)
+
+                    # IMPORTANT: Increment the number of files for the manifest
+                    manifest.file_elements += 1
 
                 # If we are at root level and the file is the readme, use it
                 # for the description of the manifest

@@ -1,14 +1,19 @@
-from fastapi import APIRouter, HTTPException
-from controller.importer_proxy import ImporterProxy
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 
-import time
+from app.models import add_job_to_db
+
+from app.celery_tasks import (
+    handle_post_manifest,
+    handle_post_export,
+    handle_get_job,
+    generate_job_id,
+    handle_get_unfinished_jobs,
+)
 
 router = APIRouter()
 
 OUTPUT_FOLDER = "/tmp/outputs/"
-
-# Define a route for retrieving a list of manifests
-# TODO: filtering?
 
 
 @router.get("/manifests")
@@ -19,31 +24,55 @@ async def get_manifests():
 # The route used to init the import/export process
 """
 The body must contain the following parameters:
-    - source_url
-    - service
-    - auth_token
+    - import_url
+    - import_service
+    - import_token
+    - export_url
+    - export_service
+    - export_token
 """
 
 
 @router.post("/manifest")
-async def post_manifest(body: dict):
+def post_manifest(body: dict):
+    job_id = generate_job_id()
 
-    if "source_url" not in body or "service" not in body or "auth_token" not in body:
-        raise HTTPException(status_code=500, detail="Missing fields")
+    add_job_to_db(body, job_id)
 
-    else:
-        request_id = str(int(round(time.time() * 1000)))
+    manifest = handle_post_manifest.delay(body, job_id).get()
+    """return JSONResponse(
+        status_code=200,
+        content={
+            "message": "Manifest generation process started",
+            "job_id": job_id,
+        },
+    )"""
+    return JSONResponse(
+        status_code=200,
+        content=manifest,
+    )
 
-        processing_prx = ImporterProxy(request_id)
-        result_json_string = await processing_prx.handle_request(body)
 
-        print("DONE!")
+@router.post("/export")
+def export(body: dict):
+    job_id = generate_job_id()
 
-        outputfile_path = OUTPUT_FOLDER + request_id + ".json"
+    print(job_id)
 
-        text_file = open(outputfile_path, "w+")
-        text_file.write(result_json_string)
-        text_file.close()
+    add_job_to_db(body, job_id)
 
-        return result_json_string
+    handle_post_export.delay(body, job_id)
+    return JSONResponse(
+        status_code=200,
+        content={"message": "Export process started", "job_id": job_id},
+    )
 
+
+@router.get("/job/{job_id}")
+def get_job(job_id):
+    return handle_get_job(job_id)
+
+
+@router.get("/unfinished_jobs")
+def get_unfinished_jobs():
+    return handle_get_unfinished_jobs()

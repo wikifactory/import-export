@@ -1,9 +1,7 @@
-from .user import User
 import json
 
 
 class Thing:
-
     def __init__(self):
         self.id = ""
         self.title = ""

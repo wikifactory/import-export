@@ -130,5 +130,9 @@ dmypy.json
 
 .vscode
 
+node_modules
+package-lock.json
+
 config/credentials.json
 /app/credentials.py
+/database.env
