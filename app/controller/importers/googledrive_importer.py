@@ -80,9 +80,7 @@ class GoogleDriveImporter(Importer):
                 except Exception as e:
                     print(e)
 
-    def process_folder_recursively(
-        self, manifest, drive_service, root_folder_id
-    ):
+    def process_folder_recursively(self, manifest, drive_service, root_folder_id):
 
         # Init the folders array
         folders_ids = []
@@ -116,9 +114,7 @@ class GoogleDriveImporter(Importer):
                 element = element_for_id[next_id]
 
             # Perform a query and get all the files and subfolders given one
-            (files, subfolders) = self.get_files_and_subfolders(
-                drive_service, next_id
-            )
+            (files, subfolders) = self.get_files_and_subfolders(drive_service, next_id)
 
             # For each subfolder
             for subfolder in subfolders:
@@ -163,9 +159,7 @@ class GoogleDriveImporter(Importer):
         for i in range(len(elements)):
             ele = elements[i]
             if ele.type == ElementType.FILE:
-                async_calls.append(
-                    self.download_file_from_element(drive_service, ele)
-                )
+                async_calls.append(self.download_file_from_element(drive_service, ele))
 
         all_results = await asyncio.gather(*async_calls)
         return all_results
@@ -192,10 +186,7 @@ class GoogleDriveImporter(Importer):
 
                 for item in result_list:
 
-                    if (
-                        item.get("mimeType")
-                        == "application/vnd.google-apps.folder"
-                    ):
+                    if item.get("mimeType") == "application/vnd.google-apps.folder":
                         subfolders.append(item)
                     else:
                         files.append(item)

@@ -148,7 +148,9 @@ class WikifactoryExporter(Exporter):
 
     def validate_url(url):
 
-        pattern = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(\@|\+)[\w\-º_]*\/[\w\-\_]+$"
+        pattern = (
+            r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(\@|\+)[\w\-º_]*\/[\w\-\_]+$"
+        )
         import re
 
         result = re.search(pattern, url)
@@ -168,9 +170,7 @@ class WikifactoryExporter(Exporter):
         slug = url_parts[-1]
 
         user_id = space.replace("+", "").replace("@", "")
-        self.client_username = base64.b64encode(
-            bytes(user_id, "ascii")
-        ).decode("ascii")
+        self.client_username = base64.b64encode(bytes(user_id, "ascii")).decode("ascii")
 
         self.manifest = manifest
         self.export_token = export_token
@@ -354,9 +354,7 @@ class WikifactoryExporter(Exporter):
             # TODO: Raise custom exception
             return None
 
-    def perform_mutation_operation(
-        self, element, file_id, project_path, export_token
-    ):
+    def perform_mutation_operation(self, element, file_id, project_path, export_token):
         transport = AIOHTTPTransport(
             url=endpoint_url,
             headers={

@@ -22,13 +22,9 @@ jobs:
           sudo pip install pipenv
           pipenv install --pre --dev
     - run:
-        name: pipenv graph
-        command: |
-          pipenv graph
-    - run:
         name: Code formatting
         command: |
-          pipenv run black --check
+          cd /app & pipenv run black --check .
     - run:
         name: Build using docker-compose
         command: |
@@ -86,14 +82,9 @@ workflows:
 #             pipenv install --pre --dev
 # 
 #       - run:
-#           name: pipenv graph
-#           command: |
-#             pipenv graph
-# 
-#       - run:
 #           name: Code formatting
 #           command: |
-#             pipenv run black --check
+#             cd /app & pipenv run black --check .
 # 
 #       - run:
 #           name: Build using docker-compose
