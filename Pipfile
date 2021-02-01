@@ -24,8 +24,13 @@ dropbox = "*"
 sqlalchemy = "*"
 psycopg2-binary = "*"
 sqlalchemy-utils = "*"
-
-[dev-packages]
+pytest = "*"
 
 [requires]
 python_version = "3.7"
+
+[pipenv]
+allow_prereleases = true
+
+[dev-packages]
+black = "==20.8b1"
