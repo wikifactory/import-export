@@ -1,8 +1,6 @@
 import os
 
 
-database_enabled = True
-
 user = os.getenv("POSTGRES_USER")
 password = os.getenv("POSTGRES_PASSWORD")
 port = os.getenv("POSTGRES_PORT")

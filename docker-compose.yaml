@@ -42,7 +42,7 @@ services:
       - ./database.env # Used to configure postgres
     volumes:
       - ./database-data:/var/lib/postgresql/data # To persist content
-      - ./db_init_scripts/database_script.sql:/docker-entrypoint-initdb.d/start.sql
+      # - ./db_init_scripts/database_script.sql:/docker-entrypoint-initdb.d/start.sql
     ports:
       - "8004:5432"
     command: ["postgres", "-c", "log_statement=all"]

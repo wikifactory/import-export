@@ -1,7 +1,8 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from app.models import add_job_to_db
+# from app.models import add_job_to_db, connect_to_db
+import app.models
 
 from app.celery_tasks import (
     handle_post_manifest,
@@ -11,9 +12,25 @@ from app.celery_tasks import (
     handle_get_unfinished_jobs,
 )
 
+from app.config import db_string, db_name
+
 router = APIRouter()
 
 OUTPUT_FOLDER = "/tmp/outputs/"
+
+database_url = db_string + "/" + db_name
+
+
+# Stablish connection with the db
+
+if db_name is None:
+    raise Exception("Error. dbname is None")
+else:
+    (engine, Session) = app.models.connect_to_db(database_url)
+
+    app.models.Session = Session
+    print("Session with the db created")
+    print(Session)
 
 
 @router.get("/manifests")
@@ -37,7 +54,7 @@ The body must contain the following parameters:
 def post_manifest(body: dict):
     job_id = generate_job_id()
 
-    add_job_to_db(body, job_id)
+    app.models.add_job_to_db(body, job_id)
 
     manifest = handle_post_manifest.delay(body, job_id).get()
     return JSONResponse(
@@ -56,7 +73,7 @@ def export(body: dict):
 
     print(job_id)
 
-    add_job_to_db(body, job_id)
+    app.models.add_job_to_db(body, job_id)
 
     handle_post_export.delay(body, job_id)
     return JSONResponse(

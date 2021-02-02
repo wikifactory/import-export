@@ -26,7 +26,8 @@ jobs:
     - run:
         name: Code formatting
         command: |
-          cd /app & pipenv run black --check .
+          cd app & pipenv run black --check .
+        when: always
     - run:
         name: Build using docker-compose
         command: |
@@ -35,6 +36,7 @@ jobs:
         name: flake8
         command: |
           pipenv run flake8
+        when: always
     - run:
         name: unit-tests
         command: |
@@ -89,7 +91,8 @@ workflows:
 #       - run:
 #           name: Code formatting
 #           command: |
-#             cd /app & pipenv run black --check .
+#             cd app & pipenv run black --check .
+#           when: always
 # 
 #       - run:
 #           name: Build using docker-compose
@@ -100,6 +103,7 @@ workflows:
 #           name: flake8
 #           command: |
 #             pipenv run flake8
+#           when: always
 #       
 #       - run:
 #           name: unit-tests

@@ -4,10 +4,12 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.config import db_string, database_enabled, db_name
+
 import datetime
 from sqlalchemy.dialects.postgresql import ENUM
 import enum
+
+from app.config import db_name, db_string
 
 
 Base = declarative_base()
@@ -16,14 +18,15 @@ Session = None
 
 
 def connect_to_db(db_connection_string):
-    global Session
-    engine = create_engine(db_connection_string)
-    Session = sessionmaker(bind=engine)
-    return (engine, Session)
 
+    try:
+        engine = create_engine(db_connection_string)
+        s = sessionmaker(bind=engine)
+        Base.metadata.create_all(engine)
 
-if database_enabled is True:
-    (engine, Session) = connect_to_db(db_string + "/" + db_name)
+        return (engine, s)
+    except Exception as e:
+        print(e)
 
 
 # Create the connection with the DB here
@@ -74,10 +77,10 @@ class Job(Base):
 
 
 class JobStatus(Base):
-    __tablename__ = "job_status"
+    __tablename__ = "job_statuses"
     status_id = Column(Integer, primary_key=True)
     job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.job_id"))
-    job_status = Column(status_types_enum)
+    status = Column(status_types_enum)
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
 
     job = relationship("Job", uselist=False, backref="statuses")
@@ -85,7 +88,7 @@ class JobStatus(Base):
 
 def add_job_to_db(options, job_id):
 
-    if Session is not None:
+    try:
 
         session = Session()
         new_job = Job()
@@ -103,36 +106,44 @@ def add_job_to_db(options, job_id):
 
         new_status = JobStatus()
         new_status.job_id = new_job.job_id
-        new_status.job_status = StatusEnum.pending.value
+        new_status.status = StatusEnum.pending.value
 
         session.add(new_job)
         session.add(new_status)
         session.commit()
-    else:
+
+        session.close()
+
+    except Exception as e:
+        print(e)
         print(
             "Warning! You are trying to add a job to the db with no connection"
         )
-        print("You should check the database_enabled env var")
 
 
 def set_job_status(job_id, status: str):
 
-    if Session is not None:
+    try:
+        engine = create_engine(db_string + "/" + db_name)
+        Session = sessionmaker(bind=engine)
+
         session = Session()
         new_status = JobStatus()
         new_status.job_id = job_id
-        new_status.job_status = status
+        new_status.status = status
 
         session.add(new_status)
         session.commit()
-    else:
+    except Exception as e:
+        print(e)
         print(
             "Warning! You are trying to set a job status in the db with no connection"
         )
-        print("You should check the database_enabled env var")
 
 
 def increment_processed_element_for_job(job_id):
+    engine = create_engine(db_string + "/" + db_name)
+    Session = sessionmaker(bind=engine)
 
     if Session is not None:
         session = Session()
@@ -143,10 +154,11 @@ def increment_processed_element_for_job(job_id):
         session.commit()
     else:
         print("Warning! You are trying to increment the processed elements")
-        print("You should check the database_enabled env var")
 
 
 def set_number_of_files_for_job_id(job_id, files):
+    engine = create_engine(db_string + "/" + db_name)
+    Session = sessionmaker(bind=engine)
     if Session is not None:
         session = Session()
 
@@ -160,11 +172,11 @@ def set_number_of_files_for_job_id(job_id, files):
         print(
             "Warning! You are trying to set the number of files for a job with no db connection"
         )
-        print("You should check the database_enabled env var")
 
 
 def get_job(job_id):
-
+    engine = create_engine(db_string + "/" + db_name)
+    Session = sessionmaker(bind=engine)
     if Session is not None:
         session = Session()
 
@@ -175,7 +187,7 @@ def get_job(job_id):
                 Job.export_service,
                 Job.import_url,
                 Job.export_url,
-                JobStatus.job_status,
+                JobStatus.status,
                 JobStatus.timestamp,
                 Job.file_elements,
                 Job.processed_elements,
@@ -211,7 +223,6 @@ def get_job(job_id):
         print(
             "Warning! You are trying to find a job in the db with no db connection"
         )
-        print("You should check the database_enabled env var")
         return None
 
 
@@ -233,7 +244,7 @@ def get_unfinished_jobs():
             )
         )"""
         result = (
-            session.query(JobStatus.job_id, JobStatus.job_status)
+            session.query(JobStatus.job_id, JobStatus.status)
             .order_by(JobStatus.timestamp.desc())
             .all()
         )

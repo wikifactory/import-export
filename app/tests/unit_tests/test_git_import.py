@@ -8,6 +8,8 @@ import uuid
 @pytest.fixture
 def prepared_tmp_git_folder():
 
+    # Disable the connection with the db, since we are unittesting
+
     job_id = str(uuid.uuid4())
     temp_folder_path = "/tmp/gitimports/" + job_id
     test_git_repo = "https://github.com/rievo/icosphere"

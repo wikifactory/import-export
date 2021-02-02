@@ -1,10 +1,4 @@
-import pytest
-
-from sqlalchemy import create_engine
 import sqlalchemy_utils
-
-from sqlalchemy.orm import sessionmaker
-from ..tests_config import test_db_string
 
 
 def database_is_empty(engine):
@@ -23,33 +17,6 @@ def db_exists(engine):
     except Exception as e:
         print(e)
         return False
-
-
-@pytest.fixture
-def setup_db_connection_():
-
-    try:
-        engine = create_engine(test_db_string)
-        Session = sessionmaker(bind=engine)
-        yield (engine, Session)
-
-    except Exception as e:
-        print(e)
-        assert "Exception"
-
-
-@pytest.fixture
-def setup_db_connection_testdb():
-    try:
-        engine = create_engine(test_db_string)
-        Session = sessionmaker(bind=engine)
-
-        yield (engine, Session)
-
-    except Exception as e:
-        print(e)
-        assert "Exception"
-        yield (engine, Session)
 
 
 """
