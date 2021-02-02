@@ -5,7 +5,6 @@ from app.model.element import Element, ElementType
 from app.models import StatusEnum
 import dropbox
 from pathlib import Path
-import asyncio
 
 temp_folder_path = "/tmp/dropboximports/"
 
