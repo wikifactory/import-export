@@ -53,7 +53,9 @@ class GoogleDriveImporter(Importer):
             )
             http = httplib2.Http()
             http = creds.authorize(http)
-            drive_service = build("drive", "v3", credentials=creds)
+            drive_service = build(
+                "drive", "v3", credentials=creds, cache_discovery=False
+            )
 
         except Exception as e:
             print(e)
@@ -152,17 +154,11 @@ class GoogleDriveImporter(Importer):
         # Finally, set the elements of the manifest
         manifest.elements = [root_element]
 
-    async def download_all_files(self, drive_service, elements):
-
-        async_calls = []
-
+    def download_all_files(self, drive_service, elements):
         for i in range(len(elements)):
             ele = elements[i]
             if ele.type == ElementType.FILE:
-                async_calls.append(self.download_file_from_element(drive_service, ele))
-
-        all_results = await asyncio.gather(*async_calls)
-        return all_results
+                self.download_file_from_element(drive_service, ele)
 
     def get_files_and_subfolders(self, drive_service, folder_id):
         files = []
@@ -204,7 +200,7 @@ class GoogleDriveImporter(Importer):
 
         return (files, subfolders)
 
-    async def download_file_from_element(self, drive_service, element):
+    def download_file_from_element(self, drive_service, element):
 
         request = drive_service.files().get_media(fileId=element.id)
         fh = io.BytesIO()

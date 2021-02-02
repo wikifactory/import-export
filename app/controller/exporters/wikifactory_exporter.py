@@ -178,9 +178,6 @@ class WikifactoryExporter(Exporter):
         # TODO: Get the details of the project: project_id, space_id
 
         details = self.get_project_details(space, slug, export_token)
-        print("++++++++++++++++++++")
-        print(details)
-        print("____________________")
 
         if details is None:
             return {}
@@ -188,7 +185,11 @@ class WikifactoryExporter(Exporter):
         self.project_id = details[0]
         self.space_id = details[1]
         # Check if we have a manifest
-        if self.manifest is not None:
+        if (
+            self.manifest is not None
+            and manifest.elements is not None
+            and len(manifest.elements) > 0
+        ):
 
             self.project_path = manifest.elements[0].path
 
@@ -250,7 +251,7 @@ class WikifactoryExporter(Exporter):
                 increment_processed_element_for_job(self.job_id)
 
             else:
-                raise ("WARNING: There is no S3 url")
+                raise Exception("WARNING: There is no S3 url")
 
                 # Increment in any case the processed element
                 increment_processed_element_for_job(self.job_id)
@@ -350,7 +351,7 @@ class WikifactoryExporter(Exporter):
 
             return (p_id, sp_id)
         else:
-            raise ("PROJECT NOT FOUND INSIDE WIKIFACTORY")
+            raise Exception("PROJECT NOT FOUND INSIDE WIKIFACTORY")
             # TODO: Raise custom exception
             return None
 

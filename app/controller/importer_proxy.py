@@ -4,12 +4,16 @@ from app.model.constants import (
     WIKIFACTORY_SERVICE,
 )
 from app.model.constants import IMPORT_SERVICE, IMPORT_URL, IMPORT_TOKEN
-from app.model.constants import GIT_SERVICE
+from app.model.constants import (
+    GIT_SERVICE,
+    DROPBOX_SERVICE,
+    GOOGLEDRIVE_SERVICE,
+)
 
-from app.model.constants import GOOGLEDRIVE_SERVICE
 from app.controller.importers.thingiverse_importer import ThingiverseImporter
 from app.controller.importers.git_importer import GitImporter
 from app.controller.importers.googledrive_importer import GoogleDriveImporter
+from app.controller.importers.dropbox_importer import DropboxImporter
 from app.controller.importers.myminifactory_importer import (
     MyMiniFactoryImporter,
 )
@@ -61,6 +65,12 @@ class ImporterProxy:
                     json_request[IMPORT_TOKEN],
                     self.job_id,
                 )
+            elif json_request[IMPORT_SERVICE].lower() == DROPBOX_SERVICE:
+                result_manifest = self.handle_dropbox(
+                    json_request[IMPORT_URL],
+                    json_request[IMPORT_TOKEN],
+                    self.job_id,
+                )
             else:
                 raise NotImplementedError()
 
@@ -95,4 +105,8 @@ class ImporterProxy:
 
     def handle_wikifactory(self, url, auth_token, job_id):
         imp = WikifactoryImporter(job_id)
+        return imp.process_url(url, auth_token)
+
+    def handle_dropbox(self, url, auth_token, job_id):
+        imp = DropboxImporter(job_id)
         return imp.process_url(url, auth_token)
