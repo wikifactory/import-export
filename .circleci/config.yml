@@ -3,7 +3,7 @@ version: 2.1
 
 orbs:
   go: circleci/go@1.3.0
-  docker: circleci/docker@1.4.0
+  docker: circleci/docker@1.5.0
 
 jobs:
   build:
@@ -24,12 +24,14 @@ jobs:
     steps:
 
       - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run:
           name: python VENV
           command: |
             sudo pip install pipenv
             pipenv install --pre --dev
-
+            
       - run:
           name: Code formatting
           command: |
@@ -38,7 +40,7 @@ jobs:
       - run:
           name: Build using docker-compose
           command: |
-            pipenv run docker-compose build
+            docker-compose build
 
       - run:
           name: flake8
