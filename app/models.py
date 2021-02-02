@@ -12,8 +12,11 @@ import enum
 
 Base = declarative_base()
 
+Session = None
+
 
 def connect_to_db(db_connection_string):
+    global Session
     engine = create_engine(db_connection_string)
     Session = sessionmaker(bind=engine)
     return (engine, Session)
@@ -82,140 +85,177 @@ class JobStatus(Base):
 
 def add_job_to_db(options, job_id):
 
-    session = Session()
-    new_job = Job()
-    new_job.job_id = job_id
-    new_job.import_service = options["import_service"]
-    new_job.import_token = options["import_token"]
-    new_job.import_url = options["import_url"]
+    if Session is not None:
 
-    new_job.export_service = options["export_service"]
-    new_job.export_token = options["export_token"]
-    new_job.export_url = options["export_url"]
+        session = Session()
+        new_job = Job()
+        new_job.job_id = job_id
+        new_job.import_service = options["import_service"]
+        new_job.import_token = options["import_token"]
+        new_job.import_url = options["import_url"]
 
-    new_job.processed_elements = 0
-    new_job.file_elements = 0
+        new_job.export_service = options["export_service"]
+        new_job.export_token = options["export_token"]
+        new_job.export_url = options["export_url"]
 
-    new_status = JobStatus()
-    new_status.job_id = new_job.job_id
-    new_status.job_status = StatusEnum.pending.value
+        new_job.processed_elements = 0
+        new_job.file_elements = 0
 
-    session.add(new_job)
-    session.add(new_status)
-    session.commit()
+        new_status = JobStatus()
+        new_status.job_id = new_job.job_id
+        new_status.job_status = StatusEnum.pending.value
+
+        session.add(new_job)
+        session.add(new_status)
+        session.commit()
+    else:
+        print(
+            "Warning! You are trying to add a job to the db with no connection"
+        )
+        print("You should check the database_enabled env var")
 
 
 def set_job_status(job_id, status: str):
 
-    session = Session()
-    new_status = JobStatus()
-    new_status.job_id = job_id
-    new_status.job_status = status
+    if Session is not None:
+        session = Session()
+        new_status = JobStatus()
+        new_status.job_id = job_id
+        new_status.job_status = status
 
-    session.add(new_status)
-    session.commit()
+        session.add(new_status)
+        session.commit()
+    else:
+        print(
+            "Warning! You are trying to set a job status in the db with no connection"
+        )
+        print("You should check the database_enabled env var")
 
 
 def increment_processed_element_for_job(job_id):
-    session = Session()
-    # Find the job and update
-    for j in session.query(Job).filter(Job.job_id == job_id).all():
-        j.processed_elements = j.processed_elements + 1
 
-    session.commit()
+    if Session is not None:
+        session = Session()
+        # Find the job and update
+        for j in session.query(Job).filter(Job.job_id == job_id).all():
+            j.processed_elements = j.processed_elements + 1
+
+        session.commit()
+    else:
+        print("Warning! You are trying to increment the processed elements")
+        print("You should check the database_enabled env var")
 
 
 def set_number_of_files_for_job_id(job_id, files):
-    session = Session()
+    if Session is not None:
+        session = Session()
 
-    # Find the job and update
-    session.query(Job).filter(Job.job_id == job_id).update(
-        {"file_elements": files}
-    )
+        # Find the job and update
+        session.query(Job).filter(Job.job_id == job_id).update(
+            {"file_elements": files}
+        )
 
-    session.commit()
+        session.commit()
+    else:
+        print(
+            "Warning! You are trying to set the number of files for a job with no db connection"
+        )
+        print("You should check the database_enabled env var")
 
 
 def get_job(job_id):
-    session = Session()
 
-    result = (
-        session.query(
-            Job.job_id,
-            Job.import_service,
-            Job.export_service,
-            Job.import_url,
-            Job.export_url,
-            JobStatus.job_status,
-            JobStatus.timestamp,
-            Job.file_elements,
-            Job.processed_elements,
+    if Session is not None:
+        session = Session()
+
+        result = (
+            session.query(
+                Job.job_id,
+                Job.import_service,
+                Job.export_service,
+                Job.import_url,
+                Job.export_url,
+                JobStatus.job_status,
+                JobStatus.timestamp,
+                Job.file_elements,
+                Job.processed_elements,
+            )
+            .filter(Job.job_id == JobStatus.job_id, Job.job_id == job_id)
+            .order_by(JobStatus.timestamp.desc())
+            .limit(1)
+            .all()
         )
-        .filter(Job.job_id == JobStatus.job_id, Job.job_id == job_id)
-        .order_by(JobStatus.timestamp.desc())
-        .limit(1)
-        .all()
-    )
 
-    if len(result) == 0:
-        return None
+        if len(result) == 0:
+            return None
 
-    result = result[0]
+        result = result[0]
 
-    if result[7] == 0:
-        percentage = 0.0
+        if result[7] == 0:
+            percentage = 0.0
+        else:
+            percentage = round((result[8] * 100.0) / result[7], 2)
+
+        job_dict = {
+            "job_id": result[0],
+            "import_service": result[1],
+            "export_service": result[2],
+            "import_url": result[3],
+            "export_url": result[4],
+            "job_status": result[5],
+            "timestamp": result[6],
+            "job_progress": percentage,
+        }
+        return job_dict
     else:
-        percentage = round((result[8] * 100.0) / result[7], 2)
-
-    job_dict = {
-        "job_id": result[0],
-        "import_service": result[1],
-        "export_service": result[2],
-        "import_url": result[3],
-        "export_url": result[4],
-        "job_status": result[5],
-        "timestamp": result[6],
-        "job_progress": percentage,
-    }
-    return job_dict
+        print(
+            "Warning! You are trying to find a job in the db with no db connection"
+        )
+        print("You should check the database_enabled env var")
+        return None
 
 
 def get_unfinished_jobs():
-    session = Session()
 
-    # session.query(Job).filter(Job.statuses.any(JobStatus.job_
+    if Session is not None:
+        session = Session()
 
-    """result = session.query(Job).filter(
-        Job.statuses.any(
-            JobStatus.job_status.in_(
-                [
-                    StatusEnum.importing_successfully.value,
-                    StatusEnum.exporting_successfully.value,
-                ]
+        # session.query(Job).filter(Job.statuses.any(JobStatus.job_
+
+        """result = session.query(Job).filter(
+            Job.statuses.any(
+                JobStatus.job_status.in_(
+                    [
+                        StatusEnum.importing_successfully.value,
+                        StatusEnum.exporting_successfully.value,
+                    ]
+                )
             )
+        )"""
+        result = (
+            session.query(JobStatus.job_id, JobStatus.job_status)
+            .order_by(JobStatus.timestamp.desc())
+            .all()
         )
-    )"""
-    result = (
-        session.query(JobStatus.job_id, JobStatus.job_status)
-        .order_by(JobStatus.timestamp.desc())
-        .all()
-    )
 
-    jobs_dict = {}
+        jobs_dict = {}
 
-    for row in result:
-        if row[0] not in jobs_dict:
-            jobs_dict[row[0]] = []
-        jobs_dict[row[0]].append(row[1])
+        for row in result:
+            if row[0] not in jobs_dict:
+                jobs_dict[row[0]] = []
+            jobs_dict[row[0]].append(row[1])
 
-    unfinished = []
+        unfinished = []
 
-    for key_job in jobs_dict:
-        if (
-            StatusEnum.importing_successfully.value not in jobs_dict[key_job]
-            or StatusEnum.exporting_successfully.value
-            not in jobs_dict[key_job]
-        ):
-            unfinished.append(key_job)
+        for key_job in jobs_dict:
+            if (
+                StatusEnum.importing_successfully.value
+                not in jobs_dict[key_job]
+                or StatusEnum.exporting_successfully.value
+                not in jobs_dict[key_job]
+            ):
+                unfinished.append(key_job)
 
-    return {"unfinished_jobs": unfinished}
+        return {"unfinished_jobs": unfinished}
+    else:
+        return {"error": "No connection with the db"}

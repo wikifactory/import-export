@@ -1,7 +1,7 @@
 import os
 
 
-database_enabled = False
+database_enabled = True
 
 user = os.getenv("POSTGRES_USER")
 password = os.getenv("POSTGRES_PASSWORD")
