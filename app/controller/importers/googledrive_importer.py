@@ -1,6 +1,5 @@
 import os
 import io
-import asyncio
 from app.model.importer import Importer
 from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
@@ -162,11 +161,7 @@ class GoogleDriveImporter(Importer):
         for i in range(len(elements)):
             ele = elements[i]
             if ele.type == ElementType.FILE:
-                # async_calls.append(
                 self.download_file_from_element(drive_service, ele)
-            # )
-
-        # all_results = await asyncio.gather(*async_calls)
 
     def get_files_and_subfolders(self, drive_service, folder_id):
         files = []

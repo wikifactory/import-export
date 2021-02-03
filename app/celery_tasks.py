@@ -31,7 +31,6 @@ def handle_post_manifest(body: dict, job_id):
 
         processing_prx = ImporterProxy(job_id)
         manifest = processing_prx.handle_request(body)
-        print(manifest)
         return manifest.toJson()
 
 

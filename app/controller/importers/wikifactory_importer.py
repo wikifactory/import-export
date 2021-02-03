@@ -154,43 +154,6 @@ class WikifactoryImporter(Importer):
                 "zip_archive_url": zip_archive_url,
                 "slug": slug,
             }
-        """
-        async with Client(
-            transport=transport, fetch_schema_from_transport=True
-        ) as session:
-
-            variables = {"space": project_space, "slug": project_slug}
-
-            result = await session.execute(
-                WikifactoryImporterQuerys.repository_zip_query,
-                variable_values=variables,
-            )
-
-            if len(result["project"]["userErrors"]) > 0:
-
-                for e in result["project"]["userErrors"]:
-                    print(e)
-                return None
-
-            else:
-
-                server_url = endpoint_url.replace("api/graphql", "")[:-1]
-                project_id = result["project"]["result"]["id"]
-                slug = result["project"]["result"]["slug"]
-
-                zip_archive_url = (
-                    server_url
-                    + result["project"]["result"]["contributionUpstream"][
-                        "zipArchiveUrl"
-                    ]
-                )
-
-                return {
-                    "project_id": project_id,
-                    "zip_archive_url": zip_archive_url,
-                    "slug": slug,
-                }
-        """
 
     def download_files_from_zip_url(self, zip_url):
 

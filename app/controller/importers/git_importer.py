@@ -56,7 +56,7 @@ class GitImporter(Importer):
 
         try:
             repo = git.Repo.clone_from(url, self.path, progress=Progress())
-            print("REPO")
+            print("Repo cloned")
 
             # Create the manifest instance
             manifest = Manifest()
@@ -64,8 +64,6 @@ class GitImporter(Importer):
             # Fill some basic information of the project
             manifest.project_name = os.path.basename(os.path.normpath(url))
             manifest.source_url = url
-
-            print("I WILL POPULATE")
 
             # Populate the manifest from the directory
             self.populate_manifest_from_repository_path(manifest, self.path)

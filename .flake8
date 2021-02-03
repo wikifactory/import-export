@@ -13,3 +13,4 @@ exclude =
     db_init_script
     database-data
     __pycache__
+

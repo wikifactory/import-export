@@ -1,0 +1,64 @@
+version: 2.1
+
+
+orbs:
+  docker: circleci/docker@1.5.0
+
+jobs:
+  build:
+
+    docker:
+      - image: "circleci/python:3.7"
+      - image: circleci/postgres
+        command: postgres -c 'fsync=off' -c 'synchronous_commit=off' -c 'full_page_writes=off'
+        environment:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgtres
+      - image: circleci/redis
+    resource_class: small
+    environment:
+      POSTGRES_ROOT_DSN: postgresql://postgres:postgres@localhost/postgres
+      POSTGRES_TEST_DSN: postgresql://postgres:postgres@localhost/dido_test
+
+    working_directory: ~/dido
+
+    steps:
+
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: python VENV
+          command: |
+            sudo pip install pipenv
+            pipenv install --pre --dev
+            
+      - run:
+          name: Code formatting
+          command: |
+            cd app & pipenv run black --check .
+          when: always
+
+      - run:
+          name: Build using docker-compose
+          command: |
+            docker-compose build
+
+      - run:
+          name: flake8
+          command: |
+            pipenv run flake8
+          when: always
+      
+      - run:
+          name: unit-tests
+          command: |
+            mkdir test-results
+            pipenv run pytest --junitxml=test-results/junit.xml
+          when: always  # run even if there is a flake8 error
+
+      - store_test_results:
+          path: test-results
+
+      - store_artifacts:
+          path: test-results

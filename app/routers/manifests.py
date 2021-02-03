@@ -1,7 +1,8 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from app.models import add_job_to_db
+# from app.models import add_job_to_db, connect_to_db
+import app.models
 
 from app.celery_tasks import (
     handle_post_manifest,
@@ -11,8 +12,8 @@ from app.celery_tasks import (
     handle_get_unfinished_jobs,
 )
 
-router = APIRouter()
 
+router = APIRouter()
 OUTPUT_FOLDER = "/tmp/outputs/"
 
 
@@ -37,19 +38,16 @@ The body must contain the following parameters:
 def post_manifest(body: dict):
     job_id = generate_job_id()
 
-    add_job_to_db(body, job_id)
+    app.models.add_job_to_db(body, job_id)
 
     manifest = handle_post_manifest.delay(body, job_id).get()
-    """return JSONResponse(
+    return JSONResponse(
         status_code=200,
         content={
             "message": "Manifest generation process started",
             "job_id": job_id,
+            "manifest": manifest,
         },
-    )"""
-    return JSONResponse(
-        status_code=200,
-        content=manifest,
     )
 
 
@@ -59,7 +57,7 @@ def export(body: dict):
 
     print(job_id)
 
-    add_job_to_db(body, job_id)
+    app.models.add_job_to_db(body, job_id)
 
     handle_post_export.delay(body, job_id)
     return JSONResponse(

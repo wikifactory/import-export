@@ -1,17 +1,19 @@
+import os
+import sys
+import urllib.parse
+
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, ForeignKey, Integer, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy import create_engine
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
-from app.config import db_string
+
 import datetime
 from sqlalchemy.dialects.postgresql import ENUM
 import enum
 
-engine = create_engine(db_string)
-
-Session = sessionmaker(bind=engine)
 
 Base = declarative_base()
 
@@ -64,13 +66,40 @@ class Job(Base):
 
 
 class JobStatus(Base):
-    __tablename__ = "job_status"
+    __tablename__ = "job_statuses"
     status_id = Column(Integer, primary_key=True)
     job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.job_id"))
-    job_status = Column(status_types_enum)
+    status = Column(status_types_enum)
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
 
     job = relationship("Job", uselist=False, backref="statuses")
+
+
+def init_engine():
+    root_engine = create_engine(os.environ["POSTGRES_ROOT_DSN"])
+
+    with root_engine.connect() as root_connection:
+        dsn = os.environ[
+            "POSTGRES_TEST_DSN" if "pytest" in sys.modules else "POSTGRES_DSN"
+        ]
+        database_name = urllib.parse.urlparse(dsn).path[1:]
+
+        engine = create_engine(dsn)
+
+        try:
+            with engine.connect() as connection:
+                connection.execute("SELECT 1")
+        except OperationalError:
+            root_connection.execute("COMMIT")
+            root_connection.execute(f"CREATE DATABASE {database_name}")
+
+        if not engine.table_names():
+            Base.metadata.create_all(engine)
+
+        return engine
+
+
+Session = sessionmaker(bind=init_engine())
 
 
 def add_job_to_db(options, job_id):
@@ -91,11 +120,13 @@ def add_job_to_db(options, job_id):
 
     new_status = JobStatus()
     new_status.job_id = new_job.job_id
-    new_status.job_status = StatusEnum.pending.value
+    new_status.status = StatusEnum.pending.value
 
     session.add(new_job)
     session.add(new_status)
     session.commit()
+
+    session.close()
 
 
 def set_job_status(job_id, status: str):
@@ -103,13 +134,14 @@ def set_job_status(job_id, status: str):
     session = Session()
     new_status = JobStatus()
     new_status.job_id = job_id
-    new_status.job_status = status
+    new_status.status = status
 
     session.add(new_status)
     session.commit()
 
 
 def increment_processed_element_for_job(job_id):
+
     session = Session()
     # Find the job and update
     for j in session.query(Job).filter(Job.job_id == job_id).all():
@@ -119,6 +151,7 @@ def increment_processed_element_for_job(job_id):
 
 
 def set_number_of_files_for_job_id(job_id, files):
+
     session = Session()
 
     # Find the job and update
@@ -130,6 +163,7 @@ def set_number_of_files_for_job_id(job_id, files):
 
 
 def get_job(job_id):
+
     session = Session()
 
     result = (
@@ -139,7 +173,7 @@ def get_job(job_id):
             Job.export_service,
             Job.import_url,
             Job.export_url,
-            JobStatus.job_status,
+            JobStatus.status,
             JobStatus.timestamp,
             Job.file_elements,
             Job.processed_elements,
@@ -174,22 +208,13 @@ def get_job(job_id):
 
 
 def get_unfinished_jobs():
+
     session = Session()
 
     # session.query(Job).filter(Job.statuses.any(JobStatus.job_
 
-    """result = session.query(Job).filter(
-        Job.statuses.any(
-            JobStatus.job_status.in_(
-                [
-                    StatusEnum.importing_successfully.value,
-                    StatusEnum.exporting_successfully.value,
-                ]
-            )
-        )
-    )"""
     result = (
-        session.query(JobStatus.job_id, JobStatus.job_status)
+        session.query(JobStatus.job_id, JobStatus.status)
         .order_by(JobStatus.timestamp.desc())
         .all()
     )

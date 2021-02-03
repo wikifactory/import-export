@@ -51,3 +51,7 @@ The steps required to create a new exporter are similar to those ones, with some
  2. You have to implement the `export_manifest` method, which is in charge of reading all the files associated to the project and upload them to the **export_service**. To facilitate that process, the *Manifest* class offers the *iterate_through_elements* method. As its name suggests, that methods goes through all the files of the downloaded files of the original project, and it allows you to define callbacks to define how to process each file and folder.
  3. Finally, you have to integrate the exporter into the process by adding an entry inside the `exporter_proxy.py` file that points to the newly created exporter.
 
+# Testing
+
+You can run the tests inside the docker environment by using the following command:
+`docker-compose run backend pytest`
