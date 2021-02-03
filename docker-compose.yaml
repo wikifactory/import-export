@@ -31,8 +31,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    env_file:
-      - ./database.env # Used to configure postgres
     command: celery -A app.celery_entrypoint worker --loglevel=info
     environment:
       - POSTGRES_ROOT_DSN=postgresql://postgres:postgres@postgres-db/postgres
