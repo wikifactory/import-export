@@ -1,3 +1,5 @@
+from app.models import Session
+
 import sqlalchemy_utils
 
 
@@ -17,6 +19,11 @@ def db_exists(engine):
     except Exception as e:
         print(e)
         return False
+
+
+def test_database_connection():
+    session = Session()
+    assert session.execute("SELECT CURRENT_DATABASE()").scalar() == "dido_test"
 
 
 """

@@ -1,8 +1,13 @@
+import os
+import sys
+import urllib.parse
+
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, ForeignKey, Integer, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy import create_engine
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
 import datetime
@@ -13,20 +18,6 @@ from app.config import db_name, db_string
 
 
 Base = declarative_base()
-
-Session = None
-
-
-def connect_to_db(db_connection_string):
-
-    try:
-        engine = create_engine(db_connection_string)
-        s = sessionmaker(bind=engine)
-        Base.metadata.create_all(engine)
-
-        return (engine, s)
-    except Exception as e:
-        print(e)
 
 
 # Create the connection with the DB here
@@ -84,6 +75,35 @@ class JobStatus(Base):
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
 
     job = relationship("Job", uselist=False, backref="statuses")
+
+
+def init_engine():
+    root_engine = create_engine(os.environ["POSTGRES_ROOT_DSN"])
+    print("ROOT_DSN", os.environ["POSTGRES_ROOT_DSN"])
+
+    with root_engine.connect() as root_connection:
+        dsn = os.environ[
+            "POSTGRES_TEST_DSN" if "pytest" in sys.modules else "POSTGRES_DSN"
+        ]
+        print("DSN", dsn)
+        database_name = urllib.parse.urlparse(dsn).path[1:]
+
+        engine = create_engine(dsn)
+
+        try:
+            with engine.connect() as connection:
+                connection.execute("SELECT 1")
+        except OperationalError:
+            root_connection.execute("COMMIT")
+            root_connection.execute(f"CREATE DATABASE {database_name}")
+
+        if not engine.table_names():
+            Base.metadata.create_all(engine)
+
+        return engine
+
+
+Session = sessionmaker(bind=init_engine())
 
 
 def add_job_to_db(options, job_id):

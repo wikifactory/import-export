@@ -5,10 +5,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    env_file:
-      - ./database.env 
+    environment:
+      - POSTGRES_ROOT_DSN=postgresql://postgres:postgres@postgres-db/postgres
+      - POSTGRES_DSN=postgresql://postgres:postgres@postgres-db/dido
+      - POSTGRES_TEST_DSN=postgresql://postgres:postgres@postgres-db/dido_test
     ports: 
       - "8000:8000"
+    volumes:
+      - ./app:/app/app
     depends_on: 
       - "redis"
       - "postgres-db"
@@ -38,11 +42,11 @@ services:
 
   postgres-db:
     image: "postgres"
-    env_file:
-      - ./database.env # Used to configure postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     volumes:
       - ./database-data:/var/lib/postgresql/data # To persist content
-      # - ./db_init_scripts/database_script.sql:/docker-entrypoint-initdb.d/start.sql
     ports:
       - "8004:5432"
     command: ["postgres", "-c", "log_statement=all"]

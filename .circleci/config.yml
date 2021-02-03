@@ -12,11 +12,13 @@ jobs:
       - image: circleci/postgres
         command: postgres -c 'fsync=off' -c 'synchronous_commit=off' -c 'full_page_writes=off'
         environment:
-          POSTGRES_USER: wikifactory
-          POSTGRES_PASSWORD: wikipass
-          POSTGRES_DB: dido
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgtres
       - image: circleci/redis
     resource_class: small
+    environment:
+      POSTGRES_ROOT_DSN: postgresql://postgres:postgres@localhost/postgres
+      POSTGRES_TEST_DSN: postgresql://postgres:postgres@localhost/dido_test
 
     working_directory: ~/dido
 
