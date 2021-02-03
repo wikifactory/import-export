@@ -1,8 +1,8 @@
-# Source image
-# FROM tiangolo/uvicorn-gunicorn-fastapi:python3.7
-FROM python:3.7
+FROM python:3.7.4-slim
 
-
+RUN apt-get update \
+    && apt-get install git libmagic1 --no-install-recommends -y \
+    && rm -rf /var/lib/apt/lists/*
 RUN pip install uvicorn
 
 # Set environment varibles
