@@ -22,11 +22,6 @@ services:
     ports:
       - "8002:6379"
 
-  #webclient: 
-  #  build: ./web_importexport
-  #  ports: 
-  #    - 8001:3000
-
   celery-worker:
     build:
       context: .
