@@ -14,10 +14,7 @@ from app.celery_tasks import (
 
 
 router = APIRouter()
-
 OUTPUT_FOLDER = "/tmp/outputs/"
-
-# Stablish connection with the db
 
 
 @router.get("/manifests")
