@@ -3,6 +3,7 @@ import pytest
 import os
 from app.tests.test_tools import clean_folder
 import uuid
+from app.models import add_job_to_db
 
 
 @pytest.fixture
@@ -19,6 +20,19 @@ def prepared_tmp_git_folder():
         "project_name": "icosphere",
         "high_level_elements": 5,
     }
+
+    # Add the job to the db
+    add_job_to_db(
+        {
+            "import_service": "git",
+            "import_token": "",
+            "import_url": test_git_repo,
+            "export_service": "",
+            "export_token": "",
+            "export_url": "",
+        },
+        job_id,
+    )
 
     try:
         if not os.path.exists(temp_folder_path):

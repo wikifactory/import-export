@@ -12,25 +12,12 @@ from app.celery_tasks import (
     handle_get_unfinished_jobs,
 )
 
-from app.config import db_string, db_name
 
 router = APIRouter()
 
 OUTPUT_FOLDER = "/tmp/outputs/"
 
-database_url = db_string + "/" + db_name
-
-
 # Stablish connection with the db
-
-if db_name is None:
-    raise Exception("Error. dbname is None")
-else:
-    (engine, Session) = app.models.connect_to_db(database_url)
-
-    app.models.Session = Session
-    print("Session with the db created")
-    print(Session)
 
 
 @router.get("/manifests")
