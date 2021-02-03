@@ -213,16 +213,6 @@ def get_unfinished_jobs():
 
     # session.query(Job).filter(Job.statuses.any(JobStatus.job_
 
-    """result = session.query(Job).filter(
-        Job.statuses.any(
-            JobStatus.job_status.in_(
-                [
-                    StatusEnum.importing_successfully.value,
-                    StatusEnum.exporting_successfully.value,
-                ]
-            )
-        )
-    )"""
     result = (
         session.query(JobStatus.job_id, JobStatus.status)
         .order_by(JobStatus.timestamp.desc())

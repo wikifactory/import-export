@@ -13,7 +13,10 @@ class MyMiniFactoryImporter(Importer):
         print("Myminifactory: Starting process of URL:")
         print(url)
         # basic_info = self.retrieve_basic_object_info(url, auth_token)
-        pass
+
+        raise NotImplementedError(
+            "The myminifactory importer has not been implemented yet"
+        )
 
     def retrieve_basic_object_info(self, url, auth_token):
 

@@ -303,32 +303,6 @@ class WikifactoryExporter(Exporter):
         )
 
         return result
-        """async with Client(
-            transport=transport, fetch_schema_from_transport=True
-        ) as session:
-
-            # FIX: the projectPath should be the path using the folders,
-            # not the name
-            variables = {
-                "fileInput": {
-                    "filename": file_name,
-                    "spaceId": space_id,
-                    "size": os.path.getsize(element.path),
-                    "projectPath": element.path.replace(project_path, "")[1:],
-                    "gitHash": str(int(round(time.time() * 1000))),
-                    "completed": "false",
-                    "contentType": magic.from_file(element.path, mime=True),
-                }
-            }
-
-            print(variables)
-
-            result = await session.execute(
-                WikifactoryMutations.value.file_mutation, variable_values=variables
-            )
-
-            return result
-        """
 
     def get_project_details(self, space, slug, export_token):
         transport = AIOHTTPTransport(
@@ -383,27 +357,6 @@ class WikifactoryExporter(Exporter):
         print("OPERATION ADD done")
         print(result)
 
-        """
-        async with Client(
-            transport=transport, fetch_schema_from_transport=True
-        ) as session:
-
-            variables = {
-                "operationData": {
-                    "fileId": file_id,
-                    "opType": "ADD",
-                    "path": element.path.replace(project_path, "")[1:],
-                    "projectId": project_id,
-                }
-            }
-
-            result = await session.execute(
-                WikifactoryMutations.operation_mutation.value, variable_values=variables
-            )
-            print("OPERATION ADD done")
-            print(result)
-        """
-
     def upload_file(self, local_path, file_url):
 
         headers = {
@@ -446,21 +399,6 @@ class WikifactoryExporter(Exporter):
             variable_values=variables,
         )
         print(result)
-        """
-        async with Client(
-            transport=transport, fetch_schema_from_transport=True
-        ) as session:
-
-            variables = {
-                "fileInput": {"spaceId": space_id, "id": file_id, "completed": True}
-            }
-
-            result = await session.execute(
-                WikifactoryMutations.complete_file_mutation.value, variable_values=variables
-            )
-            print("Complete file mutation done")
-            print(result)
-        """
 
     def commit_contribution(self, export_token):
 
@@ -486,26 +424,6 @@ class WikifactoryExporter(Exporter):
             variable_values=variables,
         )
         print(result)
-        """
-        async with Client(
-            transport=transport, fetch_schema_from_transport=True
-        ) as session:
-
-            variables = {
-                "commitData": {
-                    "projectId": project_id,
-                    "title": "Test",
-                    "description": "descrp",
-                }
-            }
-
-            result = await session.execute(
-                WikifactoryMutations.commit_contribution_mutation.value,
-                variable_values=variables,
-            )
-            print("Commit mutation done")
-            print(result)
-        """
 
     def on_files_uploaded(self):
         print("------------------")
