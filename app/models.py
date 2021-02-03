@@ -79,13 +79,11 @@ class JobStatus(Base):
 
 def init_engine():
     root_engine = create_engine(os.environ["POSTGRES_ROOT_DSN"])
-    print("ROOT_DSN", os.environ["POSTGRES_ROOT_DSN"])
 
     with root_engine.connect() as root_connection:
         dsn = os.environ[
             "POSTGRES_TEST_DSN" if "pytest" in sys.modules else "POSTGRES_DSN"
         ]
-        print("DSN", dsn)
         database_name = urllib.parse.urlparse(dsn).path[1:]
 
         engine = create_engine(dsn)
