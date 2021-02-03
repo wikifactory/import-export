@@ -195,13 +195,13 @@ def get_job(job_id):
         percentage = round((result[8] * 100.0) / result[7], 2)
 
     job_dict = {
-        "job_id": result[0],
-        "import_service": result[1],
-        "export_service": result[2],
-        "import_url": result[3],
-        "export_url": result[4],
+        "job_id": str(result[0]),
+        # "import_service": result[1],
+        # "export_service": result[2],
+        # "import_url": result[3],
+        # "export_url": result[4],
         "job_status": result[5],
-        "timestamp": result[6],
+        # "timestamp": result[6],
         "job_progress": percentage,
     }
     return job_dict
