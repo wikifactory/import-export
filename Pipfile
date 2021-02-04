@@ -17,7 +17,6 @@ aioresponses = "*"
 boto3 = "*"
 requests = "*"
 python-magic = "*"
-gql = "*"
 celery = "*"
 redis = "*"
 dropbox = "*"
@@ -35,3 +34,6 @@ allow_prereleases = true
 
 [dev-packages]
 black = "==20.8b1"
+
+[packages.gql]
+extras = [ "all",]
