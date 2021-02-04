@@ -1,8 +1,8 @@
 from celery import Celery
 
 
-BROKER_URL = "redis://redis:6379/0"
-BACKEND_URL = "redis://redis:6379/0"
+BROKER_URL = "redis://redis_dido:6379/0"
+BACKEND_URL = "redis://redis_dido:6379/0"
 
 
 celery_app = Celery(
