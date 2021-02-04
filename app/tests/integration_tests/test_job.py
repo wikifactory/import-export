@@ -4,6 +4,7 @@ from app.tests.conftest import WIKIFACTORY_TOKEN, WIKIFACTORY_TEST_PROJECT_URL
 from app.controller.importer_proxy import ImporterProxy
 from app.controller.exporter_proxy import ExporterProxy
 
+import pytest
 import uuid
 
 test_url = "http://testurl.com"
@@ -118,6 +119,7 @@ def test_import_from_git_to_wikifactory_fail():
     assert result is None
 
 
+@pytest.mark.needs_alpha
 def test_import_from_git_to_wikifactory_success():
 
     (job_id, job) = create_job(
