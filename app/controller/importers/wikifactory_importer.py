@@ -5,7 +5,7 @@ import os
 from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
 from gql import Client, gql
-from gql.transport.aiohttp import AIOHTTPTransport
+from gql.transport.requests import RequestsHTTPTransport
 import requests
 import zipfile
 from app.models import StatusEnum
@@ -113,7 +113,7 @@ class WikifactoryImporter(Importer):
         project_space = url_components[len(url_components) - 2]
         project_slug = url_components[len(url_components) - 1]
 
-        transport = AIOHTTPTransport(
+        transport = RequestsHTTPTransport(
             url=endpoint_url,
             headers={
                 "CLIENT-USERNAME": client_username,

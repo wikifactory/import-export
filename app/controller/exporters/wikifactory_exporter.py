@@ -1,7 +1,7 @@
 from app.model.exporter import Exporter
 from app.config import wikifactory_connection_url
 from gql import Client, gql
-from gql.transport.aiohttp import AIOHTTPTransport
+from gql.transport.requests import RequestsHTTPTransport
 
 from app.model.exporter import NotValidManifest
 from app.models import StatusEnum
@@ -270,7 +270,7 @@ class WikifactoryExporter(Exporter):
 
     def process_element(self, element, file_name, project_path, export_token):
 
-        transport = AIOHTTPTransport(
+        transport = RequestsHTTPTransport(
             url=endpoint_url,
             headers={
                 "CLIENT-USERNAME": self.client_username,
@@ -301,7 +301,7 @@ class WikifactoryExporter(Exporter):
         return result
 
     def get_project_details(self, space, slug, export_token):
-        transport = AIOHTTPTransport(
+        transport = RequestsHTTPTransport(
             url=endpoint_url,
             headers={
                 "CLIENT-USERNAME": self.client_username,
@@ -328,7 +328,7 @@ class WikifactoryExporter(Exporter):
     def perform_mutation_operation(
         self, element, file_id, project_path, export_token
     ):
-        transport = AIOHTTPTransport(
+        transport = RequestsHTTPTransport(
             url=endpoint_url,
             headers={
                 "CLIENT-USERNAME": self.client_username,
@@ -374,7 +374,7 @@ class WikifactoryExporter(Exporter):
                 )
 
     def complete_file(self, space_id, file_id, export_token):
-        transport = AIOHTTPTransport(
+        transport = RequestsHTTPTransport(
             url=endpoint_url,
             headers={
                 "CLIENT-USERNAME": self.client_username,
@@ -399,7 +399,7 @@ class WikifactoryExporter(Exporter):
 
     def commit_contribution(self, export_token):
 
-        transport = AIOHTTPTransport(
+        transport = RequestsHTTPTransport(
             url=endpoint_url,
             headers={
                 "CLIENT-USERNAME": self.client_username,

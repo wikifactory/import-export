@@ -6,7 +6,6 @@ name = "pypi"
 [packages]
 uvicorn = "*"
 fastapi = "*"
-aiohttp = "*"
 typing-extensions = "*"
 PyGithub = "*"
 GitPython = "*"
@@ -25,6 +24,7 @@ psycopg2-binary = "*"
 pytest = "*"
 flake8 = "*"
 pre-commit = "*"
+gql = "*"
 
 [requires]
 python_version = "3.7"
