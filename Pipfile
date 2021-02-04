@@ -36,4 +36,4 @@ allow_prereleases = true
 black = "==20.8b1"
 
 [packages.gql]
-extras = [ "all",]
+extras = [ "aiohttp",]
