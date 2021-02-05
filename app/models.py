@@ -202,12 +202,7 @@ def get_job(job_id):
     result = (
         session.query(
             Job.job_id,
-            Job.import_service,
-            Job.export_service,
-            Job.import_url,
-            Job.export_url,
             JobStatus.status,
-            JobStatus.timestamp,
             Job.file_elements,
             Job.processed_elements,
         )
@@ -222,19 +217,14 @@ def get_job(job_id):
 
     result = result[0]
 
-    if result[7] == 0:
+    if result[3] == 0:
         percentage = 0.0
     else:
-        percentage = round((result[8] * 100.0) / result[7], 2)
+        percentage = round((result[4] * 100.0) / result[3], 2)
 
     job_dict = {
         "job_id": str(result[0]),
-        # "import_service": result[1],
-        # "export_service": result[2],
-        # "import_url": result[3],
-        # "export_url": result[4],
-        "job_status": result[5],
-        # "timestamp": result[6],
+        "job_status": result[1],
         "job_progress": percentage,
         "overall_process": get_job_overall_progress(job_id),
     }
