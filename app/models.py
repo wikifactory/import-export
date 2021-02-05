@@ -162,6 +162,39 @@ def set_number_of_files_for_job_id(job_id, files):
     session.commit()
 
 
+"""
+    The overall progress of the process is calculated taking into
+    account the different steps through which the job has passed.
+"""
+
+
+def get_job_overall_progress(job_id):
+
+    statuses_to_watch = [
+        StatusEnum.pending.value,
+        StatusEnum.importing.value,
+        StatusEnum.importing_successfully.value,
+        StatusEnum.exporting.value,
+        StatusEnum.exporting_successfully.value,
+    ]
+    session = Session()
+
+    result = (
+        session.query(Job.job_id, JobStatus.status)
+        .filter(Job.job_id == JobStatus.job_id, Job.job_id == job_id)
+        .order_by(JobStatus.timestamp)
+        .all()
+    )
+
+    acum = 0.0
+
+    for status_row in result:
+        if status_row[1] in statuses_to_watch:
+            acum += 1
+
+    return acum * (100.0 / len(statuses_to_watch))
+
+
 def get_job(job_id):
 
     session = Session()
@@ -203,6 +236,7 @@ def get_job(job_id):
         "job_status": result[5],
         # "timestamp": result[6],
         "job_progress": percentage,
+        "overall_process": get_job_overall_progress(job_id),
     }
     return job_dict
 

@@ -145,3 +145,109 @@ def test_import_from_git_to_wikifactory_success():
     result = export_proxy.export_manifest(manifest, job)
 
     assert result is not None
+
+
+def test_job_overall_status_not_completed():
+
+    session = Session()
+
+    (job_id, job) = create_job(
+        import_url="testurl",
+        import_service="googledrive",
+        export_url="testurl",
+        export_service="googledrive",
+        export_token="testtoken",
+    )
+
+    # Add the job to the db
+    add_job_to_db(job, job_id)
+
+    # Add to the db the following statuses
+
+    # importing
+    importing_status = JobStatus()
+    importing_status.job_id = job_id
+    importing_status.status = StatusEnum.importing.value
+    session.add(importing_status)
+
+    # importing_succesfully
+    importing_succesfully_status = JobStatus()
+    importing_succesfully_status.job_id = job_id
+    importing_succesfully_status.status = (
+        StatusEnum.importing_successfully.value
+    )
+    session.add(importing_succesfully_status)
+    session.commit()
+
+    # The created job should appear in the db
+    retrieved_job = get_job(job_id)
+
+    assert retrieved_job["job_id"] == job_id
+
+    # Check the last status
+    assert (
+        retrieved_job["job_status"] == StatusEnum.importing_successfully.value
+    )
+
+    assert retrieved_job["overall_process"] == pytest.approx(3 / 5 * 100)
+
+
+def test_job_overall_status_complete_job():
+
+    session = Session()
+
+    (job_id, job) = create_job(
+        import_url="testurl",
+        import_service="googledrive",
+        export_url="testurl",
+        export_service="googledrive",
+        export_token="testtoken",
+    )
+
+    # Add the job to the db
+    add_job_to_db(job, job_id)
+
+    # Add to the db the following statuses
+
+    # importing
+    importing_status = JobStatus()
+    importing_status.job_id = job_id
+    importing_status.status = StatusEnum.importing.value
+    session.add(importing_status)
+
+    # importing_succesfully
+    importing_succesfully_status = JobStatus()
+    importing_succesfully_status.job_id = job_id
+    importing_succesfully_status.status = (
+        StatusEnum.importing_successfully.value
+    )
+    session.add(importing_succesfully_status)
+
+    # exporting
+    exporting_status = JobStatus()
+    exporting_status.job_id = job_id
+    exporting_status.status = StatusEnum.exporting.value
+    session.add(exporting_status)
+
+    # exporting_succesfully
+    exporting_succesfully_status = JobStatus()
+    exporting_succesfully_status.job_id = job_id
+    exporting_succesfully_status.status = (
+        StatusEnum.exporting_successfully.value
+    )
+    session.add(exporting_succesfully_status)
+
+    session.commit()
+
+    # The created job should appear in the db
+    retrieved_job = get_job(job_id)
+    print(job_id)
+
+    assert retrieved_job["job_id"] == job_id
+
+    # Check the last status
+    assert (
+        retrieved_job["job_status"] == StatusEnum.exporting_successfully.value
+    )
+
+    assert retrieved_job["overall_process"] == pytest.approx(100)
