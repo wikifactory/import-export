@@ -1,4 +1,3 @@
-import os
 from app.model.importer import Importer
 from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
@@ -17,16 +16,13 @@ class DropboxImporter(Importer):
         self.elements_list = []
         self.dropbox_path_for_element = {}
 
+        # Set the path for the project before the prepare_folder method,
+        # So we can ensure that the job folder is empty
+
+        self.path = temp_folder_path + self.job_id
+
         # Check if the tmp folder exists
-        try:
-            if not os.path.exists(temp_folder_path):
-                print("Creating tmp folder")
-                os.makedirs(temp_folder_path)
-
-            self.path = temp_folder_path + self.job_id
-
-        except Exception as e:
-            print(e)
+        self.prepare_folder(temp_folder_path, self.path)
 
     def process_url(self, url, auth_token):
 

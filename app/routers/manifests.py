@@ -10,6 +10,8 @@ from app.celery_tasks import (
     handle_get_job,
     generate_job_id,
     handle_get_unfinished_jobs,
+    handle_post_retry,
+    handle_post_cancel,
 )
 
 
@@ -74,3 +76,41 @@ def get_job(job_id):
 @router.get("/unfinished_jobs")
 def get_unfinished_jobs():
     return handle_get_unfinished_jobs()
+
+
+@router.post("/retry")
+def retry(body: dict):
+
+    if "job_id" in body:
+        handle_post_retry.delay(body, body["job_id"])
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "Retry process started",
+                "job_id": body["job_id"],
+            },
+        )
+    else:
+        return JSONResponse(
+            status_code=422,
+            content={"error": "job_id not specified"},
+        )
+
+
+@router.post("/cancel")
+def cancel(body: dict):
+    if "job_id" in body:
+        result = handle_post_cancel()
+
+        if "error" in result:
+            return JSONResponse(
+                status_code=404,
+                content=result,
+            )
+        else:
+            return JSONResponse(status_code=200, content=result)
+    else:
+        return JSONResponse(
+            status_code=422,
+            content={"error": "job_id not specified"},
+        )

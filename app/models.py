@@ -36,6 +36,8 @@ class StatusEnum(enum.Enum):
     finished_successfully = "finished_successfully"
     cancelled = "cancelled"
 
+    retry = "retry"
+
 
 status_list = []
 
@@ -259,3 +261,37 @@ def get_unfinished_jobs():
             unfinished.append(key_job)
 
     return {"unfinished_jobs": unfinished}
+
+
+def cancel_job(job_id):
+    session = Session()
+
+    # Check if the job exists
+
+    result = session.query(Job).filter(Job.job_id == job_id).limit(1).all()
+
+    if len(result) == 0:
+        # We didn't find the job
+        return {"error": "Job with id {} not found".format(job_id)}
+
+    # Otherwise, we did find the job, so we can cancel it
+
+    set_job_status(job_id, StatusEnum.cancelled.value)
+
+    return {"msg": "Job with id {} cancelled".format(job_id)}
+
+
+def set_retry_job(job_id):
+    session = Session()
+
+    # Check if the job exists
+    result = session.query(Job).filter(Job.job_id == job_id).limit(1).all()
+
+    if len(result) == 0:
+        # We didn't find the job
+        return {"error": "Job with id {} not found".format(job_id)}
+
+    # Otherwise, we did find the job, set the status to retry
+    set_job_status(job_id, StatusEnum.retry.value)
+
+    return {"msg": "Status of job {} changed to retry".format(job_id)}

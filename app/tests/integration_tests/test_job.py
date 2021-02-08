@@ -1,5 +1,6 @@
-from app.models import add_job_to_db, get_job
+from app.models import add_job_to_db, get_job, cancel_job
 from app.models import Session, Job, JobStatus, StatusEnum
+from app.celery_tasks import retry_job, export_job
 from app.tests.conftest import WIKIFACTORY_TOKEN, WIKIFACTORY_TEST_PROJECT_URL
 from app.controller.importer_proxy import ImporterProxy
 from app.controller.exporter_proxy import ExporterProxy
@@ -251,3 +252,62 @@ def test_job_overall_status_complete_job():
     )
 
     assert retrieved_job["overall_process"] == pytest.approx(100)
+
+
+def test_cancel_job_fail():
+
+    # If we try to
+    fake_job_id = "99999999-9999-9999-9999-999999999999"
+
+    cancel_result = cancel_job(fake_job_id)
+
+    assert "error" in cancel_result
+
+
+def test_cancel_job_success():
+
+    (job_id, job) = create_job(
+        import_url="testurl",
+        import_service="googledrive",
+        export_url="testurl",
+        export_service="googledrive",
+        export_token="testtoken",
+    )
+
+    # Add the job to the db
+    add_job_to_db(job, job_id)
+
+    # The job is on the database and has a "pending" status
+
+    # If we now cancel the job...
+    cancel_result = cancel_job(job_id)
+
+    assert "err" not in cancel_result
+    assert "msg" in cancel_result
+
+    retrieved_job = get_job(job_id)
+
+    assert retrieved_job["job_status"] == StatusEnum.cancelled.value
+
+
+def test_retry_job_fail():
+
+    # Create a job that cannot be imported
+    (job_id, job) = create_job(
+        import_url="testurl",
+        import_service="git",
+        export_url="testurl",
+        export_service="googledrive",
+        export_token="testtoken",
+    )
+
+    # Add the job to the db
+    add_job_to_db(job, job_id)
+
+    result = export_job(job, job_id)
+
+    print(result)
+
+    retry_result = retry_job(job, job_id)
+
+    print(retry_result)
