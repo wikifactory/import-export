@@ -281,7 +281,7 @@ def test_export_error_status_change():
     # Additionally, since this is the first try of importing it,
     # we should be able to see in the db the auth required status
     auth_result = (
-        session.query(JobStatus.job_id, JobStatus.status)
+        session.query(JobStatus)
         .filter(JobStatus.job_id == job_id)
         .filter(
             JobStatus.status.in_(
@@ -294,7 +294,7 @@ def test_export_error_status_change():
     assert len(auth_result) == 1  # The auth required status is in the db
 
     unreachable_result = (
-        session.query(JobStatus.job_id, JobStatus.status)
+        session.query(JobStatus)
         .filter(JobStatus.job_id == job_id)
         .filter(
             JobStatus.status.in_(
@@ -312,7 +312,7 @@ def test_export_error_status_change():
 
     # Check if we still have only auth required status
     auth_result = (
-        session.query(JobStatus.job_id, JobStatus.status)
+        session.query(JobStatus)
         .filter(JobStatus.job_id == job_id)
         .filter(
             JobStatus.status.in_(
@@ -326,7 +326,7 @@ def test_export_error_status_change():
 
     # Finally, test if we have the unreachabler result in the db
     unreachable_result = (
-        session.query(JobStatus.job_id, JobStatus.status)
+        session.query(JobStatus)
         .filter(JobStatus.job_id == job_id)
         .filter(
             JobStatus.status.in_(

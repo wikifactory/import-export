@@ -53,7 +53,7 @@ class Importer:
 
         try:
 
-            session.query(JobStatus.job_id, JobStatus.status).filter(
+            session.query(JobStatus).filter(
                 JobStatus.job_id == self.job_id
             ).filter(
                 JobStatus.status.in_(
