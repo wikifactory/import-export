@@ -76,7 +76,8 @@ class GitImporter(Importer):
             return manifest
 
         except Exception as e:
-            self.set_status(StatusEnum.importing_error_data_unreachable.value)
+            # self.set_status(StatusEnum.importing_error_data_unreachable.value)
+            self.on_import_error_found(e)
             print(e)
             return None
 

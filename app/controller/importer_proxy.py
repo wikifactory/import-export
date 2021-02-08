@@ -85,7 +85,7 @@ class ImporterProxy:
 
         except Exception as e:
             print(e)
-            return {"error": "Manifest is None"}
+            return None
 
     def handle_thingiverse(self, url, auth_token, job_id):
         imp = ThingiverseImporter(job_id)
