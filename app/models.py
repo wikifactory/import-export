@@ -182,17 +182,16 @@ def get_job_overall_progress(job_id):
     result = (
         session.query(Job.job_id, JobStatus.status)
         .filter(Job.job_id == JobStatus.job_id, Job.job_id == job_id)
+        .filter(
+            Job.job_id == JobStatus.job_id,
+            Job.job_id == job_id,
+            JobStatus.status.in_(statuses_to_watch),
+        )
         .order_by(JobStatus.timestamp)
         .all()
     )
 
-    acum = 0.0
-
-    for status_row in result:
-        if status_row[1] in statuses_to_watch:
-            acum += 1
-
-    return acum * (100.0 / len(statuses_to_watch))
+    return len(result) * (100.0 / len(statuses_to_watch))
 
 
 def get_job(job_id):
