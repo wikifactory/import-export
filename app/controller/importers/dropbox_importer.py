@@ -47,8 +47,6 @@ class DropboxImporter(Importer):
         # Finally, set the status
         self.set_status(StatusEnum.importing_successfully.value)
 
-        print(self.job_id)
-
         return manifest
 
     def process_folder_recursively(self, manifest, dropbox_handler, url):

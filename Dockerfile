@@ -20,8 +20,6 @@ RUN pip install pipenv
 COPY Pipfile Pipfile.lock /app/
 RUN pipenv install --system --dev
 
-RUN pip uninstall -y gql
-RUN pip install --pre gql[aiohttp]
 
 COPY ./app /app/app
 

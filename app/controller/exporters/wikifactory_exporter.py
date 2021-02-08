@@ -1,7 +1,7 @@
 from app.model.exporter import Exporter
 from app.config import wikifactory_connection_url
 from gql import Client, gql
-from gql.transport.aiohttp import AIOHTTPTransport
+from gql.transport.requests import RequestsHTTPTransport
 
 from app.model.exporter import NotValidManifest
 from app.models import StatusEnum
@@ -180,7 +180,7 @@ class WikifactoryExporter(Exporter):
         details = self.get_project_details(space, slug, export_token)
 
         if details is None:
-            return {}
+            return None
 
         self.project_id = details[0]
         self.space_id = details[1]
@@ -215,10 +215,9 @@ class WikifactoryExporter(Exporter):
 
         # Check that we got the right results
         if len(file_result["file"]["userErrors"]) > 0:
-            print("Errors")
 
-            for i in len(file_result["file"]["userErrors"]):
-                print(file_result["file"]["userErrors"])
+            for err in file_result["file"]["userErrors"]:
+                print(err)
             return
 
         wikifactory_file_id = file_result["file"]["file"]["id"]
@@ -257,7 +256,7 @@ class WikifactoryExporter(Exporter):
                 increment_processed_element_for_job(self.job_id)
 
         else:
-            print("WARNING: For some reason, we don't ")
+            print("WARNING: For some reason, the file id is None ")
             pass
 
     def on_folder_cb(self, folder_element):
@@ -266,13 +265,12 @@ class WikifactoryExporter(Exporter):
     def on_finished_cb(self):
 
         print("COMMIT")
-        print(self.export_token)
         # In order to finish, I need to perform the commit
         self.commit_contribution(self.export_token)
 
     def process_element(self, element, file_name, project_path, export_token):
 
-        transport = AIOHTTPTransport(
+        transport = RequestsHTTPTransport(
             url=endpoint_url,
             headers={
                 "CLIENT-USERNAME": self.client_username,
@@ -296,8 +294,6 @@ class WikifactoryExporter(Exporter):
             }
         }
 
-        print(variables)
-
         result = session.execute(
             WikifactoryMutations.file_mutation.value, variable_values=variables
         )
@@ -305,7 +301,7 @@ class WikifactoryExporter(Exporter):
         return result
 
     def get_project_details(self, space, slug, export_token):
-        transport = AIOHTTPTransport(
+        transport = RequestsHTTPTransport(
             url=endpoint_url,
             headers={
                 "CLIENT-USERNAME": self.client_username,
@@ -332,7 +328,7 @@ class WikifactoryExporter(Exporter):
     def perform_mutation_operation(
         self, element, file_id, project_path, export_token
     ):
-        transport = AIOHTTPTransport(
+        transport = RequestsHTTPTransport(
             url=endpoint_url,
             headers={
                 "CLIENT-USERNAME": self.client_username,
@@ -350,12 +346,11 @@ class WikifactoryExporter(Exporter):
             }
         }
 
-        result = session.execute(
+        session.execute(
             WikifactoryMutations.operation_mutation.value,
             variable_values=variables,
         )
         print("OPERATION ADD done")
-        print(result)
 
     def upload_file(self, local_path, file_url):
 
@@ -374,10 +369,12 @@ class WikifactoryExporter(Exporter):
                 )
                 print(response.content)
             else:
-                print("UPLOADED TO S3")
+                print(
+                    "File {} uploaded to s3".format(local_path.split("/")[-1])
+                )
 
     def complete_file(self, space_id, file_id, export_token):
-        transport = AIOHTTPTransport(
+        transport = RequestsHTTPTransport(
             url=endpoint_url,
             headers={
                 "CLIENT-USERNAME": self.client_username,
@@ -402,7 +399,7 @@ class WikifactoryExporter(Exporter):
 
     def commit_contribution(self, export_token):
 
-        transport = AIOHTTPTransport(
+        transport = RequestsHTTPTransport(
             url=endpoint_url,
             headers={
                 "CLIENT-USERNAME": self.client_username,

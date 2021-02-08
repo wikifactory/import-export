@@ -6,3 +6,8 @@ exclude = '''
     \.git
 )/
 '''
+
+[tool.pytest.ini_options]
+markers = [
+    "needs_alpha: Tests that need alpha project deployed and working",
+]

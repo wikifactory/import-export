@@ -9,20 +9,25 @@ services:
       - POSTGRES_ROOT_DSN=postgresql://postgres:postgres@postgres-db/postgres
       - POSTGRES_DSN=postgresql://postgres:postgres@postgres-db/dido
       - POSTGRES_TEST_DSN=postgresql://postgres:postgres@postgres-db/dido_test
-      - BROKER_URL=redis://redis:6379/0
-
+      - WIKIFACTORY_CONNECTION_URL=http://frontend:8080/api/graphql
+      - WIKIFACTORY_TEST_USER_NAME=testuser3
+      - BROKER_URL=redis://redis_dido:6379/0
     ports: 
       - "8000:8000"
     volumes:
       - ./app:/app/app
     depends_on: 
-      - "redis"
+      - "redis_dido"
       - "postgres-db"
+    networks:
+      - alpha_wikifactory-development
 
-  redis: 
+  redis_dido: 
     image: "redis:alpine"
     ports:
       - "8002:6379"
+    networks:
+      - alpha_wikifactory-development
 
   celery-worker:
     build:
@@ -33,13 +38,17 @@ services:
       - POSTGRES_ROOT_DSN=postgresql://postgres:postgres@postgres-db/postgres
       - POSTGRES_DSN=postgresql://postgres:postgres@postgres-db/dido
       - POSTGRES_TEST_DSN=postgresql://postgres:postgres@postgres-db/dido_test
-      - BROKER_URL=redis://redis:6379/0
+      - WIKIFACTORY_CONNECTION_URL=http://frontend:8080/api/graphql
+      - WIKIFACTORY_TEST_USER_NAME=testuser3
+      - BROKER_URL=redis://redis_dido:6379/0
 
     depends_on: 
-      - "redis"
+      - "redis_dido"
       - "postgres-db"
     ports:
       - "8003:8000"
+    networks:
+      - alpha_wikifactory-development
 
   postgres-db:
     image: "postgres"
@@ -51,6 +60,12 @@ services:
     ports:
       - "8004:5432"
     command: ["postgres", "-c", "log_statement=all"]
+    networks:
+      - alpha_wikifactory-development
+
+networks:
+  alpha_wikifactory-development:
+    external: true
 
 
 volumes:
