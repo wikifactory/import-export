@@ -33,23 +33,23 @@ class DropboxImporter(Importer):
         print("Dropbox: Starting process of URL: {}".format(url))
         # Create the manifest instance
 
-        dropbox_handler = dropbox.Dropbox(auth_token)
+        try:
+            dropbox_handler = dropbox.Dropbox(auth_token)
 
-        print(dropbox_handler.users_get_current_account())
+            manifest = Manifest()
 
-        manifest = Manifest()
+            self.process_folder_recursively(manifest, dropbox_handler, url)
+            self.create_folder_structure_sync(self.elements_list)
 
-        self.process_folder_recursively(manifest, dropbox_handler, url)
-        self.create_folder_structure_sync(self.elements_list)
+            self.download_all_files(dropbox_handler, self.elements_list)
 
-        self.download_all_files(dropbox_handler, self.elements_list)
+            # Finally, set the status
+            self.set_status(StatusEnum.importing_successfully.value)
 
-        # Finally, set the status
-        self.set_status(StatusEnum.importing_successfully.value)
-
-        print(self.job_id)
-
-        return manifest
+            return manifest
+        except Exception as e:
+            self.on_import_error_found(e)
+            return None
 
     def process_folder_recursively(self, manifest, dropbox_handler, url):
 

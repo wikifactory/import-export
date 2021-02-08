@@ -90,22 +90,28 @@ class WikifactoryImporter(Importer):
     def process_url(self, import_url, import_token):
         print("WIKIFACTORY: Starting process")
 
-        manifest = Manifest()
+        try:
 
-        project_info = self.get_project_details(import_url, import_token)
+            project_info = self.get_project_details(import_url, import_token)
 
-        # INFO: Maybe use the name or other field here?
-        manifest.project_name = project_info["slug"]
+            manifest = Manifest()
+            # INFO: Maybe use the name or other field here?
+            manifest.project_name = project_info["slug"]
 
-        # Download the files
-        self.download_files_from_zip_url(project_info["zip_archive_url"])
+            # Download the files
+            self.download_files_from_zip_url(project_info["zip_archive_url"])
 
-        # Populate the manifest from the directory
-        self.populate_manifest_from_folder_path(manifest, self.path)
+            # Populate the manifest from the directory
+            self.populate_manifest_from_folder_path(manifest, self.path)
 
-        # Finally, set the status
-        self.set_status(StatusEnum.importing_successfully.value)
-        return manifest
+            # Finally, set the status
+            self.set_status(StatusEnum.importing_successfully.value)
+            return manifest
+
+        except Exception as e:
+            print(e)
+            self.on_import_error_found(e)
+            return None
 
     def get_project_details(self, import_url, import_token):
 
