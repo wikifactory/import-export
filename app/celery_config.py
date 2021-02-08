@@ -1,10 +1,7 @@
+import os
 from celery import Celery
 
-
-BROKER_URL = "redis://redis_dido:6379/0"
-BACKEND_URL = "redis://redis_dido:6379/0"
-
-
 celery_app = Celery(
-    "import_export_tasks", backend=BACKEND_URL, broker=BROKER_URL
+    "import_export_tasks",
+    broker=os.environ["BROKER_URL"],
 )

@@ -11,6 +11,7 @@ services:
       - POSTGRES_TEST_DSN=postgresql://postgres:postgres@postgres-db/dido_test
       - WIKIFACTORY_CONNECTION_URL=http://frontend:8080/api/graphql
       - WIKIFACTORY_TEST_USER_NAME=testuser3
+      - BROKER_URL=redis://redis-dido:6379/0
     ports: 
       - "8000:8000"
     volumes:
@@ -39,6 +40,8 @@ services:
       - POSTGRES_TEST_DSN=postgresql://postgres:postgres@postgres-db/dido_test
       - WIKIFACTORY_CONNECTION_URL=http://frontend:8080/api/graphql
       - WIKIFACTORY_TEST_USER_NAME=testuser3
+      - BROKER_URL=redis://redis-dido:6379/0
+
     depends_on: 
       - "redis_dido"
       - "postgres-db"
