@@ -1,6 +1,6 @@
 from app.models import add_job_to_db, get_job, cancel_job
 from app.models import Session, Job, JobStatus, StatusEnum
-from app.celery_tasks import retry_job, export_job
+from app.job_methods import retry_job, export_job
 from app.tests.conftest import WIKIFACTORY_TOKEN, WIKIFACTORY_TEST_PROJECT_URL
 from app.controller.importer_proxy import ImporterProxy
 from app.controller.exporter_proxy import ExporterProxy
