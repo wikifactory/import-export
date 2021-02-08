@@ -268,9 +268,9 @@ def cancel_job(job_id):
 
     # Check if the job exists
 
-    result = session.query(Job).filter(Job.job_id == job_id).limit(1).all()
+    result = session.query(Job).get(job_id)
 
-    if len(result) == 0:
+    if result is None:
         # We didn't find the job
         return {"error": "Job with id {} not found".format(job_id)}
 
@@ -285,9 +285,9 @@ def set_retry_job(job_id):
     session = Session()
 
     # Check if the job exists
-    result = session.query(Job).filter(Job.job_id == job_id).limit(1).all()
+    result = session.query(Job).get(job_id)
 
-    if len(result) == 0:
+    if result is None:
         # We didn't find the job
         return {"error": "Job with id {} not found".format(job_id)}
 
