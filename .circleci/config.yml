@@ -42,7 +42,6 @@ jobs:
           name: Build using docker-compose
           command: |
             docker-compose build
-            docker-compose pull
 
       - run:
           name: flake8
