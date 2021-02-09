@@ -11,6 +11,14 @@ temp_folder_path = "/tmp/gitimports/"
 ignored_folders = [".git"]
 
 
+class IgnoreCredentialsCallbacks(pygit2.RemoteCallbacks):
+    def __init__(self, credentials=None, certificate=None):
+        super(self.__class__, self).__init__(credentials, certificate)
+
+    def credentials(self):
+        return ""
+
+
 class GitImporter(Importer):
     def __init__(self, job_id):
 
@@ -48,7 +56,9 @@ class GitImporter(Importer):
 
         try:
 
-            pygit2.clone_repository(url.replace("https", "http"), self.path)
+            pygit2.clone_repository(
+                url, self.path, callbacks=IgnoreCredentialsCallbacks()
+            )
             print("Repo cloned")
 
             # Create the manifest instance
