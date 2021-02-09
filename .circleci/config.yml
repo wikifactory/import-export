@@ -55,8 +55,7 @@ jobs:
           name: unit-tests
           command: |
             mkdir test-results
-            docker-compose run backend ls -lha
-            docker-compose run backend pytest -k "not needs_alpha" --junitxml=test-results/junit.xml
+            pipenv run pytest -k "not needs_alpha" --junitxml=test-results/junit.xml
           when: always  # run even if there is a flake8 error
 
       - store_test_results:
