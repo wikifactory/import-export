@@ -45,6 +45,7 @@ jobs:
           command: |
             docker network create alpha_wikifactory-development
             docker-compose build
+            docker-compose pull
 
       - run:
           name: flake8
