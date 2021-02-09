@@ -18,6 +18,9 @@ class IgnoreCredentialsCallbacks(pygit2.RemoteCallbacks):
     def credentials(self, url, username_from_url, allowed_types):
         return None
 
+    def certificate_check(self, certificate, valid, host):
+        return True
+
 
 class GitImporter(Importer):
     def __init__(self, job_id):
