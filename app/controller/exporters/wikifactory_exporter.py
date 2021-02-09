@@ -11,9 +11,9 @@ import requests
 import magic
 
 import os
+import pygit2
 
 import base64
-import hashlib
 
 from enum import Enum
 
@@ -268,8 +268,9 @@ class WikifactoryExporter(Exporter):
         # In order to finish, I need to perform the commit
         self.commit_contribution(self.export_token)
 
-    def process_element(self, element, file_name, project_path, export_token):
-
+    def wikifactory_api_request(
+        self, wikifactory_query: str, export_token: str, variables: object
+    ):
         transport = RequestsHTTPTransport(
             url=endpoint_url,
             headers={
@@ -277,10 +278,14 @@ class WikifactoryExporter(Exporter):
                 "Cookie": "session={}".format(export_token),
             },
         )
+        session = Client(
+            transport=transport, fetch_schema_from_transport=False
+        )
 
-        session = Client(transport=transport, fetch_schema_from_transport=True)
+        result = session.execute(wikifactory_query, variable_values=variables)
+        return result
 
-        # TODO: Calculate the git hash of the file at element.path
+    def process_element(self, element, file_name, project_path, export_token):
 
         variables = {
             "fileInput": {
@@ -294,25 +299,18 @@ class WikifactoryExporter(Exporter):
             }
         }
 
-        result = session.execute(
-            WikifactoryMutations.file_mutation.value, variable_values=variables
+        return self.wikifactory_api_request(
+            WikifactoryMutations.file_mutation.value,
+            export_token,
+            variables,
         )
-
-        return result
 
     def get_project_details(self, space, slug, export_token):
-        transport = RequestsHTTPTransport(
-            url=endpoint_url,
-            headers={
-                "CLIENT-USERNAME": self.client_username,
-                "Cookie": "session={}".format(export_token),
-            },
-        )
-        session = Client(transport=transport, fetch_schema_from_transport=True)
+
         variables = {"space": space, "slug": slug}
 
-        result = session.execute(
-            WikifactoryMutations.project_query.value, variable_values=variables
+        result = self.wikifactory_api_request(
+            WikifactoryMutations.project_query.value, export_token, variables
         )
 
         if "userErrors" not in result:
@@ -328,15 +326,7 @@ class WikifactoryExporter(Exporter):
     def perform_mutation_operation(
         self, element, file_id, project_path, export_token
     ):
-        transport = RequestsHTTPTransport(
-            url=endpoint_url,
-            headers={
-                "CLIENT-USERNAME": self.client_username,
-                "Cookie": "session={}".format(export_token),
-            },
-        )
 
-        session = Client(transport=transport, fetch_schema_from_transport=True)
         variables = {
             "operationData": {
                 "fileId": file_id,
@@ -346,11 +336,11 @@ class WikifactoryExporter(Exporter):
             }
         }
 
-        session.execute(
+        self.wikifactory_api_request(
             WikifactoryMutations.operation_mutation.value,
-            variable_values=variables,
+            export_token,
+            variables,
         )
-        print("OPERATION ADD done")
 
     def upload_file(self, local_path, file_url):
 
@@ -374,15 +364,7 @@ class WikifactoryExporter(Exporter):
                 )
 
     def complete_file(self, space_id, file_id, export_token):
-        transport = RequestsHTTPTransport(
-            url=endpoint_url,
-            headers={
-                "CLIENT-USERNAME": self.client_username,
-                "Cookie": "session={}".format(export_token),
-            },
-        )
 
-        session = Client(transport=transport, fetch_schema_from_transport=True)
         variables = {
             "fileInput": {
                 "spaceId": space_id,
@@ -390,24 +372,16 @@ class WikifactoryExporter(Exporter):
                 "completed": True,
             }
         }
-
-        result = session.execute(
+        result = self.wikifactory_api_request(
             WikifactoryMutations.complete_file_mutation.value,
-            variable_values=variables,
+            export_token,
+            variables,
         )
+
         print(result)
 
     def commit_contribution(self, export_token):
 
-        transport = RequestsHTTPTransport(
-            url=endpoint_url,
-            headers={
-                "CLIENT-USERNAME": self.client_username,
-                "Cookie": "session={}".format(export_token),
-            },
-        )
-
-        session = Client(transport=transport, fetch_schema_from_transport=True)
         variables = {
             "commitData": {
                 "projectId": self.project_id,
@@ -416,9 +390,10 @@ class WikifactoryExporter(Exporter):
             }
         }
 
-        result = session.execute(
+        result = self.wikifactory_api_request(
             WikifactoryMutations.commit_contribution_mutation.value,
-            variable_values=variables,
+            export_token,
+            variables,
         )
         print(result)
 
@@ -438,20 +413,4 @@ class WikifactoryExporter(Exporter):
                 print(addres)
 
     def calculate_githash_for_element(self, element):
-        return self.calculate_sha1_for_element(element)
-
-    def calculate_sha1_for_element(self, element):
-        sha1sum = hashlib.sha1()
-
-        try:
-            with open(element.path, "rb") as source:
-                block = source.read(2 ** 16)
-
-                while len(block) != 0:
-                    sha1sum.update(block)
-                    block = source.read(2 ** 16)
-
-            return sha1sum.hexdigest()
-        except Exception as e:
-            print(e)
-            return ""
+        return str(pygit2.hashfile(element.path))
