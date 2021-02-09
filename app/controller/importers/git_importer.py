@@ -48,7 +48,7 @@ class GitImporter(Importer):
 
         try:
 
-            pygit2.clone_repository(url, self.path)
+            pygit2.clone_repository(url.replace("https", "http"), self.path)
             print("Repo cloned")
 
             # Create the manifest instance
