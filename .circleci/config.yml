@@ -20,8 +20,6 @@ jobs:
       POSTGRES_ROOT_DSN: postgresql://postgres:postgres@localhost/postgres
       POSTGRES_TEST_DSN: postgresql://postgres:postgres@localhost/dido_test
 
-    working_directory: ~/dido
-
     steps:
 
       - checkout
