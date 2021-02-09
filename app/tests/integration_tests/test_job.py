@@ -144,7 +144,9 @@ def test_import_from_git_to_wikifactory_success():
     export_proxy = ExporterProxy(job_id)
     result = export_proxy.export_manifest(manifest, job)
 
-    assert result is not None
+    assert "error" not in result
+    assert "exported" in result
+    assert result["exported"] == "true"
 
 
 def test_job_overall_status_not_completed():

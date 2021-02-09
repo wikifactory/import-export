@@ -179,8 +179,8 @@ class WikifactoryExporter(Exporter):
 
         details = self.get_project_details(space, slug, export_token)
 
-        if details is None:
-            return None
+        if "error" in details:
+            return details
 
         self.project_id = details[0]
         self.space_id = details[1]
@@ -313,15 +313,12 @@ class WikifactoryExporter(Exporter):
             WikifactoryMutations.project_query.value, export_token, variables
         )
 
-        if "userErrors" not in result:
+        if result is None or "userErrors" in result:
+            return {"error": "Project nof found in Wikifactory"}
+        else:
             p_id = result["project"]["result"]["id"]
             sp_id = result["project"]["result"]["inSpace"]["id"]
-
             return (p_id, sp_id)
-        else:
-            raise Exception("PROJECT NOT FOUND INSIDE WIKIFACTORY")
-            # TODO: Raise custom exception
-            return None
 
     def perform_mutation_operation(
         self, element, file_id, project_path, export_token
