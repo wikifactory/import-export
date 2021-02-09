@@ -15,7 +15,7 @@ services:
     ports: 
       - "8000:8000"
     volumes:
-      - .:/app
+      - ./app:/app/app
     depends_on: 
       - "redis_dido"
       - "postgres-db"
