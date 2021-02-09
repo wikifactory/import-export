@@ -43,6 +43,7 @@ jobs:
       - run:
           name: Build using docker-compose
           command: |
+            docker network create alpha_wikifactory-development
             docker-compose build
 
       - run:
@@ -55,7 +56,7 @@ jobs:
           name: unit-tests
           command: |
             mkdir test-results
-            pipenv run pytest -k "not needs_alpha" --junitxml=test-results/junit.xml
+            docker-compose run backend pytest -k "not needs_alpha" --junitxml=test-results/junit.xml
           when: always  # run even if there is a flake8 error
 
       - store_test_results:
