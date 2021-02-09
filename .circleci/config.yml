@@ -43,6 +43,7 @@ jobs:
       - run:
           name: Build using docker-compose
           command: |
+            docker network create alpha_wikifactory-development
             docker-compose build
 
       - run:
