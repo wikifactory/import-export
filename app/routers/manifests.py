@@ -13,14 +13,11 @@ from app.celery_tasks import (
     handle_get_unfinished_jobs,
 )
 
+from pydantic import BaseModel
+from typing import Optional
 
 router = APIRouter()
 OUTPUT_FOLDER = "/tmp/outputs/"
-
-
-@router.get("/manifests")
-async def get_manifests():
-    return {"manifests": []}
 
 
 class OperationType(Enum):
@@ -28,115 +25,96 @@ class OperationType(Enum):
     IMPORT_EXPORT = "import_export"
 
 
-class JobParameters(Enum):
-    IMPORT_URL = "import_url"
-    IMPORT_TOKEN = "import_token"
-    IMPORT_SERVICE = "import_service"
-    EXPORT_URL = "export_url"
-    EXPORT_TOKEN = "export_token"
-    EXPORT_SERVICE = "export_service"
-    TYPE = "type"
+class JobRequest(BaseModel):
+    import_url: str
+    export_url: str
+    import_service: str
+    export_service: str
+    import_token: Optional[str] = ""
+    export_token: Optional[str] = ""
+    type: Optional[OperationType] = OperationType.IMPORT_EXPORT.value
+
+    def toJson(self):
+
+        return {
+            "import_url": self.import_url,
+            "export_url": self.export_url,
+            "import_service": self.import_service,
+            "export_service": self.export_service,
+            "import_token": self.import_token,
+            "export_token": self.export_token,
+        }
+
+
+@router.get("/manifests")
+async def get_manifests():
+    return {"manifests": []}
 
 
 @router.post("/job")
-def post_job(body: dict):
+def post_job(body: JobRequest):
 
-    if (
-        JobParameters.IMPORT_URL.value not in body
-        or JobParameters.IMPORT_SERVICE.value not in body
-        or JobParameters.EXPORT_URL.value not in body
-        or JobParameters.EXPORT_SERVICE.value not in body
-    ):
+    selected_operation = body.type
+
+    # If we need to generate the manifest...
+
+    if selected_operation == OperationType.MANIFEST.value:
+        # Generate the job_id
+        job_id = generate_job_id()
+
+        # Create the job
+        app.models.add_job_to_db(body.toJson(), job_id)
+
+        # For the moment, we wait until the manifest has been generated
+        manifest = handle_post_manifest.delay(body.toJson(), job_id).get()
+
         return JSONResponse(
-            status_code=400,
-            content={"error": "Job parameters not valid"},
+            status_code=200,
+            content={
+                "message": "Manifest generation process started",
+                "job_id": job_id,
+                "manifest": manifest,
+            },
         )
-    else:
 
-        selected_operation = ""
+    # Else if we need to process the import-export flow....
+    elif selected_operation == OperationType.IMPORT_EXPORT.value:
 
-        # Check if the request includes the operation type
-        if JobParameters.TYPE.value in body:
+        # First check if an active job exists for that url combination
+        # For the moment, we say that an active job is one that does not
+        # have the "cancelled" or "exported_succesfully" statuses
+        # (this definition may be different in the future)
+        already_present = app.models.import_export_job_combination_exists(
+            body.import_service,
+            body.export_service,
+        )
 
-            # Is it a valid one?
-            if (
-                any(
-                    x.value == body[JobParameters.TYPE.value]
-                    for x in OperationType
-                )
-                is True
-            ):
-                # Valid operation, then select it
-                selected_operation = body[JobParameters.TYPE.value]
-            else:
-                # Invalid operation, cancel request?
-                return JSONResponse(
-                    status_code=404,
-                    content={"error": "Unknown operation type"},
-                )
-
-        else:  # By default, we will try the whole import-export process
-            selected_operation = OperationType.IMPORT_EXPORT.value
-
-        # If we need to generate the manifest...
-
-        if selected_operation == OperationType.MANIFEST.value:
-            # Generate the job_id
-            job_id = generate_job_id()
-
-            # Create the job
-            app.models.add_job_to_db(body, job_id)
-
-            # For the moment, we wait until the manifest has been generated
-            manifest = handle_post_manifest.delay(body, job_id).get()
-
+        if already_present is True:  # A combination already exists
             return JSONResponse(
-                status_code=200,
+                status_code=422,
                 content={
-                    "message": "Manifest generation process started",
-                    "job_id": job_id,
-                    "manifest": manifest,
+                    "error": "An active job for that (import_url, export_url) already exists",
                 },
             )
 
-        # Else if we need to process the import-export flow....
-        elif selected_operation == OperationType.IMPORT_EXPORT.value:
+        # Otherwise, we can perform the import export job
 
-            # First check if an active job exists for that url combination
-            # For the moment, we say that an active job is one that does not
-            # have the "cancelled" or "exported_succesfully" statuses
-            # (this definition may be different in the future)
-            already_present = app.models.import_export_job_combination_exists(
-                body[JobParameters.IMPORT_URL.value],
-                body[JobParameters.EXPORT_URL.value],
-            )
+        # Generate the job_id
+        job_id = generate_job_id()
 
-            if already_present is True:  # A combination already exists
-                return JSONResponse(
-                    status_code=422,
-                    content={
-                        "error": "An active job for that (import_url, export_url) already exists",
-                    },
-                )
+        # Create the job
+        app.models.add_job_to_db(body.toJson(), job_id)
 
-            # Otherwise, we can perform the import export job
+        # Start the celery task
+        handle_post_export.delay(body.toJson(), job_id)
 
-            # Generate the job_id
-            job_id = generate_job_id()
-
-            # Create the job
-            app.models.add_job_to_db(body, job_id)
-
-            # Start the celery task
-            handle_post_export.delay(body, job_id)
-
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "message": "Export process started",
-                    "job_id": job_id,
-                },
-            )
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "Export process started",
+                "job_id": job_id,
+            },
+        )
 
 
 @router.get("/job/{job_id}")
