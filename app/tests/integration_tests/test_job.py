@@ -278,32 +278,21 @@ def test_export_error_status_change():
     # Since there was an error, the manifest couldn't be generated
     assert manifest is None
 
+    base_query = session.query(JobStatus).filter(JobStatus.job_id == job_id)
+
     # Additionally, since this is the first try of importing it,
     # we should be able to see in the db the auth required status
-    auth_result = (
-        session.query(JobStatus)
-        .filter(JobStatus.job_id == job_id)
-        .filter(
-            JobStatus.status.in_(
-                [StatusEnum.importing_error_authorization_required.value]
-            )
-        )
-        .all()
-    )
+    auth_result = base_query.filter(
+        JobStatus.status
+        == StatusEnum.importing_error_authorization_required.value
+    ).one_or_none()
 
-    assert len(auth_result) == 1  # The auth required status is in the db
+    assert auth_result is not None  # The auth required status is in the db
 
-    unreachable_result = (
-        session.query(JobStatus)
-        .filter(JobStatus.job_id == job_id)
-        .filter(
-            JobStatus.status.in_(
-                [StatusEnum.importing_error_data_unreachable.value]
-            )
-        )
-        .all()
-    )
-    assert len(unreachable_result) == 0  # The data unreachable is there
+    unreachable_result = base_query.filter(
+        JobStatus.status == StatusEnum.importing_error_data_unreachable.value
+    ).one_or_none()
+    assert unreachable_result is None  # The data unreachable is there
 
     # If we try to handle the request again:
     manifest = processing_prx.handle_request(job)
@@ -311,28 +300,15 @@ def test_export_error_status_change():
     assert manifest is None  # Manifest not generated again
 
     # Check if we still have only auth required status
-    auth_result = (
-        session.query(JobStatus)
-        .filter(JobStatus.job_id == job_id)
-        .filter(
-            JobStatus.status.in_(
-                [StatusEnum.importing_error_authorization_required.value]
-            )
-        )
-        .all()
-    )
+    auth_result = base_query.filter(
+        JobStatus.status
+        == StatusEnum.importing_error_authorization_required.value
+    ).one_or_none()
 
-    assert len(auth_result) == 1  # The auth required status is in the db
+    assert auth_result is not None  # The auth required status is in the db
 
     # Finally, test if we have the unreachabler result in the db
-    unreachable_result = (
-        session.query(JobStatus)
-        .filter(JobStatus.job_id == job_id)
-        .filter(
-            JobStatus.status.in_(
-                [StatusEnum.importing_error_data_unreachable.value]
-            )
-        )
-        .all()
-    )
-    assert len(unreachable_result) == 1  # The data unreachable is there
+    unreachable_result = base_query.filter(
+        JobStatus.status == StatusEnum.importing_error_data_unreachable.value
+    ).one_or_none()
+    assert auth_result is not None  # The data unreachable is there
