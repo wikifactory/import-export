@@ -232,9 +232,6 @@ def get_job(job_id):
 def get_unfinished_jobs():
 
     session = Session()
-
-    # session.query(Job).filter(Job.statuses.any(JobStatus.job_
-
     result = (
         session.query(JobStatus.job_id, JobStatus.status)
         .order_by(JobStatus.timestamp.desc())
@@ -259,3 +256,55 @@ def get_unfinished_jobs():
             unfinished.append(key_job)
 
     return {"unfinished_jobs": unfinished}
+
+
+def get_jobs():
+    session = Session()
+
+    result = []
+
+    for job_id, status in (
+        session.query(JobStatus.job_id, JobStatus.status)
+        .order_by(JobStatus.timestamp.desc())
+        .all()
+    ):
+        result.append({"id": job_id, "status": status})
+
+    return result
+
+
+def import_export_job_combination_exists(import_url, export_url):
+
+    session = Session()
+
+    finished_job_statuses = [
+        StatusEnum.cancelled.value,
+        StatusEnum.exporting_successfully.value,
+    ]
+
+    resp = (
+        session.query(Job.job_id, JobStatus.status)
+        .filter(Job.import_url == import_url, Job.export_url == export_url)
+        .filter(Job.job_id == JobStatus.job_id)
+    )
+
+    temp_map = {}
+
+    for row in resp:
+        if str(row[0]) not in temp_map:
+            temp_map[str(row[0])] = []
+
+        temp_map[str(row[0])].append(row[1])
+
+    for job_id, status_list in temp_map.items():
+
+        # Check if any of the finished statuses was found for each job
+        contained = any(elem in status_list for elem in finished_job_statuses)
+
+        # If we didn't find them, it means that the job is unfinished
+        if contained is False:
+            return True  # So that combination exists and is active
+
+    # Otherwise, we did find a finished job for that combination, so we
+    # could proceed and try it again (for example)
+    return False
