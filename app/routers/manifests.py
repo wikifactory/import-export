@@ -123,7 +123,7 @@ def get_job(job_id):
 
 
 @router.get("/jobs")
-def get_jobs(job_id):
+def get_jobs():
     return JSONResponse(status_code=200, content=app.models.get_jobs())
 
 
