@@ -1,7 +1,5 @@
-from app.controller.exporters.wikifactory_exporter import (
-    WikifactoryExporter,
-    WikifactoryMutations,
-)
+from app.controller.exporters.wikifactory_exporter import WikifactoryExporter
+from app.controller.exporters import wikifactory_gql
 
 from app.tests.integration_tests.test_job import create_job
 from app.tests.conftest import WIKIFACTORY_TOKEN, WIKIFACTORY_TEST_PROJECT_URL
@@ -61,7 +59,7 @@ def test_process_element(monkeypatch):
     )
 
     request_result = get_wikifactory_api_request_result(
-        WikifactoryMutations.file_mutation.value,
+        wikifactory_gql.file_mutation,
         "",
         {},
         result={
@@ -94,7 +92,7 @@ def test_project_query(monkeypatch):
     )
 
     request_result = get_wikifactory_api_request_result(
-        WikifactoryMutations.project_query.value,
+        wikifactory_gql.project_query,
         "",
         {},
         result={
@@ -138,7 +136,7 @@ def test_operation_mutation(monkeypatch):
     )
 
     request_result = get_wikifactory_api_request_result(
-        WikifactoryMutations.operation_mutation.value,
+        wikifactory_gql.operation_mutation,
         "",
         {},
         result={"project": {"id": "a590e8f66b0f63775217f65d9567d77efc4cea3d"}},
@@ -160,7 +158,7 @@ def test_complete_file_mutation(monkeypatch):
     )
 
     request_result = get_wikifactory_api_request_result(
-        WikifactoryMutations.complete_file_mutation.value,
+        wikifactory_gql.complete_file_mutation,
         "",
         {},
         result={
@@ -196,7 +194,7 @@ def test_commit_contribution_mutation(monkeypatch):
     )
 
     request_result = get_wikifactory_api_request_result(
-        WikifactoryMutations.commit_contribution_mutation.value,
+        wikifactory_gql.commit_contribution_mutation,
         "",
         {},
         result={
