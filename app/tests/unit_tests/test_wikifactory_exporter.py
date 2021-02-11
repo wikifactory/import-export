@@ -276,75 +276,8 @@ def test_export_from_manifest(monkeypatch):
         get_test_manifest(), job["export_url"], job["export_token"]
     )
 
-    print(result)
+    assert result is not None
 
     retrieved_job = get_job(job_id)
-    print(retrieved_job)
 
-    """
-    monkeypatch.setattr(
-        WikifactoryExporter,
-        "perform_mutation_operation",
-        get_wikifactory_api_request_result(
-            result={
-                "project": {"id": "a590e8f66b0f63775217f65d9567d77efc4cea3d"}
-            }
-        ),
-    )
-
-    monkeypatch.setattr(
-        WikifactoryExporter,
-        "get_project_details",
-        get_wikifactory_api_request_result(
-            result={
-                "project": {
-                    "result": {
-                        "id": "a590e8f66b0f63775217f65d9567d77efc4cea3d",
-                        "space": {
-                            "id": "de86c9ad380d87ada82e4e7a475cea5ee99308cb"
-                        },
-                        "inSpace": {
-                            "id": "1dcb9df4f37506b7efe3f85af2ef55757a92b148"
-                        },
-                    }
-                }
-            }
-        ),
-    )
-
-    monkeypatch.setattr(
-        WikifactoryExporter,
-        "complete_file",
-        get_wikifactory_api_request_result(
-            result={
-                "file": {
-                    "file": {
-                        "id": "7f65d9567d77efc4cea3da590e8f66b0f6377521",
-                        "path": "/file.txt",
-                        "url": "",
-                        "completed": True,
-                    },
-                    "userErrors": [],
-                }
-            }
-        ),
-    )
-
-    monkeypatch.setattr(
-        WikifactoryExporter,
-        "commit_contribution",
-        get_wikifactory_api_request_result(
-            result={
-                "commit": {
-                    "project": {
-                        "id": "a590e8f66b0f63775217f65d9567d77efc4cea3d",
-                        "contributionCount": 1,
-                        "inSpace": {
-                            "id": "1dcb9df4f37506b7efe3f85af2ef55757a92b148"
-                        },
-                    },
-                    "userErrors": [],
-                }
-            }
-        ),
-    )"""
+    assert retrieved_job is not None
