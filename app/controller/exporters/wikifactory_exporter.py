@@ -1,11 +1,19 @@
 from app.model.exporter import Exporter
 from app.config import wikifactory_connection_url
-from gql import Client, gql
+from gql import Client
 from gql.transport.requests import RequestsHTTPTransport
 
 from app.model.exporter import NotValidManifest
 from app.models import StatusEnum
 from app.models import increment_processed_element_for_job
+
+from .wikifactory_gql import (
+    project_query,
+    file_mutation,
+    operation_mutation,
+    complete_file_mutation,
+    commit_contribution_mutation,
+)
 
 import requests
 import magic
@@ -19,107 +27,6 @@ from enum import Enum
 
 
 endpoint_url = wikifactory_connection_url
-
-
-class WikifactoryMutations(Enum):
-    file_mutation = gql(
-        """
-        mutation File($fileInput: FileInput) {
-            file (fileData: $fileInput) {
-                file {
-                    id
-                    path
-                    mimeType
-                    filename
-                    size
-                    completed
-                    cancelled
-                    isCopy
-                    slug
-                    spaceId
-                    uploadUrl
-                }
-
-                userErrors {
-                    message
-                    key
-                    code
-                }
-
-            }
-        }
-        """
-    )
-
-    operation_mutation = gql(
-        """
-        mutation Operation($operationData: OperationInput) {
-            operation(operationData: $operationData) {
-                project {
-                    id
-                }
-            }
-        }
-        """
-    )
-
-    complete_file_mutation = gql(
-        """
-        mutation CompleteFile($fileInput: FileInput) {
-        file(fileData: $fileInput) {
-            file {
-                id
-                path
-                url
-                completed
-            }
-            userErrors {
-                message
-                key
-                code
-            }
-        }
-    }
-        """
-    )
-
-    commit_contribution_mutation = gql(
-        """
-        mutation CommitContribution($commitData: CommitInput) {
-            commit(commitData: $commitData) {
-                project {
-                    id
-                    inSpace {
-                        id
-                        whichTypes
-                    }
-                    contributionCount
-                }
-                userErrors {
-                    message
-                    key
-                    code
-                }
-            }
-        }
-        """
-    )
-
-    project_query = gql(
-        """query q($space:String, $slug:String){
-            project(space:$space, slug:$slug){
-                result{
-                    id
-                    space {
-                        id
-                    }
-                    inSpace {
-                        id
-                    }
-                }
-            }
-        }"""
-    )
 
 
 class WikifactoryExporter(Exporter):
@@ -300,7 +207,7 @@ class WikifactoryExporter(Exporter):
         }
 
         return self.wikifactory_api_request(
-            WikifactoryMutations.file_mutation.value,
+            file_mutation,
             export_token,
             variables,
         )
@@ -310,7 +217,7 @@ class WikifactoryExporter(Exporter):
         variables = {"space": space, "slug": slug}
 
         result = self.wikifactory_api_request(
-            WikifactoryMutations.project_query.value, export_token, variables
+            project_query, export_token, variables
         )
 
         if result is None or "userErrors" in result:
@@ -334,7 +241,7 @@ class WikifactoryExporter(Exporter):
         }
 
         self.wikifactory_api_request(
-            WikifactoryMutations.operation_mutation.value,
+            operation_mutation,
             export_token,
             variables,
         )
@@ -370,7 +277,7 @@ class WikifactoryExporter(Exporter):
             }
         }
         result = self.wikifactory_api_request(
-            WikifactoryMutations.complete_file_mutation.value,
+            complete_file_mutation,
             export_token,
             variables,
         )
@@ -388,7 +295,7 @@ class WikifactoryExporter(Exporter):
         }
 
         result = self.wikifactory_api_request(
-            WikifactoryMutations.commit_contribution_mutation.value,
+            commit_contribution_mutation,
             export_token,
             variables,
         )
