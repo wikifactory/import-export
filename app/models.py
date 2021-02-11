@@ -344,6 +344,33 @@ def cancel_job(job_id):
         }
 
 
+def can_retry_job(body: dict, job_id):
+    session = Session()
+
+    # Check if the job exists
+    result = session.query(Job).get(job_id)
+
+    if result is None:
+        # We didn't find the job, so we cannot retry
+        return {
+            "error": "Job with id {} not found".format(job_id),
+            "code": 404,
+        }
+
+    # If the job was found
+
+    if not running_job_exists(job_id):
+        # We can cancell it
+        return {"msg": "job can be retried"}
+    else:
+        return {
+            "error": "The job with id {} is not running and it can't be retried".format(
+                job_id
+            ),
+            "code": 422,
+        }
+
+
 def set_retry_job(job_id):
     session = Session()
 

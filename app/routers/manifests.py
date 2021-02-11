@@ -14,7 +14,7 @@ from app.celery_tasks import (
     handle_post_retry,
     handle_post_cancel,
 )
-
+from app.models import can_retry_job
 from pydantic import BaseModel
 from typing import Optional
 
@@ -46,16 +46,6 @@ class JobRequest(BaseModel):
             "import_token": self.import_token,
             "export_token": self.export_token,
         }
-
-
-class RetryRequest(JobRequest):
-
-    job_id: str
-
-    def toJson(self):
-        json_object = super().toJson()
-        json_object["job_id"] = self.job_id
-        return json_object
 
 
 @router.get("/manifests")
@@ -144,17 +134,25 @@ def get_unfinished_jobs():
     return handle_get_unfinished_jobs()
 
 
-@router.post("/retry")
-def retry(body: RetryRequest):
+@router.post("/job/{job_id}/retry")
+def retry(body: JobRequest, job_id):
 
-    handle_post_retry.delay(body.toJson(), body.job_id)
-    return JSONResponse(
-        status_code=200,
-        content={
-            "message": "Retry process started",
-            "job_id": body.job_id,
-        },
-    )
+    can_retry = can_retry_job(body.toJson(), job_id)
+
+    if "error" in can_retry:
+        return JSONResponse(
+            status_code=can_retry["code"],
+            content={"error": can_retry["msg"]},
+        )
+    else:
+        handle_post_retry.delay(body.toJson(), job_id)
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": can_retry["msg"],
+                "job_id": job_id,
+            },
+        )
 
 
 @router.post("/job/{job_id}/cancel")
