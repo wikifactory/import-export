@@ -12,9 +12,6 @@ ignored_folders = [".git"]
 
 
 class IgnoreCredentialsCallbacks(pygit2.RemoteCallbacks):
-    def __init__(self, credentials=None, certificate=None):
-        super(self.__class__, self).__init__(credentials, certificate)
-
     def credentials(self, url, username_from_url, allowed_types):
         return None
 
