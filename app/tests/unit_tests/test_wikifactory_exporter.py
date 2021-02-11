@@ -234,7 +234,7 @@ def get_file_mutation_result(
                 "id": element.id,
                 "path": element.path,
                 "completed": False,
-                "uploadUrl": "testurl.com",
+                "uploadUrl": "www.testurl.com",
             },
             "userErrors": [],
         }
