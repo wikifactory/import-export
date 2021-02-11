@@ -245,6 +245,47 @@ def upload_file_result(self, local_path, file_url):
     pass
 
 
+def get_project_details_result(self, space, slug, export_token):
+    # return (project_id, inspace_id)
+    return (
+        "a590e8f66b0f63775217f65d9567d77efc4cea3d",
+        "1dcb9df4f37506b7efe3f85af2ef55757a92b148",
+    )
+
+
+def get_complete_file_mutation_result(self, space_id, file_id, export_token):
+    return {
+        "file": {
+            "file": {
+                "id": "7f65d9567d77efc4cea3da590e8f66b0f6377521",
+                "path": "/file.txt",
+                "url": "",
+                "completed": True,
+            },
+            "userErrors": [],
+        }
+    }
+
+
+def get_perform_mutation_operation_result(
+    self, element, file_id, project_path, export_token
+):
+    return {"project": {"id": "a590e8f66b0f63775217f65d9567d77efc4cea3d"}}
+
+
+def get_commit_contribution_result(self, export_token):
+    return {
+        "commit": {
+            "project": {
+                "id": "a590e8f66b0f63775217f65d9567d77efc4cea3d",
+                "contributionCount": 1,
+                "inSpace": {"id": "1dcb9df4f37506b7efe3f85af2ef55757a92b148"},
+            },
+            "userErrors": [],
+        }
+    }
+
+
 def test_export_from_manifest(monkeypatch):
 
     monkeypatch.setattr(
@@ -257,6 +298,30 @@ def test_export_from_manifest(monkeypatch):
         WikifactoryExporter,
         "upload_file",
         upload_file_result,
+    )
+
+    monkeypatch.setattr(
+        WikifactoryExporter,
+        "get_project_details",
+        get_project_details_result,
+    )
+
+    monkeypatch.setattr(
+        WikifactoryExporter,
+        "perform_mutation_operation",
+        get_perform_mutation_operation_result,
+    )
+
+    monkeypatch.setattr(
+        WikifactoryExporter,
+        "complete_file",
+        get_complete_file_mutation_result,
+    )
+
+    monkeypatch.setattr(
+        WikifactoryExporter,
+        "commit_contribution",
+        get_commit_contribution_result,
     )
 
     # Create the exporting job
