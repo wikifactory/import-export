@@ -1,7 +1,7 @@
+from app.models import StatusEnum, Session, JobStatus
+from app.models import set_job_status
 import os
 import shutil
-from app.models import StatusEnum
-from app.models import set_job_status
 
 
 class Importer:
@@ -46,8 +46,31 @@ class Importer:
         if action in self.hooks_for_status[status]:
             self.hooks_for_status[status].remove(action)
 
-    def prepare_folder(self, temp_folder_path, job_folder_path):
+    def on_import_error_found(self, exception):
 
+        session = Session()
+
+        # First, check in the db if the job has the login_required status
+
+        job_status = (
+            session.query(JobStatus)
+            .filter(JobStatus.job_id == self.job_id)
+            .filter(
+                JobStatus.status
+                == StatusEnum.importing_error_authorization_required.value
+            )
+            .one_or_none()
+        )
+
+        status_enum = (
+            StatusEnum.importing_error_data_unreachable
+            if job_status
+            else StatusEnum.importing_error_authorization_required
+        )
+
+        set_job_status(self.job_id, status_enum.value)
+
+    def prepare_folder(self, temp_folder_path, job_folder_path):
         # Check if the tmp folder for this service already exists
         if os.path.exists(temp_folder_path) is False:
             # If we need to create it,

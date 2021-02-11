@@ -234,9 +234,6 @@ def get_job(job_id):
 def get_unfinished_jobs():
 
     session = Session()
-
-    # session.query(Job).filter(Job.statuses.any(JobStatus.job_
-
     result = (
         session.query(JobStatus.job_id, JobStatus.status)
         .order_by(JobStatus.timestamp.desc())
@@ -261,6 +258,39 @@ def get_unfinished_jobs():
             unfinished.append(key_job)
 
     return {"unfinished_jobs": unfinished}
+
+
+def get_jobs():
+    session = Session()
+
+    result = []
+
+    for job_id, status in (
+        session.query(JobStatus.job_id, JobStatus.status)
+        .order_by(JobStatus.timestamp.desc())
+        .all()
+    ):
+        result.append({"id": job_id, "status": status})
+
+    return result
+
+
+def import_export_job_combination_exists(import_url, export_url):
+
+    session = Session()
+
+    finished_job_statuses = [
+        StatusEnum.cancelled.value,
+        StatusEnum.exporting_successfully.value,
+    ]
+
+    exists = (
+        session.query(Job)
+        .filter(Job.import_url == import_url, Job.export_url == export_url)
+        .filter(Job.statuses.any(JobStatus.status.in_(finished_job_statuses)))
+    ).exists()
+
+    return session.query(exists).scalar()
 
 
 def cancel_job(job_id):

@@ -1,11 +1,11 @@
 from app.celery_config import celery_app
 from celery.utils.log import get_task_logger
-from fastapi import HTTPException
-
+from app.controller.importer_proxy import ImporterProxy
+from app.controller.exporter_proxy import ExporterProxy
 import uuid
 
 from app.models import get_job, get_unfinished_jobs, cancel_job
-from app.job_methods import export_job, retry_job, generate_manifest
+from app.job_methods import retry_job
 
 
 logger = get_task_logger(__name__)
@@ -18,50 +18,40 @@ def generate_job_id():
 @celery_app.task
 def handle_post_manifest(body: dict, job_id):
 
-    if (
-        "import_url" not in body
-        or "import_service" not in body
-        or "import_token" not in body
-    ):
-        raise HTTPException(status_code=500, detail="Missing fields")
-
-    else:
-        return generate_manifest(body, job_id)
+    processing_prx = ImporterProxy(job_id)
+    manifest = processing_prx.handle_request(body)
+    return manifest.toJson()
 
 
 @celery_app.task
 def handle_post_export(body: dict, job_id):
 
-    if (
-        "import_url" not in body
-        or "import_service" not in body
-        or "import_token" not in body
-        or "export_url" not in body
-        or "export_service" not in body
-        or "export_token" not in body
-    ):
-        raise HTTPException(status_code=500, detail="Missing fields")
-        return ""
+    # body contains the parameters for this request (tokens and so on)
 
-    else:
-        return export_job(body, job_id)
+    logger.info("Starting the import process...")
+
+    # Configure the importer
+    processing_prx = ImporterProxy(job_id)
+    manifest = processing_prx.handle_request(body)
+
+    if manifest is None:
+        return {"error": "The manifest could not be generated"}
+
+    logger.info("Importing process finished!")
+    # logger.info(manifest)
+    logger.info("Starting the export Process...")
+    # Configure the exporter
+    export_proxy = ExporterProxy(job_id)
+    result = export_proxy.export_manifest(manifest, body)
+
+    logger.info("Process done!")
+
+    return result
 
 
 @celery_app.task
 def handle_post_retry(body: dict, job_id):
-
-    if (
-        "import_url" not in body
-        or "import_service" not in body
-        or "import_token" not in body
-        or "export_url" not in body
-        or "export_service" not in body
-        or "export_token" not in body
-    ):
-        raise HTTPException(status_code=500, detail="Missing fields")
-        return ""
-    else:
-        return retry_job(body, job_id)
+    return retry_job(body, job_id)
 
 
 def handle_get_job(job_id):

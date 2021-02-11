@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
+from enum import Enum
 
 # from app.models import add_job_to_db, connect_to_db
 import app.models
@@ -14,9 +15,47 @@ from app.celery_tasks import (
     handle_post_cancel,
 )
 
+from pydantic import BaseModel
+from typing import Optional
 
 router = APIRouter()
 OUTPUT_FOLDER = "/tmp/outputs/"
+
+
+class OperationType(Enum):
+    MANIFEST = "manifest"
+    IMPORT_EXPORT = "import_export"
+
+
+class JobRequest(BaseModel):
+    import_url: str
+    export_url: str
+    import_service: str
+    export_service: str
+    import_token: Optional[str] = ""
+    export_token: Optional[str] = ""
+    type: Optional[OperationType] = OperationType.IMPORT_EXPORT.value
+
+    def toJson(self):
+
+        return {
+            "import_url": self.import_url,
+            "export_url": self.export_url,
+            "import_service": self.import_service,
+            "export_service": self.export_service,
+            "import_token": self.import_token,
+            "export_token": self.export_token,
+        }
+
+
+class RetryCancelRequest(JobRequest):
+
+    job_id: str
+
+    def toJson(self):
+        json_object = super().toJson()
+        json_object["job_id"] = self.job_id
+        return json_object
 
 
 @router.get("/manifests")
@@ -24,53 +63,80 @@ async def get_manifests():
     return {"manifests": []}
 
 
-# The route used to init the import/export process
-"""
-The body must contain the following parameters:
-    - import_url
-    - import_service
-    - import_token
-    - export_url
-    - export_service
-    - export_token
-"""
+@router.post("/job")
+def post_job(body: JobRequest):
 
+    selected_operation = body.type
 
-@router.post("/manifest")
-def post_manifest(body: dict):
-    job_id = generate_job_id()
+    # If we need to generate the manifest...
 
-    app.models.add_job_to_db(body, job_id)
+    if selected_operation == OperationType.MANIFEST.value:
+        # Generate the job_id
+        job_id = generate_job_id()
 
-    manifest = handle_post_manifest.delay(body, job_id).get()
-    return JSONResponse(
-        status_code=200,
-        content={
-            "message": "Manifest generation process started",
-            "job_id": job_id,
-            "manifest": manifest,
-        },
-    )
+        # Create the job
+        app.models.add_job_to_db(body.toJson(), job_id)
 
+        # For the moment, we wait until the manifest has been generated
+        manifest = handle_post_manifest.delay(body.toJson(), job_id).get()
 
-@router.post("/export")
-def export(body: dict):
-    job_id = generate_job_id()
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "Manifest generation process started",
+                "job_id": job_id,
+                "manifest": manifest,
+            },
+        )
 
-    print(job_id)
+    # Else if we need to process the import-export flow....
+    elif selected_operation == OperationType.IMPORT_EXPORT.value:
 
-    app.models.add_job_to_db(body, job_id)
+        # First check if an active job exists for that url combination
+        # For the moment, we say that an active job is one that does not
+        # have the "cancelled" or "exported_succesfully" statuses
+        # (this definition may be different in the future)
+        already_present = app.models.import_export_job_combination_exists(
+            body.import_service,
+            body.export_service,
+        )
 
-    handle_post_export.delay(body, job_id)
-    return JSONResponse(
-        status_code=200,
-        content={"message": "Export process started", "job_id": job_id},
-    )
+        if already_present is True:  # A combination already exists
+            return JSONResponse(
+                status_code=422,
+                content={
+                    "error": "An active job for that (import_url, export_url) already exists",
+                },
+            )
+
+        # Otherwise, we can perform the import export job
+
+        # Generate the job_id
+        job_id = generate_job_id()
+
+        # Create the job
+        app.models.add_job_to_db(body.toJson(), job_id)
+
+        # Start the celery task
+        handle_post_export.delay(body.toJson(), job_id)
+
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "Export process started",
+                "job_id": job_id,
+            },
+        )
 
 
 @router.get("/job/{job_id}")
 def get_job(job_id):
     return handle_get_job(job_id)
+
+
+@router.get("/jobs")
+def get_jobs():
+    return JSONResponse(status_code=200, content=app.models.get_jobs())
 
 
 @router.get("/unfinished_jobs")
@@ -79,38 +145,27 @@ def get_unfinished_jobs():
 
 
 @router.post("/retry")
-def retry(body: dict):
+def retry(body: RetryCancelRequest):
 
-    if "job_id" in body:
-        handle_post_retry.delay(body, body["job_id"])
-        return JSONResponse(
-            status_code=200,
-            content={
-                "message": "Retry process started",
-                "job_id": body["job_id"],
-            },
-        )
-    else:
-        return JSONResponse(
-            status_code=422,
-            content={"error": "job_id not specified"},
-        )
+    handle_post_retry.delay(body.toJson(), body.job_id)
+    return JSONResponse(
+        status_code=200,
+        content={
+            "message": "Retry process started",
+            "job_id": body.job_id,
+        },
+    )
 
 
 @router.post("/cancel")
-def cancel(body: dict):
-    if "job_id" in body:
-        result = handle_post_cancel()
+def cancel(body: RetryCancelRequest):
 
-        if "error" in result:
-            return JSONResponse(
-                status_code=404,
-                content=result,
-            )
-        else:
-            return JSONResponse(status_code=200, content=result)
-    else:
+    result = handle_post_cancel(body.job_id)
+
+    if "error" in result:
         return JSONResponse(
-            status_code=422,
-            content={"error": "job_id not specified"},
+            status_code=404,
+            content=result,
         )
+    else:
+        return JSONResponse(status_code=200, content=result)
