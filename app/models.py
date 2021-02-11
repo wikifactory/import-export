@@ -215,10 +215,10 @@ def get_job(job_id):
 
     result = result[0]
 
-    if result[3] == 0:
+    if result[2] == 0:
         percentage = 0.0
     else:
-        percentage = round((result[4] * 100.0) / result[3], 2)
+        percentage = round((result[3] * 100.0) / result[2], 2)
 
     job_dict = {
         "job_id": str(result[0]),
