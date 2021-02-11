@@ -56,20 +56,22 @@ class GoogleDriveImporter(Importer):
                 "drive", "v3", credentials=creds, cache_discovery=False
             )
 
+            # Create the manifest instance
+            manifest = Manifest()
+
+            self.process_folder_recursively(manifest, drive_service, url)
+            self.create_folder_structure_sync(self.elements_list)
+
+            self.download_all_files(drive_service, self.elements_list)
+
+            # Finally, set the status
+            self.set_status(StatusEnum.importing_successfully.value)
+            return manifest
+
         except Exception as e:
             print(e)
-
-        # Create the manifest instance
-        manifest = Manifest()
-
-        self.process_folder_recursively(manifest, drive_service, url)
-        self.create_folder_structure_sync(self.elements_list)
-
-        self.download_all_files(drive_service, self.elements_list)
-
-        # Finally, set the status
-        self.set_status(StatusEnum.importing_successfully.value)
-        return manifest
+            self.on_import_error_found(e)
+            return None
 
     def create_folder_structure_sync(self, elements):
 

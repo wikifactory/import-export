@@ -253,3 +253,64 @@ def test_job_overall_status_complete_job():
     )
 
     assert retrieved_job["overall_process"] == pytest.approx(100)
+
+
+def test_export_error_status_change():
+
+    session = Session()
+    # Try to import from git, with a non-valid url
+    # That should first add an "auth_required" status to the db for that job
+    # and then if the user retries the process, a "data_not_reachable" one
+
+    (job_id, job) = create_job(
+        import_url="https://github.com/rievo/icosphere"[
+            ::-1
+        ],  # Unexisting url
+        import_service="git",
+    )  # default export parameters
+
+    # Add the job to the db as well as the "pending" status
+    add_job_to_db(job, job_id)
+
+    # Start the importing process
+    processing_prx = ImporterProxy(job_id)
+
+    manifest = processing_prx.handle_request(job)
+
+    # Since there was an error, the manifest couldn't be generated
+    assert manifest is None
+
+    base_query = session.query(JobStatus).filter(JobStatus.job_id == job_id)
+
+    # Additionally, since this is the first try of importing it,
+    # we should be able to see in the db the auth required status
+    auth_result = base_query.filter(
+        JobStatus.status
+        == StatusEnum.importing_error_authorization_required.value
+    ).one_or_none()
+
+    assert auth_result is not None  # The auth required status is in the db
+
+    unreachable_result = base_query.filter(
+        JobStatus.status == StatusEnum.importing_error_data_unreachable.value
+    ).one_or_none()
+    assert unreachable_result is None  # The data unreachable is there
+
+    # If we try to handle the request again:
+    manifest = processing_prx.handle_request(job)
+
+    assert manifest is None  # Manifest not generated again
+
+    # Check if we still have only auth required status
+    auth_result = base_query.filter(
+        JobStatus.status
+        == StatusEnum.importing_error_authorization_required.value
+    ).one_or_none()
+
+    assert auth_result is not None  # The auth required status is in the db
+
+    # Finally, test if we have the unreachabler result in the db
+    unreachable_result = base_query.filter(
+        JobStatus.status == StatusEnum.importing_error_data_unreachable.value
+    ).one_or_none()
+    assert auth_result is not None  # The data unreachable is there

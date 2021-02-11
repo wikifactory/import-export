@@ -1,4 +1,4 @@
-from app.models import StatusEnum
+from app.models import StatusEnum, Session, JobStatus
 from app.models import set_job_status
 
 
@@ -43,6 +43,30 @@ class Importer:
         # Remove the hook for that status
         if action in self.hooks_for_status[status]:
             self.hooks_for_status[status].remove(action)
+
+    def on_import_error_found(self, exception):
+
+        session = Session()
+
+        # First, check in the db if the job has the login_required status
+
+        job_status = (
+            session.query(JobStatus)
+            .filter(JobStatus.job_id == self.job_id)
+            .filter(
+                JobStatus.status
+                == StatusEnum.importing_error_authorization_required.value
+            )
+            .one_or_none()
+        )
+
+        status_enum = (
+            StatusEnum.importing_error_data_unreachable
+            if job_status
+            else StatusEnum.importing_error_authorization_required
+        )
+
+        set_job_status(self.job_id, status_enum.value)
 
 
 class NotValidURLForImportException(ValueError):
