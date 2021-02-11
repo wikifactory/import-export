@@ -48,7 +48,7 @@ class JobRequest(BaseModel):
         }
 
 
-class RetryCancelRequest(JobRequest):
+class RetryRequest(JobRequest):
 
     job_id: str
 
@@ -145,7 +145,7 @@ def get_unfinished_jobs():
 
 
 @router.post("/retry")
-def retry(body: RetryCancelRequest):
+def retry(body: RetryRequest):
 
     handle_post_retry.delay(body.toJson(), body.job_id)
     return JSONResponse(
@@ -157,15 +157,15 @@ def retry(body: RetryCancelRequest):
     )
 
 
-@router.post("/cancel")
-def cancel(body: RetryCancelRequest):
+@router.post("/job/{job_id}/cancel")
+def cancel(job_id):
 
-    result = handle_post_cancel(body.job_id)
+    result = handle_post_cancel(job_id)
 
     if "error" in result:
         return JSONResponse(
-            status_code=404,
-            content=result,
+            status_code=result["code"],
+            content={"error": result["msg"]},
         )
     else:
         return JSONResponse(status_code=200, content=result)

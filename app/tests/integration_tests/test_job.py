@@ -1,4 +1,4 @@
-from app.models import add_job_to_db, get_job, cancel_job
+from app.models import add_job_to_db, get_job, cancel_job, set_job_status
 from app.models import Session, Job, JobStatus, StatusEnum
 from app.job_methods import retry_job, export_job
 from app.tests.conftest import WIKIFACTORY_TOKEN, WIKIFACTORY_TEST_PROJECT_URL
@@ -325,7 +325,7 @@ def test_cancel_job_fail():
     assert "error" in cancel_result
 
 
-def test_cancel_job_success():
+def test_cancel_job_running_success():
 
     (job_id, job) = create_job(
         import_url="testurl",
@@ -340,15 +340,37 @@ def test_cancel_job_success():
 
     # The job is on the database and has a "pending" status
 
-    # If we now cancel the job...
+    # We can now cancel the job because it is running
     cancel_result = cancel_job(job_id)
 
-    assert "err" not in cancel_result
+    assert "error" not in cancel_result
     assert "msg" in cancel_result
 
     retrieved_job = get_job(job_id)
 
     assert retrieved_job["job_status"] == StatusEnum.cancelled.value
+
+
+def test_cancel_job_finished_fail():
+    (job_id, job) = create_job(
+        import_url="testurl",
+        import_service="googledrive",
+        export_url="testurl",
+        export_service="googledrive",
+        export_token="testtoken",
+    )
+
+    # Add the job to the db
+    add_job_to_db(job, job_id)
+
+    # Set the status to cancel
+    set_job_status(job_id, StatusEnum.cancelled.value)
+
+    # If we try to cancel it now, we must receive an error with code 422
+    cancel_result = cancel_job(job_id)
+
+    assert "error" in cancel_result
+    assert cancel_result["code"] == 422
 
 
 def test_retry_job_fail():

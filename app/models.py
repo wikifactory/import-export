@@ -6,7 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, ForeignKey, Integer, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, not_
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
@@ -287,7 +287,29 @@ def import_export_job_combination_exists(import_url, export_url):
     exists = (
         session.query(Job)
         .filter(Job.import_url == import_url, Job.export_url == export_url)
-        .filter(Job.statuses.any(JobStatus.status.in_(finished_job_statuses)))
+        .filter(
+            not_(Job.statuses.any(JobStatus.status.in_(finished_job_statuses)))
+        )
+    ).exists()
+
+    return session.query(exists).scalar()
+
+
+def running_job_exists(job_id):
+
+    session = Session()
+
+    finished_job_statuses = [
+        StatusEnum.cancelled.value,
+        StatusEnum.exporting_successfully.value,
+    ]
+
+    exists = (
+        session.query(Job)
+        .filter(Job.job_id == job_id)
+        .filter(
+            not_(Job.statuses.any(JobStatus.status.in_(finished_job_statuses)))
+        )
     ).exists()
 
     return session.query(exists).scalar()
@@ -302,13 +324,24 @@ def cancel_job(job_id):
 
     if result is None:
         # We didn't find the job
-        return {"error": "Job with id {} not found".format(job_id)}
+        return {
+            "error": "Job with id {} not found".format(job_id),
+            "code": 404,
+        }
 
-    # Otherwise, we did find the job, so we can cancel it
+    # Otherwise, we did find the job, but is it running at this moment?
 
-    set_job_status(job_id, StatusEnum.cancelled.value)
-
-    return {"msg": "Job with id {} cancelled".format(job_id)}
+    if running_job_exists(job_id):
+        # We can cancell it
+        set_job_status(job_id, StatusEnum.cancelled.value)
+        return {"msg": "Job with id {} cancelled".format(job_id)}
+    else:
+        return {
+            "error": "The job with id {} is not running and it can't be cancelled".format(
+                job_id
+            ),
+            "code": 422,
+        }
 
 
 def set_retry_job(job_id):
