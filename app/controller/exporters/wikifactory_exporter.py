@@ -23,10 +23,15 @@ import pygit2
 
 import base64
 
-from enum import Enum
-
-
 endpoint_url = wikifactory_connection_url
+
+
+def validate_url(url):
+
+    from re import search
+
+    pattern = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(\@|\+)[\w\-º_]*\/[\w\-\_]+$"
+    return bool(search(pattern, url))
 
 
 class WikifactoryExporter(Exporter):
@@ -41,25 +46,13 @@ class WikifactoryExporter(Exporter):
         self.manifest = None
         self.project_details = None
 
-            self.add_hook_for_status(
-                StatusEnum.exporting_successfully.value, self.on_files_uploaded
-            )
-            self.add_hook_for_status(
-                StatusEnum.exporting_successfully.value,
-                self.invite_collaborators,
-            )
-
-    def validate_url(url):
-
-        pattern = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(\@|\+)[\w\-º_]*\/[\w\-\_]+$"
-        import re
-
-        result = re.search(pattern, url)
-
-        if result is None:
-            return False
-        else:
-            return True
+        self.add_hook_for_status(
+            StatusEnum.exporting_successfully.value, self.on_files_uploaded
+        )
+        self.add_hook_for_status(
+            StatusEnum.exporting_successfully.value,
+            self.invite_collaborators,
+        )
 
     def export_manifest(self, manifest, export_url, export_token):
 

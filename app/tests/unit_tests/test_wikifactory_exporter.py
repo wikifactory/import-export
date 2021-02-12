@@ -1,4 +1,7 @@
-from app.controller.exporters.wikifactory_exporter import WikifactoryExporter
+import pytest
+import uuid
+
+from app.controller.exporters.wikifactory_exporter import WikifactoryExporter, validate_url
 from app.controller.exporters import wikifactory_gql
 
 from app.tests.integration_tests.test_job import create_job
@@ -48,6 +51,21 @@ def get_test_manifest():
     root_element.children.append(ch_2)
 
     return manifest
+
+
+@pytest.mark.parametrize(
+    "project_url, is_valid",
+    [
+        ("http://wikifactory.com/@botler/test-project", True),
+        ("http://www.wikifactory.com/@botler/test-project", True),
+        ("https://wikifactory.com/@botler/test-project", True),
+        ("https://www.wikifactory.com/@botler/test-project", True),
+        ("https://wikifactory.com/+wikifactory/important-project", True),
+        ("https://wikifactory.com/+wikifactory/试验", True),
+    ],
+)
+def test_validate_url(project_url, is_valid):
+    assert validate_url(project_url) is is_valid
 
 
 def test_process_element(monkeypatch):
