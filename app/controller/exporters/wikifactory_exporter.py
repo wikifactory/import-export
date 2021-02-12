@@ -231,7 +231,7 @@ class WikifactoryExporter(Exporter):
     def upload_file(self, local_path, file_url):
 
         headers = {
-            "x-amz-acl": "public-read",
+            "x-amz-acl": "private" if self.project_details.private else "public-read",
             "Content-Type": magic.from_file(local_path, mime=True),
         }
 
