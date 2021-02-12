@@ -85,9 +85,10 @@ commit_contribution_mutation = gql(
 
 project_query = gql(
     """query q($space:String, $slug:String) {
-        project(space:$space, slug:$slug) {
+        project(space: $space, slug: $slug) {
             result {
                 id
+                private
                 space {
                     id
                 }
