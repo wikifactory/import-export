@@ -4,8 +4,11 @@ from gql import Client
 from gql.transport.requests import RequestsHTTPTransport
 
 from app.controller.error import NotValidManifest, ExportNotReachable
-from app.models import StatusEnum
-from app.models import increment_processed_element_for_job
+from app.models import (
+  get_job,
+  increment_processed_element_for_job,
+  StatusEnum,
+)
 
 from .wikifactory_gql import (
     project_query,
@@ -54,7 +57,8 @@ class WikifactoryExporter(Exporter):
             self.invite_collaborators,
         )
 
-    def export_manifest(self, manifest, export_url, export_token):
+    def export_manifest(self, manifest):
+        job = get_job(self.job_id)
 
         print("WIKIFACTORY: Starting the exporting process")
 
@@ -63,11 +67,8 @@ class WikifactoryExporter(Exporter):
         space = url_parts[-2]
         slug = url_parts[-1]
 
-        self.manifest = manifest
-        self.export_token = export_token
-
         self.project_details = self.get_project_details(
-            space, slug, export_token
+            space, slug, job.export_token
         )
 
         # Check if we have a manifest
@@ -88,8 +89,7 @@ class WikifactoryExporter(Exporter):
             return {"exported": "true", "manifest": self.manifest.toJson()}
 
         else:
-            raise NotValidManifest()
-            return {"error": "Manifest not valid"}
+            raise NotValidManifest("Manifest not valid")
 
     def on_file_cb(self, file_element):
 
