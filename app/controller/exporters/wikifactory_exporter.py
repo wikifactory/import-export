@@ -3,7 +3,7 @@ from app.config import wikifactory_connection_url
 from gql import Client
 from gql.transport.requests import RequestsHTTPTransport
 
-from app.model.exporter import NotValidManifest
+from app.controller.error import NotValidManifest
 from app.models import StatusEnum
 from app.models import increment_processed_element_for_job
 

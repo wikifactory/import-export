@@ -1,0 +1,4 @@
+class NotValidManifest(ValueError):
+    pass
+
+
