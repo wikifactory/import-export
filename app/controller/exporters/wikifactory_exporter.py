@@ -41,7 +41,6 @@ class WikifactoryExporter(Exporter):
         self.manifest = None
         self.project_details = None
 
-        try:
             self.add_hook_for_status(
                 StatusEnum.exporting_successfully.value, self.on_files_uploaded
             )
@@ -74,8 +73,9 @@ class WikifactoryExporter(Exporter):
         self.manifest = manifest
         self.export_token = export_token
 
-
-        self.project_details = self.get_project_details(space, slug, export_token)
+        self.project_details = self.get_project_details(
+            space, slug, export_token
+        )
 
         # Check if we have a manifest
         if (
@@ -136,7 +136,9 @@ class WikifactoryExporter(Exporter):
                 # 4) Finally, mark the file as completed
 
                 self.complete_file(
-                    self.project_details.space_id, wikifactory_file_id, self.export_token
+                    self.project_details.space_id,
+                    wikifactory_file_id,
+                    self.export_token,
                 )
 
                 # Increment the processed elements in the database
@@ -209,9 +211,9 @@ class WikifactoryExporter(Exporter):
             raise ExportNotReachable("Project nof found in Wikifactory")
 
         return {
-          "project_id": result["project"]["result"]["id"]
-          "space_id": result["project"]["result"]["inSpace"]["id"]
-          "private": result["project"]["result"]["private"]
+            "project_id": result["project"]["result"]["id"],
+            "space_id": result["project"]["result"]["inSpace"]["id"],
+            "private": result["project"]["result"]["private"],
         }
 
     def perform_mutation_operation(
