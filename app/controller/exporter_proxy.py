@@ -28,6 +28,7 @@ class ExporterProxy:
                 )
         except Exception as e:
             print(e)
+            return {"error": "Error on ExporterProxy.export_manifest"}
 
     def handle_wikifactory(self, manifest, export_url, export_token, job_id):
         exporter = WikifactoryExporter(job_id)

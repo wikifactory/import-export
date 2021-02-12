@@ -13,8 +13,6 @@ import magic
 import os
 import pygit2
 
-import base64
-
 from enum import Enum
 
 
@@ -167,16 +165,10 @@ class WikifactoryExporter(Exporter):
         space = url_parts[-2]
         slug = url_parts[-1]
 
-        user_id = space.replace("+", "").replace("@", "")
-        self.client_username = base64.b64encode(
-            bytes(user_id, "ascii")
-        ).decode("ascii")
-
         self.manifest = manifest
         self.export_token = export_token
 
-        # TODO: Get the details of the project: project_id, space_id
-
+        # Get the details of the project: project_id, space_id
         details = self.get_project_details(space, slug, export_token)
 
         if "error" in details:
@@ -184,7 +176,8 @@ class WikifactoryExporter(Exporter):
 
         self.project_id = details[0]
         self.space_id = details[1]
-        # Check if we have a manifest
+
+        # Check if we have a valid manifest
         if (
             self.manifest is not None
             and manifest.elements is not None
@@ -273,10 +266,8 @@ class WikifactoryExporter(Exporter):
     ):
         transport = RequestsHTTPTransport(
             url=endpoint_url,
-            headers={
-                "CLIENT-USERNAME": self.client_username,
-                "Cookie": "session={}".format(export_token),
-            },
+            headers={"Authorization": "Bearer {}".format(export_token)},
+            use_json=True,
         )
         session = Client(
             transport=transport, fetch_schema_from_transport=False
