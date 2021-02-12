@@ -40,11 +40,10 @@ def wikifactory_api_request(
     variables: object,
     result_path: str,
 ):
+    headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else None
     transport = RequestsHTTPTransport(
         url=endpoint_url,
-        headers={
-            "Authorization": f"Bearer {auth_token}",
-        },
+        headers=headers,
     )
     session = Client(transport=transport, fetch_schema_from_transport=False)
 
