@@ -74,11 +74,6 @@ class WikifactoryExporter(Exporter):
         space = url_parts[-2]
         slug = url_parts[-1]
 
-        user_id = space.replace("+", "").replace("@", "")
-        self.client_username = base64.b64encode(
-            bytes(user_id, "ascii")
-        ).decode("ascii")
-
         self.manifest = manifest
         self.export_token = export_token
 
@@ -181,8 +176,7 @@ class WikifactoryExporter(Exporter):
         transport = RequestsHTTPTransport(
             url=endpoint_url,
             headers={
-                "CLIENT-USERNAME": self.client_username,
-                "Cookie": "session={}".format(export_token),
+                "Authorization": f"Bearer {export_token}",
             },
         )
         session = Client(
