@@ -5,9 +5,9 @@ from gql.transport.requests import RequestsHTTPTransport
 
 from app.controller.error import NotValidManifest, ExportNotReachable
 from app.models import (
-  get_job,
-  increment_processed_element_for_job,
-  StatusEnum,
+    get_job,
+    increment_processed_element_for_job,
+    StatusEnum,
 )
 
 from .wikifactory_gql import (
@@ -33,7 +33,9 @@ def validate_url(url):
 
     from re import search
 
-    pattern = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/[@+][\w-]+\/[\w-]+$"
+    pattern = (
+        r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/[@+][\w-]+\/[\w-]+$"
+    )
     return bool(search(pattern, url))
 
 
@@ -115,7 +117,8 @@ class WikifactoryExporter(Exporter):
 
             # 2) Upload to S3
             if s3_upload_url is not None and (len(s3_upload_url) > 0):
-                self.upload_file(file_element.path, s3_upload_url)
+                with open(file_element.path, "rb") as data:
+                    self.upload_file(file_element.path, s3_upload_url)
 
                 # 3) Once finished do the ADD operation
 
@@ -228,26 +231,22 @@ class WikifactoryExporter(Exporter):
             variables,
         )
 
-    def upload_file(self, local_path, file_url):
+    def upload_file(self, file_handle, file_url):
 
         headers = {
-            "x-amz-acl": "private" if self.project_details.private else "public-read",
+            "x-amz-acl": "private"
+            if self.project_details.private
+            else "public-read",
             "Content-Type": magic.from_file(local_path, mime=True),
         }
 
-        with open(local_path, "rb") as data:
-            response = requests.put(file_url, data=data, headers=headers)
-            if response.status_code != 200:
-                print(
-                    "There was an error uploading the file. Error code: {}".format(
-                        response.status_code
-                    )
-                )
-                print(response.content)
-            else:
-                print(
-                    "File {} uploaded to s3".format(local_path.split("/")[-1])
-                )
+        response = requests.put(file_url, data=data, headers=headers)
+
+        if response.status_code != 200:
+            raise FileUploadError(
+                f"There was an error uploading the file. Error code: {response.status_code}"
+            )
+        print("File {} uploaded to s3".format(local_path.split("/")[-1]))
 
     def complete_file(self, space_id, file_id, export_token):
 
