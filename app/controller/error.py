@@ -4,3 +4,11 @@ class NotValidManifest(ValueError):
 
 class ExportNotReachable(Exception):
     pass
+
+
+class WikifactoryAPIUserErrors(Exception):
+    pass
+
+
+class FileUploadError(Exception):
+    pass
