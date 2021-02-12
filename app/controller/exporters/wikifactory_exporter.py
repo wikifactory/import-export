@@ -3,7 +3,7 @@ from app.config import wikifactory_connection_url
 from gql import Client
 from gql.transport.requests import RequestsHTTPTransport
 
-from app.controller.error import NotValidManifest
+from app.controller.error import NotValidManifest, ExportNotReachable
 from app.models import StatusEnum
 from app.models import increment_processed_element_for_job
 
@@ -215,7 +215,7 @@ class WikifactoryExporter(Exporter):
         )
 
         if result is None or "userErrors" in result:
-            return {"error": "Project nof found in Wikifactory"}
+            raise ExportNotReachable("Project nof found in Wikifactory")
         else:
             p_id = result["project"]["result"]["id"]
             sp_id = result["project"]["result"]["inSpace"]["id"]
