@@ -50,8 +50,6 @@ class WikifactoryExporter(Exporter):
             )
             self.space_id = ""
             self.project_id = ""
-        except Exception as e:
-            print(e)
 
     def validate_url(url):
 
