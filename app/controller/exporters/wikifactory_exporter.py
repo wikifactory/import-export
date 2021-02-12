@@ -9,13 +9,16 @@ import base64
 from app.model.exporter import Exporter
 from app.config import wikifactory_connection_url
 from gql import Client
-from gql.transport.requests import RequestsHTTPTransport
+from gql.transport.requests import RequestsHTTPTransport, TransportServerError
 
 from app.controller.error import (
     NotValidManifest,
     ExportNotReachable,
     FileUploadError,
+    ExportAuthRequired,
     WikifactoryAPIUserErrors,
+    WikifactoryAPINoResultPath,
+    WikifactoryAPINoResult,
 )
 from app.models import (
     get_job,
@@ -47,14 +50,37 @@ def wikifactory_api_request(
     )
     session = Client(transport=transport, fetch_schema_from_transport=False)
 
-    response = session.execute(graphql_document, variable_values=variables)
+    try:
+        # FIXME - this seems to be a sync request. In the future,
+        # we should look into making requests async
+        response = session.execute(graphql_document, variable_values=variables)
+    except TransportServerError:
+        # FIXME - apparently TransportServerError doesn't provide the error code.
+        # That would be useful to handle it better, but by now it will be considered
+        # an authentication error.
+        raise ExportAuthRequired()
+    
+    try:
+        result_path_root, *result_path_rest = result_path.split('.')
+    except AttributeError:
+      raise WikifactoryAPINoResultPath()
 
-    result = getattr(response, result_path, {})
-    user_errors = getattr(result, "userErrors", [])
+    try:
+        result_root = response[result_path_root]
+    except KeyError:
+        raise WikifactoryAPINoResult()
+
+    user_errors = getattr(result_root, "userErrors", [])
     if user_errors:
-        raise WikifactoryAPIUserErrors(user_errors)
+        raise WikifactoryAPIUserErrors()
 
-    return getattr(result, "result", {})
+    try:
+        for result_path_item in result_path_rest:
+            result = result[result_path_item]
+    except KeyError:
+        raise WikifactoryAPINoResult()
+
+    return result
 
 
 def validate_url(url):
