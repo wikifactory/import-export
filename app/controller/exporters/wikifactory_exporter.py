@@ -35,7 +35,7 @@ endpoint_url = wikifactory_connection_url
 
 
 def wikifactory_api_request(
-    wikifactory_query: str,
+    graphql_document: str,
     auth_token: str,
     variables: object,
     result_path: str,
@@ -48,7 +48,7 @@ def wikifactory_api_request(
     )
     session = Client(transport=transport, fetch_schema_from_transport=False)
 
-    response = session.execute(wikifactory_query, variable_values=variables)
+    response = session.execute(graphql_document, variable_values=variables)
 
     result = getattr(response, result_path, {})
     user_errors = getattr(result, "userErrors", [])
