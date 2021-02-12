@@ -39,6 +39,7 @@ class WikifactoryExporter(Exporter):
         self.set_status(StatusEnum.exporting.value)
 
         self.manifest = None
+        self.project_details = None
 
         try:
             self.add_hook_for_status(
@@ -48,8 +49,6 @@ class WikifactoryExporter(Exporter):
                 StatusEnum.exporting_successfully.value,
                 self.invite_collaborators,
             )
-            self.space_id = ""
-            self.project_id = ""
 
     def validate_url(url):
 
@@ -75,15 +74,9 @@ class WikifactoryExporter(Exporter):
         self.manifest = manifest
         self.export_token = export_token
 
-        # TODO: Get the details of the project: project_id, space_id
 
-        details = self.get_project_details(space, slug, export_token)
+        self.project_details = self.get_project_details(space, slug, export_token)
 
-        if "error" in details:
-            return details
-
-        self.project_id = details[0]
-        self.space_id = details[1]
         # Check if we have a manifest
         if (
             self.manifest is not None
@@ -143,7 +136,7 @@ class WikifactoryExporter(Exporter):
                 # 4) Finally, mark the file as completed
 
                 self.complete_file(
-                    self.space_id, wikifactory_file_id, self.export_token
+                    self.project_details.space_id, wikifactory_file_id, self.export_token
                 )
 
                 # Increment the processed elements in the database
@@ -189,7 +182,7 @@ class WikifactoryExporter(Exporter):
         variables = {
             "fileInput": {
                 "filename": file_name,
-                "spaceId": self.space_id,
+                "spaceId": self.project_details.space_id,
                 "size": os.path.getsize(element.path),
                 "projectPath": element.path.replace(project_path, "")[1:],
                 "gitHash": self.calculate_githash_for_element(element),
@@ -214,10 +207,12 @@ class WikifactoryExporter(Exporter):
 
         if result is None or "userErrors" in result:
             raise ExportNotReachable("Project nof found in Wikifactory")
-        else:
-            p_id = result["project"]["result"]["id"]
-            sp_id = result["project"]["result"]["inSpace"]["id"]
-            return (p_id, sp_id)
+
+        return {
+          "project_id": result["project"]["result"]["id"]
+          "space_id": result["project"]["result"]["inSpace"]["id"]
+          "private": result["project"]["result"]["private"]
+        }
 
     def perform_mutation_operation(
         self, element, file_id, project_path, export_token
@@ -228,7 +223,7 @@ class WikifactoryExporter(Exporter):
                 "fileId": file_id,
                 "opType": "ADD",
                 "path": element.path.replace(project_path, "")[1:],
-                "projectId": self.project_id,
+                "projectId": self.project_details.project_id,
             }
         }
 
@@ -280,7 +275,7 @@ class WikifactoryExporter(Exporter):
 
         variables = {
             "commitData": {
-                "projectId": self.project_id,
+                "projectId": self.project_details.project_id,
                 "title": "Import files",
                 "description": "",
             }
