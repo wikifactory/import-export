@@ -30,7 +30,7 @@ def validate_url(url):
 
     from re import search
 
-    pattern = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(\@|\+)[\w\-º_]*\/[\w\-\_]+$"
+    pattern = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/[@+][\w-]+\/[\w-]+$"
     return bool(search(pattern, url))
 
 

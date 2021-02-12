@@ -62,6 +62,10 @@ def get_test_manifest():
         ("https://www.wikifactory.com/@botler/test-project", True),
         ("https://wikifactory.com/+wikifactory/important-project", True),
         ("https://wikifactory.com/+wikifactory/试验", True),
+        ("https://wikifactory.com/+wikifactory/", False),
+        ("https://wikifactory.com/+wikifactory", False),
+        ("https://wikifactory.com/+/not-here", False),
+        ("https://wikifactory.com/@/not-here", False),
     ],
 )
 def test_validate_url(project_url, is_valid):
