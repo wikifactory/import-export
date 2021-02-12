@@ -268,7 +268,7 @@ def get_jobs():
         .order_by(JobStatus.timestamp.desc())
         .all()
     ):
-        result.append({"id": job_id, "status": status})
+        result.append({"id": str(job_id), "status": status})
 
     return result
 
