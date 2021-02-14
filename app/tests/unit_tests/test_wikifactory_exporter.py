@@ -84,6 +84,8 @@ dummy_gql = gql.gql(
 
 
 def mock_gql_response(monkeypatch, response_dict={}):
+    # mocking the response is a direct mock on the output/result
+    # it doesn't use any data from the query/mutation requested
     def mock_execute(*args, **kwargs):
         response = requests.Response()
         response.status_code = (
@@ -195,6 +197,32 @@ def test_api_no_result_error(monkeypatch, result_path, response_dict):
     mock_gql_response(monkeypatch, response_dict=response_dict)
     with pytest.raises(error.WikifactoryAPINoResult):
         wikifactory_api_request(dummy_gql, "this-is-a-token", {}, result_path)
+
+
+@pytest.mark.parametrize(
+    "result_path,response_dict,expected_result",
+    [
+        ("dummy.result", {"data": {"dummy": {"result": "ok"}}}, "ok"),
+        (
+            "dummy.result",
+            {"data": {"dummy": {"result": [1, 2, 3]}}},
+            [1, 2, 3],
+        ),
+        (
+            "dummy.result.project",
+            {"data": {"dummy": {"result": {"project": {"id": "project-id"}}}}},
+            {"id": "project-id"},
+        ),
+    ],
+)
+def test_api_success(monkeypatch, result_path, response_dict, expected_result):
+    mock_gql_response(monkeypatch, response_dict=response_dict)
+
+    result = wikifactory_api_request(
+        dummy_gql, "this-is-a-token", {}, result_path
+    )
+
+    assert result == expected_result
 
 
 def test_process_element(monkeypatch):
