@@ -450,26 +450,49 @@ def test_complete_file_mutation_variables(
     exporter.complete_file(file_id)
 
 
-def test_operation_mutation(monkeypatch):
-    monkeypatch.setattr(
-        WikifactoryExporter,
-        "wikifactory_api_request",
-        get_wikifactory_api_request_result,
+@pytest.mark.parametrize(
+    "project_path, project_details, element, file_id, expected_variables",
+    [
+        (
+            f"{CURRENT_DIR}/test_files/sample-project",
+            {"space_id": "space-id", "project_id": "project-id"},
+            Element(path=f"{CURRENT_DIR}/test_files/sample-project/README.md"),
+            "file-id",
+            {
+                "operationData": {
+                    "fileId": "file-id",
+                    "opType": "ADD",
+                    "path": "README.md",
+                    "projectId": "project-id",
+                }
+            },
+        ),
+    ],
+)
+def test_perform_operation_mutation_variables(
+    monkeypatch,
+    exporter,
+    project_path,
+    project_details,
+    element,
+    file_id,
+    expected_variables,
+):
+    exporter.project_path = project_path
+    exporter.project_details = project_details
+    dummy_operation_data = {
+        "operation": {
+            "project": {
+                "id": project_details.get("project_id"),
+            }
+        }
+    }
+    mock_gql_response(
+        monkeypatch,
+        response_dict={"data": dummy_operation_data},
+        expected_variables=expected_variables,
     )
-
-    request_result = get_wikifactory_api_request_result(
-        wikifactory_gql.operation_mutation,
-        "",
-        {},
-        result={"project": {"id": "a590e8f66b0f63775217f65d9567d77efc4cea3d"}},
-    )
-
-    assert "project" in request_result
-    assert "id" in request_result["project"]
-    assert (
-        request_result["project"]["id"]
-        == "a590e8f66b0f63775217f65d9567d77efc4cea3d"
-    )
+    exporter.perform_mutation_operation(element, file_id)
 
 
 def test_commit_contribution_mutation(monkeypatch):

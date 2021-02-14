@@ -255,6 +255,8 @@ class WikifactoryExporter(Exporter):
 
     def perform_mutation_operation(self, element, file_id):
 
+        job = get_db_job(self.job_id)
+
         variables = {
             "operationData": {
                 "fileId": file_id,
@@ -265,7 +267,10 @@ class WikifactoryExporter(Exporter):
         }
 
         wikifactory_api_request(
-            operation_mutation, self.export_token, variables, "operationData"
+            operation_mutation,
+            job.export_token,
+            variables,
+            "operation.project",
         )
 
     def upload_file(self, file_handle, file_url):
