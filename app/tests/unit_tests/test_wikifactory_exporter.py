@@ -1,7 +1,15 @@
 import pytest
 import uuid
+import gql
+import requests
+from graphql.execution import ExecutionResult
 
-from app.controller.exporters.wikifactory_exporter import WikifactoryExporter, validate_url
+from app.controller.exporters.wikifactory_exporter import (
+    WikifactoryExporter,
+    validate_url,
+    wikifactory_api_request,
+)
+from app.controller import error
 from app.controller.exporters import wikifactory_gql
 
 from app.tests.integration_tests.test_job import create_job
@@ -9,15 +17,6 @@ from app.tests.conftest import WIKIFACTORY_TOKEN, WIKIFACTORY_TEST_PROJECT_URL
 from app.models import add_job_to_db, get_job
 from app.model.manifest import Manifest
 from app.model.element import Element
-
-
-def get_wikifactory_api_request_result(
-    wikifactory_query: str = "",
-    export_token: str = "",
-    variables: object = {},
-    result: object = {},
-):
-    return result
 
 
 def get_test_manifest():
@@ -70,6 +69,132 @@ def get_test_manifest():
 )
 def test_validate_url(project_url, is_valid):
     assert validate_url(project_url) is is_valid
+
+
+dummy_gql = gql.gql(
+    """
+    query Dummy {
+      dummy {
+        result
+        userErrors { message, key, code }
+      }
+    }
+    """
+)
+
+
+def mock_gql_response(monkeypatch, response_dict={}):
+    def mock_execute(*args, **kwargs):
+        response = requests.Response()
+        response.status_code = (
+            response_dict.get("status_code") or requests.codes["ok"]
+        )
+        response.raise_for_status()
+        return ExecutionResult(
+            data=response_dict.get("data"), errors=response_dict.get("errors")
+        )
+
+    monkeypatch.setattr(gql.Client, "execute", mock_execute)
+
+
+@pytest.mark.parametrize(
+    "response_dict",
+    [
+        {"status_code": requests.codes["unauthorized"]},
+        {"errors": [{"message": "unauthorized request"}]},
+        {"errors": [{"message": "token is invalid"}]},
+        {
+            "data": {
+                "dummy": {
+                    "userErrors": [
+                        {
+                            "key": 0,
+                            "code": "AUTHORISATION",
+                            "message": "AUTHORISATION error",
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "data": {
+                "dummy": {
+                    "userErrors": [
+                        {
+                            "key": 0,
+                            "code": "AUTHENTICATION",
+                            "message": "AUTHENTICATION error",
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "data": {
+                "dummy": {
+                    "userErrors": [
+                        {
+                            "key": 0,
+                            "code": "NOTFOUND",
+                            "message": "NOTFOUND error",
+                        }
+                    ]
+                }
+            }
+        },
+    ],
+)
+def test_api_auth_error(monkeypatch, response_dict):
+    mock_gql_response(monkeypatch, response_dict=response_dict)
+    with pytest.raises(error.ExportAuthRequired):
+        wikifactory_api_request(
+            dummy_gql, "this-is-a-token", {}, "dummy.result"
+        )
+
+
+@pytest.mark.parametrize(
+    "response_dict",
+    [
+        {
+            "data": {
+                "dummy": {
+                    "userErrors": [
+                        {
+                            "key": 0,
+                            "code": "UNHANDLED_ERROR",
+                            "message": "Backend exception",
+                        }
+                    ]
+                }
+            }
+        },
+    ],
+)
+def test_api_user_error(monkeypatch, response_dict):
+    mock_gql_response(monkeypatch, response_dict=response_dict)
+    with pytest.raises(error.WikifactoryAPIUserErrors):
+        wikifactory_api_request(
+            dummy_gql, "this-is-a-token", {}, "dummy.result"
+        )
+
+
+def test_api_no_result_path_error(monkeypatch):
+    mock_gql_response(monkeypatch, response_dict={"data": {}})
+    with pytest.raises(error.WikifactoryAPINoResultPath):
+        wikifactory_api_request(dummy_gql, "this-is-a-token", {}, None)
+
+
+@pytest.mark.parametrize(
+    "result_path,response_dict",
+    [
+        ("dummy", {"data": {}}),
+        ("dummy.result", {"data": {"dummy": {}}}),
+    ],
+)
+def test_api_no_result_error(monkeypatch, result_path, response_dict):
+    mock_gql_response(monkeypatch, response_dict=response_dict)
+    with pytest.raises(error.WikifactoryAPINoResult):
+        wikifactory_api_request(dummy_gql, "this-is-a-token", {}, result_path)
 
 
 def test_process_element(monkeypatch):
