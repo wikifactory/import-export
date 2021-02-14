@@ -115,14 +115,13 @@ def validate_url(url):
 class WikifactoryExporter(Exporter):
     def __init__(self, job_id):
         self.job_id = job_id
-        self.set_status(StatusEnum.exporting.value)
-
         self.manifest = None
         self.project_details = None
 
     def export_manifest(self, manifest):
 
         job = get_job(self.job_id)
+        self.set_status(StatusEnum.exporting.value)
         print("WIKIFACTORY: Starting the exporting process")
 
         # Extract the space and slug from the URL
