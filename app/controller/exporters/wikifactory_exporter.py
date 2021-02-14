@@ -297,14 +297,14 @@ class WikifactoryExporter(Exporter):
 
         variables = {
             "fileInput": {
-                "spaceId": self.project_details["space_id"],
                 "id": file_id,
+                "spaceId": self.project_details["space_id"],
                 "completed": True,
             }
         }
-        self.wikifactory_api_request(
+        wikifactory_api_request(
             complete_file_mutation,
             job.export_token,
             variables,
-            "fileInput",
+            "file.file",
         )

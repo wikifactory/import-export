@@ -411,6 +411,45 @@ def test_upload_file_error(monkeypatch, exporter):
         exporter.upload_file(file_handle, file_url)
 
 
+@pytest.mark.parametrize(
+    "project_details, file_id, expected_variables",
+    [
+        (
+            {"space_id": "space-id", "project_id": "project-id"},
+            "file-id",
+            {
+                "fileInput": {
+                    "id": "file-id",
+                    "spaceId": "space-id",
+                    "completed": True,
+                }
+            },
+        ),
+    ],
+)
+def test_complete_file_mutation_variables(
+    monkeypatch,
+    exporter,
+    project_details,
+    file_id,
+    expected_variables,
+):
+    exporter.project_details = project_details
+    dummy_file_data = {
+        "file": {
+            "file": {
+                "id": file_id,
+            }
+        }
+    }
+    mock_gql_response(
+        monkeypatch,
+        response_dict={"data": dummy_file_data},
+        expected_variables=expected_variables,
+    )
+    exporter.complete_file(file_id)
+
+
 def test_operation_mutation(monkeypatch):
     monkeypatch.setattr(
         WikifactoryExporter,
@@ -431,42 +470,6 @@ def test_operation_mutation(monkeypatch):
         request_result["project"]["id"]
         == "a590e8f66b0f63775217f65d9567d77efc4cea3d"
     )
-
-
-def test_complete_file_mutation(monkeypatch):
-    monkeypatch.setattr(
-        WikifactoryExporter,
-        "wikifactory_api_request",
-        get_wikifactory_api_request_result,
-    )
-
-    request_result = get_wikifactory_api_request_result(
-        wikifactory_gql.complete_file_mutation,
-        "",
-        {},
-        result={
-            "file": {
-                "file": {
-                    "id": "7f65d9567d77efc4cea3da590e8f66b0f6377521",
-                    "path": "/file.txt",
-                    "url": "",
-                    "completed": True,
-                },
-                "userErrors": [],
-            }
-        },
-    )
-
-    assert "file" in request_result
-    assert "file" in request_result["file"]
-    assert len(request_result["file"]["userErrors"]) == 0
-
-    assert "id" in request_result["file"]["file"]
-    assert (
-        request_result["file"]["file"]["id"]
-        == "7f65d9567d77efc4cea3da590e8f66b0f6377521"
-    )
-    assert request_result["file"]["file"]["completed"] is True
 
 
 def test_commit_contribution_mutation(monkeypatch):
@@ -503,56 +506,6 @@ def test_commit_contribution_mutation(monkeypatch):
         request_result["commit"]["project"]["id"]
         == "a590e8f66b0f63775217f65d9567d77efc4cea3d"
     )
-
-
-def get_file_mutation_result(
-    self, element, file_name, project_path, export_token
-):
-
-    return {
-        "file": {
-            "file": {
-                "id": element.id,
-                "path": element.path,
-                "completed": False,
-                "uploadUrl": "www.testurl.com",
-            },
-            "userErrors": [],
-        }
-    }
-
-
-def get_complete_file_mutation_result(self, space_id, file_id, export_token):
-    return {
-        "file": {
-            "file": {
-                "id": "7f65d9567d77efc4cea3da590e8f66b0f6377521",
-                "path": "/file.txt",
-                "url": "",
-                "completed": True,
-            },
-            "userErrors": [],
-        }
-    }
-
-
-def get_perform_mutation_operation_result(
-    self, element, file_id, project_path, export_token
-):
-    return {"project": {"id": "a590e8f66b0f63775217f65d9567d77efc4cea3d"}}
-
-
-def get_commit_contribution_result(self, export_token):
-    return {
-        "commit": {
-            "project": {
-                "id": "a590e8f66b0f63775217f65d9567d77efc4cea3d",
-                "contributionCount": 1,
-                "inSpace": {"id": "1dcb9df4f37506b7efe3f85af2ef55757a92b148"},
-            },
-            "userErrors": [],
-        }
-    }
 
 
 def test_export_from_manifest(monkeypatch):

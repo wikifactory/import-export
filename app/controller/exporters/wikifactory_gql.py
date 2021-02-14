@@ -34,20 +34,17 @@ operation_mutation = gql(
 complete_file_mutation = gql(
     """
     mutation CompleteFile($fileInput: FileInput) {
-    file(fileData: $fileInput) {
-        file {
-            id
-            path
-            url
-            completed
-        }
-        userErrors {
-            message
-            key
-            code
+        file(fileData: $fileInput) {
+            file {
+                id
+            }
+            userErrors {
+                message
+                key
+                code
+            }
         }
     }
-}
     """
 )
 
