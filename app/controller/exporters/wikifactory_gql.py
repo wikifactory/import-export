@@ -6,18 +6,8 @@ file_mutation = gql(
         file (fileData: $fileInput) {
             file {
                 id
-                path
-                mimeType
-                filename
-                size
-                completed
-                cancelled
-                isCopy
-                slug
-                spaceId
                 uploadUrl
             }
-
             userErrors {
                 message
                 key
