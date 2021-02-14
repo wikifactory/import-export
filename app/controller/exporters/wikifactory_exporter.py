@@ -139,7 +139,7 @@ class WikifactoryExporter(Exporter):
             # FIXME - this data should be attached to the job itself
             self.project_path = manifest.elements[0].path
 
-            # FIXME - we should look into this. 
+            # FIXME - we should look into this.
             # Why exporter has to call back to manifest
             # which then will call then exporter methods?
             self.manifest.iterate_through_elements(
@@ -279,9 +279,12 @@ class WikifactoryExporter(Exporter):
             ),
         }
 
-        response = requests.put(file_url, data=file_handle, headers=headers)
-
-        if response.status_code != 200:
+        try:
+            response = requests.put(
+                file_url, data=file_handle, headers=headers
+            )
+            response.raise_for_status()
+        except requests.HTTPError:
             raise FileUploadError(
                 f"There was an error uploading the file. Error code: {response.status_code}"
             )

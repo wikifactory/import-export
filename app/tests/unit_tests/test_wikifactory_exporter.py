@@ -345,6 +345,72 @@ def test_process_element_mutation_variables(
     exporter.process_element(element)
 
 
+@pytest.mark.parametrize(
+    "file_path, project_details, expected_headers",
+    [
+        (
+            f"{CURRENT_DIR}/test_files/sample-project/README.md",
+            {
+                "space_id": "space-id",
+                "project_id": "project-id",
+                "private": False,
+            },
+            {"x-amz-acl": "public-read", "Content-Type": "text/plain"},
+        ),
+        (
+            f"{CURRENT_DIR}/test_files/sample-project/README.md",
+            {
+                "space_id": "space-id",
+                "project_id": "project-id",
+                "private": True,
+            },
+            {"x-amz-acl": "private", "Content-Type": "text/plain"},
+        ),
+    ],
+)
+def test_upload_file_headers(
+    monkeypatch, exporter, file_path, project_details, expected_headers
+):
+    def mock_put_assert_headers(*args, **kwargs):
+        headers = kwargs.get("headers")
+        assert headers == expected_headers
+        response = requests.Response()
+        response.status_code = requests.codes["ok"]
+        return response
+
+    monkeypatch.setattr(requests, "put", mock_put_assert_headers)
+
+    exporter.project_details = project_details
+
+    file_url = "http://upload-domain/upload-endpoint"
+
+    with open(file_path, "rb") as file_handle:
+        exporter.upload_file(file_handle, file_url)
+
+
+def test_upload_file_error(monkeypatch, exporter):
+    def mock_put_status_error(*args, **kwargs):
+        response = requests.Response()
+        response.status_code = requests.codes["expectation_failed"]
+        return response
+
+    monkeypatch.setattr(requests, "put", mock_put_status_error)
+
+    exporter.project_details = {
+        "space_id": "space-id",
+        "project_id": "project-id",
+        "private": False,
+    }
+
+    file_url = "http://upload-domain/upload-endpoint"
+    file_path = f"{CURRENT_DIR}/test_files/sample-project/README.md"
+
+    with open(file_path, "rb") as file_handle, pytest.raises(
+        error.FileUploadError
+    ):
+        exporter.upload_file(file_handle, file_url)
+
+
 def test_operation_mutation(monkeypatch):
     monkeypatch.setattr(
         WikifactoryExporter,
@@ -454,10 +520,6 @@ def get_file_mutation_result(
             "userErrors": [],
         }
     }
-
-
-def upload_file_result(self, local_path, file_url):
-    pass
 
 
 def get_complete_file_mutation_result(self, space_id, file_id, export_token):
