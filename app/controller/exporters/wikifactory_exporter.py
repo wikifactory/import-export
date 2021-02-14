@@ -136,12 +136,17 @@ class WikifactoryExporter(Exporter):
             and len(manifest.elements) > 0
         ):
 
+            # FIXME - this data should be attached to the job itself
             self.project_path = manifest.elements[0].path
 
+            # FIXME - we should look into this. 
+            # Why exporter has to call back to manifest
+            # which then will call then exporter methods?
             self.manifest.iterate_through_elements(
                 self, self.on_file_cb, self.on_folder_cb, self.on_finished_cb
             )
 
+            # FIXME - probably would be better to do this on the final callback
             self.set_status(StatusEnum.exporting_successfully.value)
 
             return {"exported": "true", "manifest": self.manifest.toJson()}
