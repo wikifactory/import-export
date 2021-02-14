@@ -552,63 +552,61 @@ def test_on_file_cb_no_file_id(monkeypatch, exporter):
         exporter.on_file_cb(Element())
 
 
-def test_export_from_manifest(monkeypatch):
+@pytest.mark.parametrize("manifest", [None, Manifest()])
+def test_export_manifest_invalid(monkeypatch, exporter, manifest):
+    def mock_get_project_details(*args, **kwargs):
+        return {
+            "space_id": "space-id",
+            "project_id": "project-id",
+            "private": False,
+        }
 
     monkeypatch.setattr(
-        WikifactoryExporter,
-        "process_element",
-        get_file_mutation_result,
+        exporter, "get_project_details", mock_get_project_details
     )
+
+    with pytest.raises(error.NotValidManifest):
+        exporter.export_manifest(manifest)
+
+
+@pytest.mark.parametrize(
+    "manifest",
+    [
+        Manifest(
+            project_id="project-id",
+            project_name="Test Project",
+            project_description="This is a test project",
+            source_url="https://github.com/wikifactory/sample-project",
+            elements=[
+                Element(
+                    id="element-id",
+                    type=ElementType.FILE,
+                    name="README.md",
+                    path=f"{CURRENT_DIR}/test_files/sample-project/README.md",
+                )
+            ],
+        )
+    ],
+)
+def test_export_manifest(monkeypatch, exporter, manifest):
+    def mock_get_project_details(*args, **kwargs):
+        return {
+            "space_id": "space-id",
+            "project_id": "project-id",
+            "private": False,
+        }
+
+    def mock_iterate_through_elements(*args, **kwargs):
+        pass
 
     monkeypatch.setattr(
-        WikifactoryExporter,
-        "upload_file",
-        upload_file_result,
+        exporter, "get_project_details", mock_get_project_details
     )
-
     monkeypatch.setattr(
-        WikifactoryExporter,
-        "get_project_details",
-        get_project_details_result,
+        manifest, "iterate_through_elements", mock_iterate_through_elements
     )
 
-    monkeypatch.setattr(
-        WikifactoryExporter,
-        "perform_mutation_operation",
-        get_perform_mutation_operation_result,
-    )
-
-    monkeypatch.setattr(
-        WikifactoryExporter,
-        "complete_file",
-        get_complete_file_mutation_result,
-    )
-
-    monkeypatch.setattr(
-        WikifactoryExporter,
-        "commit_contribution",
-        get_commit_contribution_result,
-    )
-
-    # Create the exporting job
-    (job_id, job) = create_job(
-        import_url="https://github.com/rievo/icosphere",
-        import_service="git",
-        export_url=WIKIFACTORY_TEST_PROJECT_URL,
-        export_service="wikifactory",
-        export_token=WIKIFACTORY_TOKEN,
-    )
-
-    # Add the job to the db
-    add_job_to_db(job, job_id)
-
-    wfexporter = WikifactoryExporter(job_id)
-    result = wfexporter.export_manifest(
-        get_test_manifest(), job["export_url"], job["export_token"]
-    )
-
-    assert result is not None
-
-    retrieved_job = get_job(job_id)
-
-    assert retrieved_job is not None
+    result = exporter.export_manifest(manifest)
+    assert exporter.manifest is manifest
+    assert result.get("exported") == "true"
+    assert result.get("manifest") == manifest.toJson()

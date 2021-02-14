@@ -131,10 +131,12 @@ class WikifactoryExporter(Exporter):
 
         # Check if we have a manifest
         if (
-            self.manifest is not None
+            manifest is not None
             and manifest.elements is not None
             and len(manifest.elements) > 0
         ):
+
+            self.manifest = manifest
 
             # FIXME - this data should be attached to the job itself
             self.project_path = manifest.elements[0].path
@@ -149,6 +151,7 @@ class WikifactoryExporter(Exporter):
             # FIXME - probably would be better to do this on the final callback
             self.set_status(StatusEnum.exporting_successfully.value)
 
+            # FIXME - should it return "true" as a string?
             return {"exported": "true", "manifest": self.manifest.toJson()}
 
         else:
