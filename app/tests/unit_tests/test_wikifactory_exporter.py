@@ -117,6 +117,26 @@ def mock_gql_response(monkeypatch, response_dict={}):
     monkeypatch.setattr(gql.Client, "execute", mock_execute)
 
 
+@pytest.fixture
+def basic_job():
+    options = {
+        "import_service": "git",
+        "import_url": "https://github.com/wikifactory/sample-project",
+        "import_token": None,
+        "export_service": "wikifactory",
+        "export_url": "https://wikifactory.com/@botler/sample-project",
+        "export_token": "this-is-a-token",
+    }
+    job_id = str(uuid.uuid4())
+    add_job_to_db(options, job_id)
+    return job_id
+
+
+@pytest.fixture
+def exporter(basic_job):
+    return WikifactoryExporter(basic_job)
+
+
 @pytest.mark.parametrize(
     "response_dict",
     [
@@ -241,6 +261,27 @@ def test_api_success(monkeypatch, result_path, response_dict, expected_result):
     )
 
     assert result == expected_result
+
+
+@pytest.mark.parametrize("project_id, private, space_id", [
+    ("project-id", True, "space-id"),
+    ("project-id", False, "space-id"),
+])
+def test_get_project_details(monkeypatch, exporter, project_id, private, space_id):
+    project_data = {
+        "project": {
+            "result": {
+                "id": project_id,
+                "private": private,
+                "inSpace": { "id": space_id }
+            }
+        }
+    }
+    mock_gql_response(monkeypatch, response_dict={"data": project_data})
+    project_details = exporter.get_project_details()
+    assert project_details["project_id"] == project_id
+    assert project_details["private"] == private
+    assert project_details["space_id"] == space_id
 
 
 def test_process_element(monkeypatch):
@@ -434,14 +475,6 @@ def get_file_mutation_result(
 
 def upload_file_result(self, local_path, file_url):
     pass
-
-
-def get_project_details_result(self, space, slug, export_token):
-    # return (project_id, inspace_id)
-    return (
-        "a590e8f66b0f63775217f65d9567d77efc4cea3d",
-        "1dcb9df4f37506b7efe3f85af2ef55757a92b148",
-    )
 
 
 def get_complete_file_mutation_result(self, space_id, file_id, export_token):

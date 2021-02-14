@@ -224,7 +224,7 @@ class WikifactoryExporter(Exporter):
 
         try:
             project = wikifactory_api_request(
-                project_query, job.export_token, variables, "project"
+                project_query, job.export_token, variables, "project.result"
             )
         except:
             raise ExportNotReachable("Project nof found in Wikifactory")
