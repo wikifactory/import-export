@@ -54,11 +54,6 @@ commit_contribution_mutation = gql(
         commit(commitData: $commitData) {
             project {
                 id
-                inSpace {
-                    id
-                    whichTypes
-                }
-                contributionCount
             }
             userErrors {
                 message

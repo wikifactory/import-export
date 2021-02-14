@@ -206,11 +206,11 @@ class WikifactoryExporter(Exporter):
             }
         }
 
-        self.wikifactory_api_request(
+        wikifactory_api_request(
             commit_contribution_mutation,
             job.export_token,
             variables,
-            "commitData",
+            "commit.project",
         )
 
     def process_element(self, element):

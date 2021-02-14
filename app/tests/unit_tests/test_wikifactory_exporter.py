@@ -495,40 +495,41 @@ def test_perform_operation_mutation_variables(
     exporter.perform_mutation_operation(element, file_id)
 
 
-def test_commit_contribution_mutation(monkeypatch):
-    monkeypatch.setattr(
-        WikifactoryExporter,
-        "wikifactory_api_request",
-        get_wikifactory_api_request_result,
-    )
-
-    request_result = get_wikifactory_api_request_result(
-        wikifactory_gql.commit_contribution_mutation,
-        "",
-        {},
-        result={
-            "commit": {
-                "project": {
-                    "id": "a590e8f66b0f63775217f65d9567d77efc4cea3d",
-                    "contributionCount": 1,
-                    "inSpace": {
-                        "id": "1dcb9df4f37506b7efe3f85af2ef55757a92b148"
-                    },
-                },
-                "userErrors": [],
+@pytest.mark.parametrize(
+    "project_details, expected_variables",
+    [
+        (
+            {"space_id": "space-id", "project_id": "project-id"},
+            {
+                "commitData": {
+                    "projectId": "project-id",
+                    "title": "Import files",
+                    "description": "",
+                }
+            },
+        ),
+    ],
+)
+def test_on_finished_cb_mutation_variables(
+    monkeypatch,
+    exporter,
+    project_details,
+    expected_variables,
+):
+    exporter.project_details = project_details
+    dummy_commit_data = {
+        "commit": {
+            "project": {
+                "id": project_details.get("project_id"),
             }
-        },
+        }
+    }
+    mock_gql_response(
+        monkeypatch,
+        response_dict={"data": dummy_commit_data},
+        expected_variables=expected_variables,
     )
-
-    assert "commit" in request_result
-    assert "project" in request_result["commit"]
-    assert len(request_result["commit"]["userErrors"]) == 0
-
-    assert "id" in request_result["commit"]["project"]
-    assert (
-        request_result["commit"]["project"]["id"]
-        == "a590e8f66b0f63775217f65d9567d77efc4cea3d"
-    )
+    exporter.on_finished_cb()
 
 
 def test_export_from_manifest(monkeypatch):
