@@ -23,39 +23,6 @@ from app.model.element import Element, ElementType
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
-def get_test_manifest():
-
-    manifest = Manifest()
-    manifest.project_name = "test_project"
-    manifest.project_id = "9972e4fe-1a20-4f95-bb0c-648178b96522"
-    manifest.project_description = "Test description"
-
-    root_element = Element()
-    root_element.id = "root"
-    root_element.type = "2"
-
-    manifest.elements.append(root_element)
-
-    ch_1 = Element()
-    ch_1.id = "id1"
-    ch_1.type = "1"
-    ch_1.path = (
-        "/tmp/gitimports/9972e4fe-1a20-4f95-bb0c-648178b96522/index.html"
-    )
-    ch_1.name = "index.html"
-
-    ch_2 = Element()
-    ch_2.id = "id2"
-    ch_2.type = "1"
-    ch_2.path = "/tmp/gitimports/9972e4fe-1a20-4f95-bb0c-648178b96522/main.js"
-    ch_2.name = "main.js"
-
-    root_element.children.append(ch_1)
-    root_element.children.append(ch_2)
-
-    return manifest
-
-
 @pytest.mark.parametrize(
     "project_url, is_valid",
     [
