@@ -10,13 +10,13 @@ class ElementType(str, Enum):
 
 class Element:
     def __init__(
-        self, id="", type=ElementType.UNKNOWN, children=[], path="", name=""
+        self, id=None, type=None, children=None, path=None, name=None
     ):
-        self.id = id
-        self.type = type
-        self.children = children
-        self.path = path
-        self.name = name
+        self.id = id or ""
+        self.type = type or ElementType.UNKNOWN
+        self.children = children or []
+        self.path = path or ""
+        self.name = name or ""
 
     def toJson(self):
         return json.dumps(self, default=lambda o: o.__dict__)
