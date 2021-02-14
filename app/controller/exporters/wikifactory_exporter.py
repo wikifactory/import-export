@@ -23,7 +23,7 @@ from app.controller.error import (
     WikifactoryAPINoResult,
 )
 from app.models import (
-    get_job,
+    get_db_job,
     increment_processed_element_for_job,
     StatusEnum,
 )
@@ -196,7 +196,7 @@ class WikifactoryExporter(Exporter):
         self.commit_contribution()
 
     def process_element(self, element, file_name):
-        job = get_job(self.job_id)
+        job = get_db_job(self.job_id)
 
         variables = {
             "fileInput": {
@@ -218,7 +218,7 @@ class WikifactoryExporter(Exporter):
 
     def get_project_details(self):
 
-        job = get_job(self.job_id)
+        job = get_db_job(self.job_id)
 
         variables = space_slug_from_url(job.export_url)
 
@@ -272,7 +272,7 @@ class WikifactoryExporter(Exporter):
         print(f"File {file_name} uploaded to s3")
 
     def complete_file(self, file_id):
-        job = get_job(self.job_id)
+        job = get_db_job(self.job_id)
 
         variables = {
             "fileInput": {
@@ -290,7 +290,7 @@ class WikifactoryExporter(Exporter):
 
     def commit_contribution(self):
 
-        job = get_job(self.job_id)
+        job = get_db_job(self.job_id)
 
         variables = {
             "commitData": {

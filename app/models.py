@@ -193,6 +193,15 @@ def get_job_overall_progress(job_id):
     return count * (100.0 / len(statuses_to_watch))
 
 
+# FIXME - replace get_job with this
+def get_db_job(job_id):
+    # FIXME - Use session per request
+    session = Session()
+
+    return session.query(Job).filter(Job.job_id == job_id).one_or_none()
+
+
+# FIXME
 def get_job(job_id):
 
     session = Session()
