@@ -1,3 +1,4 @@
+import os
 import pytest
 import uuid
 import gql
@@ -17,7 +18,9 @@ from app.tests.integration_tests.test_job import create_job
 from app.tests.conftest import WIKIFACTORY_TOKEN, WIKIFACTORY_TEST_PROJECT_URL
 from app.models import add_job_to_db, get_job
 from app.model.manifest import Manifest
-from app.model.element import Element
+from app.model.element import Element, ElementType
+
+CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
 def get_test_manifest():
@@ -101,10 +104,13 @@ dummy_gql = gql.gql(
 )
 
 
-def mock_gql_response(monkeypatch, response_dict={}):
+def mock_gql_response(monkeypatch, response_dict={}, expected_variables=None):
     # mocking the response is a direct mock on the output/result
     # it doesn't use any data from the query/mutation requested
     def mock_execute(*args, **kwargs):
+        if expected_variables:
+            assert kwargs.get("variable_values") == expected_variables
+
         response = requests.Response()
         response.status_code = (
             response_dict.get("status_code") or requests.codes["ok"]
@@ -263,17 +269,22 @@ def test_api_success(monkeypatch, result_path, response_dict, expected_result):
     assert result == expected_result
 
 
-@pytest.mark.parametrize("project_id, private, space_id", [
-    ("project-id", True, "space-id"),
-    ("project-id", False, "space-id"),
-])
-def test_get_project_details(monkeypatch, exporter, project_id, private, space_id):
+@pytest.mark.parametrize(
+    "project_id, private, space_id",
+    [
+        ("project-id", True, "space-id"),
+        ("project-id", False, "space-id"),
+    ],
+)
+def test_get_project_details(
+    monkeypatch, exporter, project_id, private, space_id
+):
     project_data = {
         "project": {
             "result": {
                 "id": project_id,
                 "private": private,
-                "inSpace": { "id": space_id }
+                "inSpace": {"id": space_id},
             }
         }
     }
@@ -284,82 +295,54 @@ def test_get_project_details(monkeypatch, exporter, project_id, private, space_i
     assert project_details["space_id"] == space_id
 
 
-def test_process_element(monkeypatch):
-
-    monkeypatch.setattr(
-        WikifactoryExporter,
-        "wikifactory_api_request",
-        get_wikifactory_api_request_result,
-    )
-
-    request_result = get_wikifactory_api_request_result(
-        wikifactory_gql.file_mutation,
-        "",
-        {},
-        result={
-            "file": {
-                "id": "7f65d9567d77efc4cea3da590e8f66b0f6377521",
-                "path": "/file.txt",
-                "mimeType": "text/plain",
-                "completed": "false",
-                "slug": "@user",
-            }
-        },
-    )
-    assert "file" in request_result
-    assert "id" in request_result["file"]
-    assert (
-        request_result["file"]["id"]
-        == "7f65d9567d77efc4cea3da590e8f66b0f6377521"
-    )
-    assert "path" in request_result["file"]
-    assert request_result["file"]["path"] == "/file.txt"
-
-    assert request_result["file"]["slug"] == "@user"
-
-
-def test_project_query(monkeypatch):
-    monkeypatch.setattr(
-        WikifactoryExporter,
-        "wikifactory_api_request",
-        get_wikifactory_api_request_result,
-    )
-
-    request_result = get_wikifactory_api_request_result(
-        wikifactory_gql.project_query,
-        "",
-        {},
-        result={
-            "project": {
-                "result": {
-                    "id": "a590e8f66b0f63775217f65d9567d77efc4cea3d",
-                    "space": {
-                        "id": "de86c9ad380d87ada82e4e7a475cea5ee99308cb"
-                    },
-                    "inSpace": {
-                        "id": "1dcb9df4f37506b7efe3f85af2ef55757a92b148"
-                    },
+@pytest.mark.parametrize(
+    "project_path, project_details, element, expected_variables",
+    [
+        (
+            f"{CURRENT_DIR}/test_files/sample-project",
+            {"space_id": "space-id", "project_id": "project-id"},
+            Element(
+                path=f"{CURRENT_DIR}/test_files/sample-project/README.md",
+                type=ElementType.FILE,
+            ),
+            {
+                "fileInput": {
+                    "filename": "README.md",
+                    "spaceId": "space-id",
+                    "size": 54,
+                    "projectPath": "README.md",
+                    "gitHash": "692f66f8b675de33548ce2fdb66b196e287c8971",
+                    "completed": False,
+                    "contentType": "text/plain",
                 }
+            },
+        ),
+    ],
+)
+def test_process_element_mutation_variables(
+    monkeypatch,
+    exporter,
+    project_path,
+    project_details,
+    element,
+    expected_variables,
+):
+    exporter.project_path = project_path
+    exporter.project_details = project_details
+    dummy_file_data = {
+        "file": {
+            "file": {
+                "id": "file-id",
+                "uploadUrl": "http://upload-domain/upload-endpoint",
             }
-        },
+        }
+    }
+    mock_gql_response(
+        monkeypatch,
+        response_dict={"data": dummy_file_data},
+        expected_variables=expected_variables,
     )
-
-    assert "project" in request_result
-
-    project = request_result["project"]
-
-    assert "result" in project
-    assert (
-        project["result"]["id"] == "a590e8f66b0f63775217f65d9567d77efc4cea3d"
-    )
-    assert (
-        project["result"]["inSpace"]["id"]
-        == "1dcb9df4f37506b7efe3f85af2ef55757a92b148"
-    )
-    assert (
-        project["result"]["space"]["id"]
-        == "de86c9ad380d87ada82e4e7a475cea5ee99308cb"
-    )
+    exporter.process_element(element)
 
 
 def test_operation_mutation(monkeypatch):

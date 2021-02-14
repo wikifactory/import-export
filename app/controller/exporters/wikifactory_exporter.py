@@ -156,21 +156,19 @@ class WikifactoryExporter(Exporter):
 
     def on_file_cb(self, file_element):
 
-        file_name = file_element.path.split("/")[-1]
-
         try:
-            file_result = self.process_element(file_element, file_name)
+            file_result = self.process_element(file_element)
         except WikifactoryAPIUserErrors:
             raise FileUploadError("Wikifactory file couldn't be created")
 
-        wikifactory_file_id = file_result["file"]["file"]["id"]
+        wikifactory_file_id = file_result["id"]
 
         if not wikifactory_file_id:
             raise FileUploadError(
                 "Wikifactory file couldn't be created. Missing File ID"
             )
 
-        s3_upload_url = file_result["file"]["file"]["uploadUrl"]
+        s3_upload_url = file_result["uploadUrl"]
 
         if not s3_upload_url:
             print(
@@ -215,25 +213,25 @@ class WikifactoryExporter(Exporter):
             "commitData",
         )
 
-    def process_element(self, element, file_name):
+    def process_element(self, element):
         job = get_db_job(self.job_id)
 
         variables = {
             "fileInput": {
-                "filename": file_name,
+                "filename": os.path.basename(element.path),
                 "spaceId": self.project_details["space_id"],
                 "size": os.path.getsize(element.path),
                 "projectPath": os.path.relpath(
                     element.path, self.project_path
                 ),
                 "gitHash": str(pygit2.hashfile(element.path)),
-                "completed": "false",
+                "completed": False,
                 "contentType": magic.from_file(element.path, mime=True),
             }
         }
 
         return wikifactory_api_request(
-            file_mutation, job.export_token, variables, "fileInput"
+            file_mutation, job.export_token, variables, "file.file"
         )
 
     def get_project_details(self):
