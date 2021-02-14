@@ -9,7 +9,7 @@ import base64
 from app.model.exporter import Exporter
 from app.config import wikifactory_connection_url
 from gql import Client
-from gql.transport.requests import RequestsHTTPTransport, TransportServerError
+from gql.transport.requests import RequestsHTTPTransport
 
 from app.controller.error import (
     NotValidManifest,
@@ -53,25 +53,44 @@ def wikifactory_api_request(
     try:
         # FIXME - this seems to be a sync request. In the future,
         # we should look into making requests async
-        response = session.execute(graphql_document, variable_values=variables)
-    except TransportServerError:
-        # FIXME - apparently TransportServerError doesn't provide the error code.
-        # That would be useful to handle it better, but by now it will be considered
-        # an authentication error.
-        raise ExportAuthRequired()
-    
-    try:
-        result_path_root, *result_path_rest = result_path.split('.')
-    except AttributeError:
-      raise WikifactoryAPINoResultPath()
+        execution_result = session.execute(
+            graphql_document, variable_values=variables
+        )
+    except requests.HTTPError as http_error:
+        if http_error.response.status_code == requests.codes["unauthorized"]:
+            raise ExportAuthRequired()
+        raise http_error
 
     try:
-        result_root = response[result_path_root]
+        result_path_root, *result_path_rest = result_path.split(".")
+    except AttributeError:
+        raise WikifactoryAPINoResultPath()
+
+    if execution_result.errors:
+        for error in execution_result.errors:
+            if "unauthorized request" in error.get(
+                "message"
+            ) or "token is invalid" in error.get("message"):
+                raise ExportAuthRequired()
+        # FIXME trigger an exception on other GraphQL errors?
+
+    try:
+        result = execution_result.data[result_path_root]
     except KeyError:
         raise WikifactoryAPINoResult()
 
-    user_errors = getattr(result_root, "userErrors", [])
+    user_errors = result.get("userErrors", [])
     if user_errors:
+        for error in user_errors:
+            if error.get("code") in [
+                "AUTHORISATION",
+                "AUTHENTICATION",
+                "NOTFOUND",
+            ]:
+                # FIXME NOTFOUND should either be handled differently or
+                # the error code should be passed to the exception, so a "real" NOTFOUND
+                # can be differentiated from a "not allowed to read right now"
+                raise ExportAuthRequired()
         raise WikifactoryAPIUserErrors()
 
     try:
