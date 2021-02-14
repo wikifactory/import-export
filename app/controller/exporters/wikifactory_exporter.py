@@ -161,7 +161,7 @@ class WikifactoryExporter(Exporter):
         except WikifactoryAPIUserErrors:
             raise FileUploadError("Wikifactory file couldn't be created")
 
-        wikifactory_file_id = file_result["id"]
+        wikifactory_file_id = file_result.get("id")
 
         if not wikifactory_file_id:
             raise FileUploadError(
@@ -171,22 +171,24 @@ class WikifactoryExporter(Exporter):
         s3_upload_url = file_result["uploadUrl"]
 
         if not s3_upload_url:
+            # FIXME - this mean the file already exists on Wikifactory.
+            # We should probably query the "completed" status or raise an exception.
             print(
                 "WARNING: There is no S3 url. This probably means a file with the same hash has already been uploaded"
             )
+        else:
+            # Upload to S3
+            with open(file_element.path, "rb") as data:
+                self.upload_file(data, s3_upload_url)
 
-        # 2) Upload to S3
-        with open(file_element.path, "rb") as data:
-            self.upload_file(data, s3_upload_url)
+            # Once finished do the ADD operation
+            self.perform_mutation_operation(
+                file_element,
+                wikifactory_file_id,
+            )
 
-        # 3) Once finished do the ADD operation
-        self.perform_mutation_operation(
-            file_element,
-            wikifactory_file_id,
-        )
-
-        # 4) Finally, mark the file as completed
-        self.complete_file(wikifactory_file_id)
+            # Mark the file as completed
+            self.complete_file(wikifactory_file_id)
 
         # Increment the processed elements in the database
         increment_processed_element_for_job(self.job_id)

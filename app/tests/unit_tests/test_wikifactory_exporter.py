@@ -532,6 +532,26 @@ def test_on_finished_cb_mutation_variables(
     exporter.on_finished_cb()
 
 
+def test_on_file_cb_user_errors(monkeypatch, exporter):
+    def mock_process_element(*args, **kwargs):
+        raise error.WikifactoryAPIUserErrors()
+
+    monkeypatch.setattr(exporter, "process_element", mock_process_element)
+
+    with pytest.raises(error.FileUploadError):
+        exporter.on_file_cb(Element())
+
+
+def test_on_file_cb_no_file_id(monkeypatch, exporter):
+    def mock_process_element(*args, **kwargs):
+        return {"id": None, "uploadUrl": None}
+
+    monkeypatch.setattr(exporter, "process_element", mock_process_element)
+
+    with pytest.raises(error.FileUploadError):
+        exporter.on_file_cb(Element())
+
+
 def test_export_from_manifest(monkeypatch):
 
     monkeypatch.setattr(

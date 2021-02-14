@@ -143,6 +143,7 @@ def set_job_status(job_id, status: str):
 def increment_processed_element_for_job(job_id):
 
     session = Session()
+    # FIXME
     # Find the job and update
     for j in session.query(Job).filter(Job.job_id == job_id).all():
         j.processed_elements = j.processed_elements + 1
