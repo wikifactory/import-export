@@ -7,6 +7,7 @@ from graphql.execution import ExecutionResult
 from app.controller.exporters.wikifactory_exporter import (
     WikifactoryExporter,
     validate_url,
+    space_slug_from_url,
     wikifactory_api_request,
 )
 from app.controller import error
@@ -69,6 +70,23 @@ def get_test_manifest():
 )
 def test_validate_url(project_url, is_valid):
     assert validate_url(project_url) is is_valid
+
+
+@pytest.mark.parametrize(
+    "project_url, space, slug",
+    [
+        (
+            "http://wikifactory.com/@botler/test-project",
+            "@botler",
+            "test-project",
+        ),
+        ("http://wikifactory.com/+wikifactory/试验", "+wikifactory", "试验"),
+    ],
+)
+def test_space_slug_from_url(project_url, space, slug):
+    result = space_slug_from_url(project_url)
+    assert result.get("space") == space
+    assert result.get("slug") == slug
 
 
 dummy_gql = gql.gql(

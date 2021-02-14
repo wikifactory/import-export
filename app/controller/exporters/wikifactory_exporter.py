@@ -6,6 +6,8 @@ import pygit2
 
 import base64
 
+from re import search
+
 from app.model.exporter import Exporter
 from app.config import wikifactory_connection_url
 from gql import Client
@@ -102,14 +104,16 @@ def wikifactory_api_request(
     return result
 
 
+wikifactory_project_regex = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
+
+
 def validate_url(url):
+    return bool(search(wikifactory_project_regex, url))
 
-    from re import search
 
-    pattern = (
-        r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/[@+][\w-]+\/[\w-]+$"
-    )
-    return bool(search(pattern, url))
+def space_slug_from_url(url):
+    match = search(wikifactory_project_regex, url)
+    return match.groupdict()
 
 
 class WikifactoryExporter(Exporter):
@@ -120,16 +124,10 @@ class WikifactoryExporter(Exporter):
 
     def export_manifest(self, manifest):
 
-        job = get_job(self.job_id)
         self.set_status(StatusEnum.exporting.value)
         print("WIKIFACTORY: Starting the exporting process")
 
-        # Extract the space and slug from the URL
-        url_parts = job.export_url.split("/")
-        space = url_parts[-2]
-        slug = url_parts[-1]
-
-        self.project_details = self.get_project_details(space, slug)
+        self.project_details = self.get_project_details()
 
         # Check if we have a manifest
         if (
@@ -218,11 +216,11 @@ class WikifactoryExporter(Exporter):
             file_mutation, job.export_token, variables, "fileInput"
         )
 
-    def get_project_details(self, space, slug):
+    def get_project_details(self):
 
         job = get_job(self.job_id)
 
-        variables = {"space": space, "slug": slug}
+        variables = space_slug_from_url(job.export_url)
 
         try:
             project = wikifactory_api_request(
