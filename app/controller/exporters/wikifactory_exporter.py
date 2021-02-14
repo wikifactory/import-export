@@ -193,7 +193,22 @@ class WikifactoryExporter(Exporter):
 
     def on_finished_cb(self):
         # In order to finish, I need to perform the commit
-        self.commit_contribution()
+        job = get_db_job(self.job_id)
+
+        variables = {
+            "commitData": {
+                "projectId": self.project_details["project_id"],
+                "title": "Import files",
+                "description": "",
+            }
+        }
+
+        self.wikifactory_api_request(
+            commit_contribution_mutation,
+            job.export_token,
+            variables,
+            "commitData",
+        )
 
     def process_element(self, element, file_name):
         job = get_db_job(self.job_id)
@@ -286,23 +301,4 @@ class WikifactoryExporter(Exporter):
             job.export_token,
             variables,
             "fileInput",
-        )
-
-    def commit_contribution(self):
-
-        job = get_db_job(self.job_id)
-
-        variables = {
-            "commitData": {
-                "projectId": self.project_details["project_id"],
-                "title": "Import files",
-                "description": "",
-            }
-        }
-
-        self.wikifactory_api_request(
-            commit_contribution_mutation,
-            job.export_token,
-            variables,
-            "commitData",
         )
