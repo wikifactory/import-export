@@ -5,6 +5,8 @@ from enum import Enum
 # from app.models import add_job_to_db, connect_to_db
 import app.models
 
+from app.model.manifest import Manifest
+
 from app.celery_tasks import (
     handle_post_manifest,
     handle_post_export,
@@ -51,10 +53,29 @@ async def get_manifests():
     return {"manifests": []}
 
 
-@router.post("/job")
+class JobResponse(BaseModel):
+    message: str
+    job_id: str
+    manifest: Optional[Manifest]
+
+
+class ErrorResponse(BaseModel):
+    error: str
+
+
+@router.post(
+    "/job",
+    response_model=JobResponse,
+    responses={422: {"model": ErrorResponse}},
+)
 def post_job(body: JobRequest):
 
-    selected_operation = body.type.value
+    selected_operation = None
+
+    if hasattr(body, "type"):
+        selected_operation = body.type.value
+    else:
+        selected_operation = OperationType.IMPORT_EXPORT.value
 
     # If we need to generate the manifest...
 
