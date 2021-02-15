@@ -253,7 +253,7 @@ def get_unfinished_jobs():
             or StatusEnum.exporting_successfully.value
             not in jobs_dict[key_job]
         ):
-            unfinished.append(key_job)
+            unfinished.append(str(key_job))
 
     return {"unfinished_jobs": unfinished}
 
@@ -268,7 +268,7 @@ def get_jobs():
         .order_by(JobStatus.timestamp.desc())
         .all()
     ):
-        result.append({"id": job_id, "status": status})
+        result.append({"id": str(job_id), "status": status})
 
     return result
 
