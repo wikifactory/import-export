@@ -4,8 +4,6 @@ import os
 # import aiohttp
 # from app.model.constants import THINGIVERSE_URL, THINGIVERSE_THINGS_PATH
 
-# from app.model.manifest import Manifest
-from app.model.thing import Thing
 
 # from app.models import StatusEnum
 
@@ -55,14 +53,4 @@ class ThingiverseImporter(Importer):
 
     def populate_manifest_with_things(self, manifest, things_arr):
 
-        for thing in things_arr:
-
-            new_thing = Thing()
-
-            # TODO: Generate new id?
-            new_thing.id = thing["id"]
-
-            new_thing.title = thing["name"]
-            new_thing.description = thing["description"]
-
-            manifest.things.append(new_thing)
+        raise NotImplementedError("")

@@ -54,7 +54,7 @@ async def get_manifests():
 @router.post("/job")
 def post_job(body: JobRequest):
 
-    selected_operation = body.type
+    selected_operation = body.type.value
 
     # If we need to generate the manifest...
 

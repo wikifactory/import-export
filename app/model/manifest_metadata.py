@@ -1,16 +1,19 @@
 from .user import User
 from datetime import date
 import json
+from pydantic.dataclasses import dataclass
 
 
+@dataclass
 class ManifestMetadata:
-    def __init__(self, populate=True):
-        self.date_created = ""
-        self.last_date_updated = ""
-        self.author = User()
-        self.language = ""
-        self.documentation_language = ""
 
+    date_created: str = ""
+    last_date_updated: str = ""
+    author: User = User()
+    language: str = ""
+    documentation_language: str = ""
+
+    def __init__(self, populate=True):
         if populate is True:
             self.default_populate()
 

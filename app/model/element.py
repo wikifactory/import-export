@@ -1,5 +1,7 @@
 from enum import Enum
 import json
+from pydantic import BaseModel
+from typing import List
 
 
 class ElementType(str, Enum):
@@ -8,13 +10,15 @@ class ElementType(str, Enum):
     UNKNOWN = "-99"
 
 
-class Element:
-    def __init__(self):
-        self.id = ""
-        self.type = ElementType.UNKNOWN
-        self.children = []
-        self.path = ""
-        self.name = ""
+class Element(BaseModel):
+    id: str = ""
+    type: ElementType = ElementType.UNKNOWN
+    children: List["Element"] = []
+    path: str = ""
+    name: str = ""
 
     def toJson(self):
         return json.dumps(self, default=lambda o: o.__dict__)
+
+
+Element.update_forward_refs()
