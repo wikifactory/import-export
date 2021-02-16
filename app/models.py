@@ -22,15 +22,11 @@ Base = declarative_base()
 class StatusEnum(enum.Enum):
     pending = "pending"
     importing = "importing"
-    importing_error_authorization_required = (
-        "importing_error_authorization_required"
-    )
+    importing_error_authorization_required = "importing_error_authorization_required"
     importing_error_data_unreachable = "importing_error_data_unreachable"
     importing_successfully = "importing_successfully"
     exporting = "exporting"
-    exporting_error_authorization_required = (
-        "exporting_error_authorization_required"
-    )
+    exporting_error_authorization_required = "exporting_error_authorization_required"
     exporting_error_data_unreachable = "exporting_error_data_unreachable"
     exporting_successfully = "exporting_successfully"
     finished_successfully = "finished_successfully"
@@ -156,9 +152,7 @@ def set_number_of_files_for_job_id(job_id, files):
     session = Session()
 
     # Find the job and update
-    session.query(Job).filter(Job.job_id == job_id).update(
-        {"file_elements": files}
-    )
+    session.query(Job).filter(Job.job_id == job_id).update({"file_elements": files})
 
     session.commit()
 
@@ -260,8 +254,7 @@ def get_unfinished_jobs():
     for key_job in jobs_dict:
         if (
             StatusEnum.importing_successfully.value not in jobs_dict[key_job]
-            or StatusEnum.exporting_successfully.value
-            not in jobs_dict[key_job]
+            or StatusEnum.exporting_successfully.value not in jobs_dict[key_job]
         ):
             unfinished.append(str(key_job))
 

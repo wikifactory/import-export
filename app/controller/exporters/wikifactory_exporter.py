@@ -53,9 +53,7 @@ def wikifactory_api_request(
     try:
         # FIXME - this seems to be a sync request. In the future,
         # we should look into making requests async
-        execution_result = session.execute(
-            graphql_document, variable_values=variables
-        )
+        execution_result = session.execute(graphql_document, variable_values=variables)
     except requests.HTTPError as http_error:
         if http_error.response.status_code == requests.codes["unauthorized"]:
             raise ExportAuthRequired()
@@ -224,9 +222,7 @@ class WikifactoryExporter(Exporter):
                 "filename": os.path.basename(element.path),
                 "spaceId": self.project_details["space_id"],
                 "size": os.path.getsize(element.path),
-                "projectPath": os.path.relpath(
-                    element.path, self.project_path
-                ),
+                "projectPath": os.path.relpath(element.path, self.project_path),
                 "gitHash": str(pygit2.hashfile(element.path)),
                 "completed": False,
                 "contentType": magic.from_file(element.path, mime=True),
@@ -282,15 +278,11 @@ class WikifactoryExporter(Exporter):
             "x-amz-acl": "private"
             if self.project_details["private"]
             else "public-read",
-            "Content-Type": magic.from_descriptor(
-                file_handle.fileno(), mime=True
-            ),
+            "Content-Type": magic.from_descriptor(file_handle.fileno(), mime=True),
         }
 
         try:
-            response = requests.put(
-                file_url, data=file_handle, headers=headers
-            )
+            response = requests.put(file_url, data=file_handle, headers=headers)
             response.raise_for_status()
         except requests.HTTPError:
             raise FileUploadError(

@@ -113,15 +113,11 @@ class DropboxImporter(Importer):
                         file_element.id = entry.id
                         file_element.type = ElementType.FILE
                         file_element.name = entry.name
-                        file_element.path = (
-                            element.path + "/" + file_element.name
-                        )
+                        file_element.path = element.path + "/" + file_element.name
 
                         element.children.append(file_element)
 
-                        self.dropbox_path_for_element[
-                            file_element
-                        ] = entry.path_lower
+                        self.dropbox_path_for_element[file_element] = entry.path_lower
 
                         self.elements_list.append(file_element)
 
@@ -191,6 +187,4 @@ class DropboxImporter(Importer):
             except Exception as e:
                 print(e)
         else:
-            raise "Dropbox path for element width id {} not found".format(
-                element.id
-            )
+            raise "Dropbox path for element width id {} not found".format(element.id)

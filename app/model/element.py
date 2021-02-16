@@ -14,6 +14,7 @@ class ElementType(str, Enum):
 @dataclass
 class Element:
 
+
     id: str = ""
     type: ElementType = ElementType.UNKNOWN
     children: List["Element"] = dataclasses.field(default_factory=lambda: [0])
