@@ -44,11 +44,3 @@ class Exporter:
         # Remove the hook for that status
         if action in self.hooks_for_status[status]:
             self.hooks_for_status[status].remove(action)
-
-
-class NotValidURLForExportException(ValueError):
-    pass
-
-
-class NotValidManifest(ValueError):
-    pass

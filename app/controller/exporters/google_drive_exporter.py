@@ -1,7 +1,7 @@
 import os
 
 from app.model.exporter import Exporter
-from app.model.exporter import NotValidManifest
+from app.controller.error import NotValidManifest
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 import httplib2

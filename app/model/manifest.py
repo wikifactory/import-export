@@ -5,14 +5,21 @@ import json
 
 
 class Manifest:
-    def __init__(self):
+    def __init__(
+        self,
+        project_id=None,
+        project_name=None,
+        project_description=None,
+        source_url=None,
+        elements=None,
+    ):
         self.metatadata = ManifestMetadata()
-        self.project_name = ""
-        self.project_id = ""
-        self.project_description = ""
-        self.elements = []
+        self.project_name = project_name or ""
+        self.project_id = project_id or ""
+        self.project_description = project_description or ""
+        self.elements = elements or []
         self.collaborators = []
-        self.source_url = ""
+        self.source_url = source_url or ""
         self.file_elements = 0
 
     def toJson(self):

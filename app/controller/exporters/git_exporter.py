@@ -1,6 +1,5 @@
 from app.model.exporter import Exporter
 
-# from app.model.exporter import NotValidManifest
 from app.models import StatusEnum
 
 
