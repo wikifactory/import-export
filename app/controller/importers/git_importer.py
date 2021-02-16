@@ -15,13 +15,12 @@ temp_folder_path = "/tmp/gitimports/"
 ignored_folders = [".git"]
 
 
-
 git_repo_regex = r"^(((git|ssh|http(s)?)|(git@[\w\.]+))(:(\/\/)?)([\w\.@\:\/\-~]+)(\.git)(\/)?)|(^http(s)?:\/\/github\.com(?:\/[^\s\/]+){2}$)"
+
 
 class IgnoreCredentialsCallbacks(pygit2.RemoteCallbacks):
     def credentials(self, url, username_from_url, allowed_types):
         return None
-
 
     def certificate_check(self, certificate, valid, host):
         return True
