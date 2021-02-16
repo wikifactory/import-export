@@ -199,7 +199,7 @@ def get_db_job(job_id):
     # FIXME - Use session per request
     session = Session()
 
-    return session.query(Job).filter(Job.job_id == job_id).one_or_none()
+    return session.query(Job).get(job_id)
 
 
 # FIXME
