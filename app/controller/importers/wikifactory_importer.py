@@ -150,9 +150,7 @@ class WikifactoryImporter(Importer):
 
             zip_archive_url = (
                 server_url
-                + result["project"]["result"]["contributionUpstream"][
-                    "zipArchiveUrl"
-                ]
+                + result["project"]["result"]["contributionUpstream"]["zipArchiveUrl"]
             )
 
             return {
@@ -237,10 +235,7 @@ class WikifactoryImporter(Importer):
 
                 # If we are at root level and the file is the readme, use it
                 # for the description of the manifest
-                if (
-                    full_path == project_path
-                    and filename.lower() == "readme.md"
-                ):
+                if full_path == project_path and filename.lower() == "readme.md":
                     with open(file_element.path, "r") as file:
                         manifest.project_description = file.read()
 

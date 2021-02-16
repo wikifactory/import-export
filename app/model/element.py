@@ -9,9 +9,7 @@ class ElementType(str, Enum):
 
 
 class Element:
-    def __init__(
-        self, id=None, type=None, children=None, path=None, name=None
-    ):
+    def __init__(self, id=None, type=None, children=None, path=None, name=None):
         self.id = id or ""
         self.type = type or ElementType.UNKNOWN
         self.children = children or []

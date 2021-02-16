@@ -76,9 +76,7 @@ def mock_gql_response(monkeypatch, response_dict={}, expected_variables=None):
             assert kwargs.get("variable_values") == expected_variables
 
         response = requests.Response()
-        response.status_code = (
-            response_dict.get("status_code") or requests.codes["ok"]
-        )
+        response.status_code = response_dict.get("status_code") or requests.codes["ok"]
         response.raise_for_status()
         return ExecutionResult(
             data=response_dict.get("data"), errors=response_dict.get("errors")
@@ -157,9 +155,7 @@ def exporter(basic_job):
 def test_api_auth_error(monkeypatch, response_dict):
     mock_gql_response(monkeypatch, response_dict=response_dict)
     with pytest.raises(error.ExportAuthRequired):
-        wikifactory_api_request(
-            dummy_gql, "this-is-a-token", {}, "dummy.result"
-        )
+        wikifactory_api_request(dummy_gql, "this-is-a-token", {}, "dummy.result")
 
 
 @pytest.mark.parametrize(
@@ -183,9 +179,7 @@ def test_api_auth_error(monkeypatch, response_dict):
 def test_api_user_error(monkeypatch, response_dict):
     mock_gql_response(monkeypatch, response_dict=response_dict)
     with pytest.raises(error.WikifactoryAPIUserErrors):
-        wikifactory_api_request(
-            dummy_gql, "this-is-a-token", {}, "dummy.result"
-        )
+        wikifactory_api_request(dummy_gql, "this-is-a-token", {}, "dummy.result")
 
 
 def test_api_no_result_path_error(monkeypatch):
@@ -226,9 +220,7 @@ def test_api_no_result_error(monkeypatch, result_path, response_dict):
 def test_api_success(monkeypatch, result_path, response_dict, expected_result):
     mock_gql_response(monkeypatch, response_dict=response_dict)
 
-    result = wikifactory_api_request(
-        dummy_gql, "this-is-a-token", {}, result_path
-    )
+    result = wikifactory_api_request(dummy_gql, "this-is-a-token", {}, result_path)
 
     assert result == expected_result
 
@@ -240,9 +232,7 @@ def test_api_success(monkeypatch, result_path, response_dict, expected_result):
         ("project-id", False, "space-id"),
     ],
 )
-def test_get_project_details(
-    monkeypatch, exporter, project_id, private, space_id
-):
+def test_get_project_details(monkeypatch, exporter, project_id, private, space_id):
     project_data = {
         "project": {
             "result": {
@@ -369,9 +359,7 @@ def test_upload_file_error(monkeypatch, exporter):
     file_url = "http://upload-domain/upload-endpoint"
     file_path = f"{CURRENT_DIR}/test_files/sample-project/README.md"
 
-    with open(file_path, "rb") as file_handle, pytest.raises(
-        error.FileUploadError
-    ):
+    with open(file_path, "rb") as file_handle, pytest.raises(error.FileUploadError):
         exporter.upload_file(file_handle, file_url)
 
 
@@ -525,9 +513,7 @@ def test_export_manifest_invalid(monkeypatch, exporter, manifest):
             "private": False,
         }
 
-    monkeypatch.setattr(
-        exporter, "get_project_details", mock_get_project_details
-    )
+    monkeypatch.setattr(exporter, "get_project_details", mock_get_project_details)
 
     with pytest.raises(error.NotValidManifest):
         exporter.export_manifest(manifest)
@@ -563,9 +549,7 @@ def test_export_manifest(monkeypatch, exporter, manifest):
     def mock_iterate_through_elements(*args, **kwargs):
         pass
 
-    monkeypatch.setattr(
-        exporter, "get_project_details", mock_get_project_details
-    )
+    monkeypatch.setattr(exporter, "get_project_details", mock_get_project_details)
     monkeypatch.setattr(
         manifest, "iterate_through_elements", mock_iterate_through_elements
     )
