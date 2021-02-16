@@ -8,26 +8,17 @@ from dataclasses import field
 @dataclass
 class ManifestMetadata:
 
-    date_created: str = ""
-    last_date_updated: str = ""
-    author: User = field(default_factory=User)
-    language: str = ""
-    documentation_language: str = ""
+    date_created: str = field(init=False)
+    last_date_updated: str = field(init=False)
+    author: User = field(default_factory=lambda: User(name="unknown-author"))
+    language: str = "EN"
+    documentation_language: str = "EN"
 
-    @classmethod
-    def default(cls) -> "ManifestMetadata":
-        metadata = cls()
-
-        metadata.author.name = "unknown-author"
-        metadata.language = "EN"
-        metadata.documentation_language = "EN"
-
+    def __post_init__(self):
         current_date = date.today().strftime("%d/%m/%Y")
 
-        metadata.date_created = current_date
-        metadata.last_date_updated = current_date
-
-        return metadata
+        self.date_created = current_date
+        self.last_date_updated = current_date
 
     def toJson(self):
         return json.dumps(self, default=lambda o: o.__dict__)

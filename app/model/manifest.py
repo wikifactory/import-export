@@ -9,7 +9,7 @@ from app.model.user import User
 
 @dataclass
 class Manifest:
-    metatadata: ManifestMetadata = field(default_factory=ManifestMetadata.default)
+    metatadata: ManifestMetadata = field(default_factory=ManifestMetadata)
     project_name: str = ""
     project_id: str = ""
     project_description: str = ""
