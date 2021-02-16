@@ -143,6 +143,7 @@ def set_job_status(job_id, status: str):
 def increment_processed_element_for_job(job_id):
 
     session = Session()
+    # FIXME
     # Find the job and update
     for j in session.query(Job).filter(Job.job_id == job_id).all():
         j.processed_elements = j.processed_elements + 1
@@ -193,6 +194,15 @@ def get_job_overall_progress(job_id):
     return count * (100.0 / len(statuses_to_watch))
 
 
+# FIXME - replace get_job with this
+def get_db_job(job_id):
+    # FIXME - Use session per request
+    session = Session()
+
+    return session.query(Job).get(job_id)
+
+
+# FIXME
 def get_job(job_id):
 
     session = Session()
@@ -215,10 +225,10 @@ def get_job(job_id):
 
     result = result[0]
 
-    if result[3] == 0:
+    if result[2] == 0:
         percentage = 0.0
     else:
-        percentage = round((result[4] * 100.0) / result[3], 2)
+        percentage = round((result[3] * 100.0) / result[2], 2)
 
     job_dict = {
         "job_id": str(result[0]),

@@ -10,12 +10,16 @@ class ElementType(str, Enum):
     UNKNOWN = "-99"
 
 
+
 class Element(BaseModel):
-    id: str = ""
-    type: ElementType = ElementType.UNKNOWN
-    children: List["Element"] = []
-    path: str = ""
-    name: str = ""
+    def __init__(
+        self, id=None, type=None, children=None, path=None, name=None
+    ):
+        self.id: str = id or ""
+        self.type: ElementType = type or ElementType.UNKNOWN
+        self.children: List["Element"] = children or []
+        self.path: str = path or ""
+        self.name: str = name or ""
 
     def toJson(self):
         return json.dumps(self, default=lambda o: o.__dict__)
