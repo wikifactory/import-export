@@ -14,16 +14,13 @@ class ElementType(str, Enum):
 @dataclass
 class Element:
 
-
     id: str = ""
     type: ElementType = ElementType.UNKNOWN
     children: List["Element"] = dataclasses.field(default_factory=lambda: [0])
     path: str = ""
     name: str = ""
 
-    def __init__(
-        self, id=None, type=None, children=None, path=None, name=None
-    ):
+    def __init__(self, id=None, type=None, children=None, path=None, name=None):
         self.id = id or ""
         self.type = type or ElementType.UNKNOWN
         self.children = children or []
