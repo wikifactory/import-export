@@ -2,6 +2,7 @@ from .user import User
 from datetime import date
 import json
 from pydantic.dataclasses import dataclass
+from dataclasses import field
 
 
 @dataclass
@@ -9,24 +10,24 @@ class ManifestMetadata:
 
     date_created: str = ""
     last_date_updated: str = ""
-    author: User = User()
+    author: User = field(default_factory=User)
     language: str = ""
     documentation_language: str = ""
 
-    def __init__(self, populate=True):
-        if populate is True:
-            self.default_populate()
+    @classmethod
+    def default(cls) -> "ManifestMetadata":
+        metadata = cls()
 
-    def default_populate(self):
-        self.author.name = "unknown-author"
-        self.language = "EN"
-        self.documentation_language = "EN"
+        metadata.author.name = "unknown-author"
+        metadata.language = "EN"
+        metadata.documentation_language = "EN"
 
         current_date = date.today().strftime("%d/%m/%Y")
 
-        self.date_created = current_date
-        self.last_date_updated = current_date
+        metadata.date_created = current_date
+        metadata.last_date_updated = current_date
+
+        return metadata
 
     def toJson(self):
         return json.dumps(self, default=lambda o: o.__dict__)
-        pass

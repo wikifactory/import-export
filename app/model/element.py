@@ -1,8 +1,8 @@
 from enum import Enum
 import json
 from pydantic.dataclasses import dataclass
+from dataclasses import field
 from typing import List
-from pydantic import Field
 
 
 class ElementType(str, Enum):
@@ -16,16 +16,9 @@ class Element:
 
     id: str = ""
     type: ElementType = ElementType.UNKNOWN
-    children: List["Element"] = Field(default_factory=list)
+    children: List["Element"] = field(default_factory=list)
     path: str = ""
     name: str = ""
-
-    def __init__(self, id=None, type=None, children=None, path=None, name=None):
-        self.id = id or ""
-        self.type = type or ElementType.UNKNOWN
-        self.children = children or []
-        self.path = path or ""
-        self.name = name or ""
 
     def toJson(self):
         return json.dumps(self, default=lambda o: o.__dict__)
