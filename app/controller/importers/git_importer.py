@@ -1,6 +1,6 @@
 from app.model.importer import Importer
 import os
-import git
+import pygit2
 
 from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
@@ -11,12 +11,12 @@ temp_folder_path = "/tmp/gitimports/"
 ignored_folders = [".git"]
 
 
-class Progress(git.remote.RemoteProgress):
-    def update(self, op_code, cur_count, max_count=None, message=""):
+class IgnoreCredentialsCallbacks(pygit2.RemoteCallbacks):
+    def credentials(self, url, username_from_url, allowed_types):
+        return None
 
-        # INFO: Uncomment this line to show the progress of the cloning process
-        # print("update({}, {}, {}, {})".format(op_code, cur_count, max_count, message))
-        pass
+    def certificate_check(self, certificate, valid, host):
+        return True
 
 
 class GitImporter(Importer):
@@ -55,7 +55,10 @@ class GitImporter(Importer):
         # First, we clone the repo into the tmp folder
 
         try:
-            repo = git.Repo.clone_from(url, self.path, progress=Progress())
+
+            pygit2.clone_repository(
+                url, self.path, callbacks=IgnoreCredentialsCallbacks()
+            )
             print("Repo cloned")
 
             # Create the manifest instance
@@ -67,9 +70,6 @@ class GitImporter(Importer):
 
             # Populate the manifest from the directory
             self.populate_manifest_from_repository_path(manifest, self.path)
-
-            # Find the contributors
-            self.fill_contributors(manifest, repo)
 
             # Finally, set the status
             self.set_status(StatusEnum.importing_successfully.value)

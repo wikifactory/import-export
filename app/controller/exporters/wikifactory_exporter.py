@@ -1,457 +1,318 @@
-from app.model.exporter import Exporter
-from app.config import wikifactory_connection_url
-from gql import Client, gql
-from gql.transport.requests import RequestsHTTPTransport
-
-from app.model.exporter import NotValidManifest
-from app.models import StatusEnum
-from app.models import increment_processed_element_for_job
-
 import requests
 import magic
 
 import os
+import pygit2
 
-import base64
-import hashlib
+from re import search
 
-from enum import Enum
+from app.model.exporter import Exporter
+from app.config import wikifactory_connection_url
+from gql import Client
+from gql.transport.requests import RequestsHTTPTransport
 
+from app.controller.error import (
+    NotValidManifest,
+    ExportNotReachable,
+    FileUploadError,
+    ExportAuthRequired,
+    WikifactoryAPIUserErrors,
+    WikifactoryAPINoResultPath,
+    WikifactoryAPINoResult,
+)
+from app.models import (
+    get_db_job,
+    increment_processed_element_for_job,
+    StatusEnum,
+)
+
+from .wikifactory_gql import (
+    project_query,
+    file_mutation,
+    operation_mutation,
+    complete_file_mutation,
+    commit_contribution_mutation,
+)
 
 endpoint_url = wikifactory_connection_url
 
 
-class WikifactoryMutations(Enum):
-    file_mutation = gql(
-        """
-        mutation File($fileInput: FileInput) {
-            file (fileData: $fileInput) {
-                file {
-                    id
-                    path
-                    mimeType
-                    filename
-                    size
-                    completed
-                    cancelled
-                    isCopy
-                    slug
-                    spaceId
-                    uploadUrl
-                }
-
-                userErrors {
-                    message
-                    key
-                    code
-                }
-
-            }
-        }
-        """
+def wikifactory_api_request(
+    graphql_document: str,
+    auth_token: str,
+    variables: object,
+    result_path: str,
+):
+    headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else None
+    transport = RequestsHTTPTransport(
+        url=endpoint_url,
+        headers=headers,
     )
+    session = Client(transport=transport, fetch_schema_from_transport=False)
 
-    operation_mutation = gql(
-        """
-        mutation Operation($operationData: OperationInput) {
-            operation(operationData: $operationData) {
-                project {
-                    id
-                }
-            }
-        }
-        """
-    )
+    try:
+        # FIXME - this seems to be a sync request. In the future,
+        # we should look into making requests async
+        execution_result = session.execute(
+            graphql_document, variable_values=variables
+        )
+    except requests.HTTPError as http_error:
+        if http_error.response.status_code == requests.codes["unauthorized"]:
+            raise ExportAuthRequired()
+        raise http_error
 
-    complete_file_mutation = gql(
-        """
-        mutation CompleteFile($fileInput: FileInput) {
-        file(fileData: $fileInput) {
-            file {
-                id
-                path
-                url
-                completed
-            }
-            userErrors {
-                message
-                key
-                code
-            }
-        }
-    }
-        """
-    )
+    try:
+        result_path_root, *result_path_rest = result_path.split(".")
+    except AttributeError:
+        raise WikifactoryAPINoResultPath()
 
-    commit_contribution_mutation = gql(
-        """
-        mutation CommitContribution($commitData: CommitInput) {
-            commit(commitData: $commitData) {
-                project {
-                    id
-                    inSpace {
-                        id
-                        whichTypes
-                    }
-                    contributionCount
-                }
-                userErrors {
-                    message
-                    key
-                    code
-                }
-            }
-        }
-        """
-    )
+    if execution_result.errors:
+        for error in execution_result.errors:
+            if "unauthorized request" in error.get(
+                "message"
+            ) or "token is invalid" in error.get("message"):
+                raise ExportAuthRequired()
+        # FIXME trigger an exception on other GraphQL errors?
 
-    project_query = gql(
-        """query q($space:String, $slug:String){
-            project(space:$space, slug:$slug){
-                result{
-                    id
-                    space {
-                        id
-                    }
-                    inSpace {
-                        id
-                    }
-                }
-            }
-        }"""
-    )
+    try:
+        result = execution_result.data[result_path_root]
+    except KeyError:
+        raise WikifactoryAPINoResult()
+
+    user_errors = result.get("userErrors", [])
+    if user_errors:
+        for error in user_errors:
+            if error.get("code") in [
+                "AUTHORISATION",
+                "AUTHENTICATION",
+                "NOTFOUND",
+            ]:
+                # FIXME NOTFOUND should either be handled differently or
+                # the error code should be passed to the exception, so a "real" NOTFOUND
+                # can be differentiated from a "not allowed to read right now"
+                raise ExportAuthRequired()
+        raise WikifactoryAPIUserErrors()
+
+    try:
+        for result_path_item in result_path_rest:
+            result = result[result_path_item]
+    except KeyError:
+        raise WikifactoryAPINoResult()
+
+    return result
+
+
+wikifactory_project_regex = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
+
+
+def validate_url(url):
+    return bool(search(wikifactory_project_regex, url))
+
+
+def space_slug_from_url(url):
+    match = search(wikifactory_project_regex, url)
+    return match.groupdict()
 
 
 class WikifactoryExporter(Exporter):
     def __init__(self, job_id):
-
-        # Assign this import process a unique id
-        # This id will identify the tmp folder
-
         self.job_id = job_id
-        self.set_status(StatusEnum.exporting.value)
-
         self.manifest = None
+        self.project_details = None
 
-        try:
-            self.add_hook_for_status(
-                StatusEnum.exporting_successfully.value, self.on_files_uploaded
-            )
-            self.add_hook_for_status(
-                StatusEnum.exporting_successfully.value,
-                self.invite_collaborators,
-            )
-            self.space_id = ""
-            self.project_id = ""
-        except Exception as e:
-            print(e)
+    def export_manifest(self, manifest):
 
-    def validate_url(url):
-
-        pattern = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(\@|\+)[\w\-º_]*\/[\w\-\_]+$"
-        import re
-
-        result = re.search(pattern, url)
-
-        if result is None:
-            return False
-        else:
-            return True
-
-    def export_manifest(self, manifest, export_url, export_token):
-
+        self.set_status(StatusEnum.exporting.value)
         print("WIKIFACTORY: Starting the exporting process")
 
-        # Extract the space and slug from the URL
-        url_parts = export_url.split("/")
-        space = url_parts[-2]
-        slug = url_parts[-1]
+        self.project_details = self.get_project_details()
 
-        user_id = space.replace("+", "").replace("@", "")
-        self.client_username = base64.b64encode(
-            bytes(user_id, "ascii")
-        ).decode("ascii")
-
-        self.manifest = manifest
-        self.export_token = export_token
-
-        # TODO: Get the details of the project: project_id, space_id
-
-        details = self.get_project_details(space, slug, export_token)
-
-        if details is None:
-            return None
-
-        self.project_id = details[0]
-        self.space_id = details[1]
         # Check if we have a manifest
         if (
-            self.manifest is not None
+            manifest is not None
             and manifest.elements is not None
             and len(manifest.elements) > 0
         ):
 
+            self.manifest = manifest
+
+            # FIXME - this data should be attached to the job itself
             self.project_path = manifest.elements[0].path
 
+            # FIXME - we should look into this.
+            # Why exporter has to call back to manifest
+            # which then will call then exporter methods?
             self.manifest.iterate_through_elements(
                 self, self.on_file_cb, self.on_folder_cb, self.on_finished_cb
             )
 
+            # FIXME - probably would be better to do this on the final callback
             self.set_status(StatusEnum.exporting_successfully.value)
 
+            # FIXME - should it return "true" as a string?
             return {"exported": "true", "manifest": self.manifest.toJson()}
 
         else:
-            raise NotValidManifest()
-            return {"error": "Manifest not valid"}
+            raise NotValidManifest("Manifest not valid")
 
     def on_file_cb(self, file_element):
 
-        file_name = file_element.path.split("/")[-1]
+        try:
+            file_result = self.process_element(file_element)
+        except WikifactoryAPIUserErrors:
+            raise FileUploadError("Wikifactory file couldn't be created")
 
-        file_result = self.process_element(
-            file_element, file_name, self.project_path, self.export_token
-        )
+        wikifactory_file_id = file_result.get("id")
 
-        # Check that we got the right results
-        if len(file_result["file"]["userErrors"]) > 0:
+        if not wikifactory_file_id:
+            raise FileUploadError(
+                "Wikifactory file couldn't be created. Missing File ID"
+            )
 
-            for err in file_result["file"]["userErrors"]:
-                print(err)
-            return
+        s3_upload_url = file_result["uploadUrl"]
 
-        wikifactory_file_id = file_result["file"]["file"]["id"]
-        s3_upload_url = file_result["file"]["file"]["uploadUrl"]
-
-        if wikifactory_file_id is not None:
-
-            # We actually have the id, move to the next step
-
-            # 2) Upload to S3
-            if s3_upload_url is not None and (len(s3_upload_url) > 0):
-                self.upload_file(file_element.path, s3_upload_url)
-
-                # 3) Once finished do the ADD operation
-
-                self.perform_mutation_operation(
-                    file_element,
-                    wikifactory_file_id,
-                    self.project_path,
-                    self.export_token,
-                )
-
-                # 4) Finally, mark the file as completed
-
-                self.complete_file(
-                    self.space_id, wikifactory_file_id, self.export_token
-                )
-
-                # Increment the processed elements in the database
-                increment_processed_element_for_job(self.job_id)
-
-            else:
-                raise Exception("WARNING: There is no S3 url")
-
-                # Increment in any case the processed element
-                increment_processed_element_for_job(self.job_id)
-
+        if not s3_upload_url:
+            # FIXME - this mean the file already exists on Wikifactory.
+            # We should probably query the "completed" status or raise an exception.
+            print(
+                "WARNING: There is no S3 url. This probably means a file with the same hash has already been uploaded"
+            )
         else:
-            print("WARNING: For some reason, the file id is None ")
-            pass
+            # Upload to S3
+            with open(file_element.path, "rb") as data:
+                self.upload_file(data, s3_upload_url)
+
+            # Once finished do the ADD operation
+            self.perform_mutation_operation(
+                file_element,
+                wikifactory_file_id,
+            )
+
+            # Mark the file as completed
+            self.complete_file(wikifactory_file_id)
+
+        # Increment the processed elements in the database
+        increment_processed_element_for_job(self.job_id)
 
     def on_folder_cb(self, folder_element):
         print("Ignoring folder element")
 
     def on_finished_cb(self):
-
-        print("COMMIT")
         # In order to finish, I need to perform the commit
-        self.commit_contribution(self.export_token)
+        job = get_db_job(self.job_id)
 
-    def process_element(self, element, file_name, project_path, export_token):
-
-        transport = RequestsHTTPTransport(
-            url=endpoint_url,
-            headers={
-                "CLIENT-USERNAME": self.client_username,
-                "Cookie": "session={}".format(export_token),
-            },
-        )
-
-        session = Client(transport=transport, fetch_schema_from_transport=True)
-
-        # TODO: Calculate the git hash of the file at element.path
-
-        variables = {
-            "fileInput": {
-                "filename": file_name,
-                "spaceId": self.space_id,
-                "size": os.path.getsize(element.path),
-                "projectPath": element.path.replace(project_path, "")[1:],
-                "gitHash": self.calculate_githash_for_element(element),
-                "completed": "false",
-                "contentType": magic.from_file(element.path, mime=True),
-            }
-        }
-
-        result = session.execute(
-            WikifactoryMutations.file_mutation.value, variable_values=variables
-        )
-
-        return result
-
-    def get_project_details(self, space, slug, export_token):
-        transport = RequestsHTTPTransport(
-            url=endpoint_url,
-            headers={
-                "CLIENT-USERNAME": self.client_username,
-                "Cookie": "session={}".format(export_token),
-            },
-        )
-        session = Client(transport=transport, fetch_schema_from_transport=True)
-        variables = {"space": space, "slug": slug}
-
-        result = session.execute(
-            WikifactoryMutations.project_query.value, variable_values=variables
-        )
-
-        if "userErrors" not in result:
-            p_id = result["project"]["result"]["id"]
-            sp_id = result["project"]["result"]["inSpace"]["id"]
-
-            return (p_id, sp_id)
-        else:
-            raise Exception("PROJECT NOT FOUND INSIDE WIKIFACTORY")
-            # TODO: Raise custom exception
-            return None
-
-    def perform_mutation_operation(
-        self, element, file_id, project_path, export_token
-    ):
-        transport = RequestsHTTPTransport(
-            url=endpoint_url,
-            headers={
-                "CLIENT-USERNAME": self.client_username,
-                "Cookie": "session={}".format(export_token),
-            },
-        )
-
-        session = Client(transport=transport, fetch_schema_from_transport=True)
-        variables = {
-            "operationData": {
-                "fileId": file_id,
-                "opType": "ADD",
-                "path": element.path.replace(project_path, "")[1:],
-                "projectId": self.project_id,
-            }
-        }
-
-        session.execute(
-            WikifactoryMutations.operation_mutation.value,
-            variable_values=variables,
-        )
-        print("OPERATION ADD done")
-
-    def upload_file(self, local_path, file_url):
-
-        headers = {
-            "x-amz-acl": "public-read",
-            "Content-Type": magic.from_file(local_path, mime=True),
-        }
-
-        with open(local_path, "rb") as data:
-            response = requests.put(file_url, data=data, headers=headers)
-            if response.status_code != 200:
-                print(
-                    "There was an error uploading the file. Error code: {}".format(
-                        response.status_code
-                    )
-                )
-                print(response.content)
-            else:
-                print(
-                    "File {} uploaded to s3".format(local_path.split("/")[-1])
-                )
-
-    def complete_file(self, space_id, file_id, export_token):
-        transport = RequestsHTTPTransport(
-            url=endpoint_url,
-            headers={
-                "CLIENT-USERNAME": self.client_username,
-                "Cookie": "session={}".format(export_token),
-            },
-        )
-
-        session = Client(transport=transport, fetch_schema_from_transport=True)
-        variables = {
-            "fileInput": {
-                "spaceId": space_id,
-                "id": file_id,
-                "completed": True,
-            }
-        }
-
-        result = session.execute(
-            WikifactoryMutations.complete_file_mutation.value,
-            variable_values=variables,
-        )
-        print(result)
-
-    def commit_contribution(self, export_token):
-
-        transport = RequestsHTTPTransport(
-            url=endpoint_url,
-            headers={
-                "CLIENT-USERNAME": self.client_username,
-                "Cookie": "session={}".format(export_token),
-            },
-        )
-
-        session = Client(transport=transport, fetch_schema_from_transport=True)
         variables = {
             "commitData": {
-                "projectId": self.project_id,
+                "projectId": self.project_details["project_id"],
                 "title": "Import files",
                 "description": "",
             }
         }
 
-        result = session.execute(
-            WikifactoryMutations.commit_contribution_mutation.value,
-            variable_values=variables,
+        wikifactory_api_request(
+            commit_contribution_mutation,
+            job.export_token,
+            variables,
+            "commit.project",
         )
-        print(result)
 
-    def on_files_uploaded(self):
-        print("------------------")
-        print("  FILES UPLOADED  ")
-        print("------------------")
+    def process_element(self, element):
+        job = get_db_job(self.job_id)
 
-    def invite_collaborators(self):
+        variables = {
+            "fileInput": {
+                "filename": os.path.basename(element.path),
+                "spaceId": self.project_details["space_id"],
+                "size": os.path.getsize(element.path),
+                "projectPath": os.path.relpath(
+                    element.path, self.project_path
+                ),
+                "gitHash": str(pygit2.hashfile(element.path)),
+                "completed": False,
+                "contentType": magic.from_file(element.path, mime=True),
+            }
+        }
 
-        if self.manifest is not None:
+        return wikifactory_api_request(
+            file_mutation, job.export_token, variables, "file.file"
+        )
 
-            emails_list = self.manifest.collaborators
+    def get_project_details(self):
 
-            for addres in emails_list:
+        job = get_db_job(self.job_id)
 
-                print(addres)
-
-    def calculate_githash_for_element(self, element):
-        return self.calculate_sha1_for_element(element)
-
-    def calculate_sha1_for_element(self, element):
-        sha1sum = hashlib.sha1()
+        variables = space_slug_from_url(job.export_url)
 
         try:
-            with open(element.path, "rb") as source:
-                block = source.read(2 ** 16)
+            project = wikifactory_api_request(
+                project_query, job.export_token, variables, "project.result"
+            )
+        except (WikifactoryAPINoResult, WikifactoryAPIUserErrors):
+            raise ExportNotReachable("Project nof found in Wikifactory")
 
-                while len(block) != 0:
-                    sha1sum.update(block)
-                    block = source.read(2 ** 16)
+        return {
+            "project_id": project["id"],
+            "space_id": project["inSpace"]["id"],
+            "private": project["private"],
+        }
 
-            return sha1sum.hexdigest()
-        except Exception as e:
-            print(e)
-            return ""
+    def perform_mutation_operation(self, element, file_id):
+
+        job = get_db_job(self.job_id)
+
+        variables = {
+            "operationData": {
+                "fileId": file_id,
+                "opType": "ADD",
+                "path": os.path.relpath(element.path, self.project_path),
+                "projectId": self.project_details["project_id"],
+            }
+        }
+
+        wikifactory_api_request(
+            operation_mutation,
+            job.export_token,
+            variables,
+            "operation.project",
+        )
+
+    def upload_file(self, file_handle, file_url):
+
+        headers = {
+            "x-amz-acl": "private"
+            if self.project_details["private"]
+            else "public-read",
+            "Content-Type": magic.from_descriptor(
+                file_handle.fileno(), mime=True
+            ),
+        }
+
+        try:
+            response = requests.put(
+                file_url, data=file_handle, headers=headers
+            )
+            response.raise_for_status()
+        except requests.HTTPError:
+            raise FileUploadError(
+                f"There was an error uploading the file. Error code: {response.status_code}"
+            )
+
+        file_name = os.path.basename(file_handle.name)
+        print(f"File {file_name} uploaded to s3")
+
+    def complete_file(self, file_id):
+        job = get_db_job(self.job_id)
+
+        variables = {
+            "fileInput": {
+                "id": file_id,
+                "spaceId": self.project_details["space_id"],
+                "completed": True,
+            }
+        }
+        wikifactory_api_request(
+            complete_file_mutation,
+            job.export_token,
+            variables,
+            "file.file",
+        )

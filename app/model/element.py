@@ -9,12 +9,14 @@ class ElementType(str, Enum):
 
 
 class Element:
-    def __init__(self):
-        self.id = ""
-        self.type = ElementType.UNKNOWN
-        self.children = []
-        self.path = ""
-        self.name = ""
+    def __init__(
+        self, id=None, type=None, children=None, path=None, name=None
+    ):
+        self.id = id or ""
+        self.type = type or ElementType.UNKNOWN
+        self.children = children or []
+        self.path = path or ""
+        self.name = name or ""
 
     def toJson(self):
         return json.dumps(self, default=lambda o: o.__dict__)
