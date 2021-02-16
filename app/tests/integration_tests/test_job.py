@@ -175,9 +175,7 @@ def test_job_overall_status_not_completed():
     # importing_succesfully
     importing_succesfully_status = JobStatus()
     importing_succesfully_status.job_id = job_id
-    importing_succesfully_status.status = (
-        StatusEnum.importing_successfully.value
-    )
+    importing_succesfully_status.status = StatusEnum.importing_successfully.value
     session.add(importing_succesfully_status)
     session.commit()
 
@@ -187,9 +185,7 @@ def test_job_overall_status_not_completed():
     assert retrieved_job["job_id"] == job_id
 
     # Check the last status
-    assert (
-        retrieved_job["job_status"] == StatusEnum.importing_successfully.value
-    )
+    assert retrieved_job["job_status"] == StatusEnum.importing_successfully.value
 
     assert retrieved_job["overall_process"] == pytest.approx(3 / 5 * 100)
 
@@ -220,9 +216,7 @@ def test_job_overall_status_complete_job():
     # importing_succesfully
     importing_succesfully_status = JobStatus()
     importing_succesfully_status.job_id = job_id
-    importing_succesfully_status.status = (
-        StatusEnum.importing_successfully.value
-    )
+    importing_succesfully_status.status = StatusEnum.importing_successfully.value
     session.add(importing_succesfully_status)
 
     # exporting
@@ -234,9 +228,7 @@ def test_job_overall_status_complete_job():
     # exporting_succesfully
     exporting_succesfully_status = JobStatus()
     exporting_succesfully_status.job_id = job_id
-    exporting_succesfully_status.status = (
-        StatusEnum.exporting_successfully.value
-    )
+    exporting_succesfully_status.status = StatusEnum.exporting_successfully.value
     session.add(exporting_succesfully_status)
 
     session.commit()
@@ -248,9 +240,7 @@ def test_job_overall_status_complete_job():
     assert retrieved_job["job_id"] == job_id
 
     # Check the last status
-    assert (
-        retrieved_job["job_status"] == StatusEnum.exporting_successfully.value
-    )
+    assert retrieved_job["job_status"] == StatusEnum.exporting_successfully.value
 
     assert retrieved_job["overall_process"] == pytest.approx(100)
 
@@ -263,9 +253,7 @@ def test_export_error_status_change():
     # and then if the user retries the process, a "data_not_reachable" one
 
     (job_id, job) = create_job(
-        import_url="https://github.com/rievo/icosphere"[
-            ::-1
-        ],  # Unexisting url
+        import_url="https://github.com/rievo/icosphere"[::-1],  # Unexisting url
         import_service="git",
     )  # default export parameters
 
@@ -285,8 +273,7 @@ def test_export_error_status_change():
     # Additionally, since this is the first try of importing it,
     # we should be able to see in the db the auth required status
     auth_result = base_query.filter(
-        JobStatus.status
-        == StatusEnum.importing_error_authorization_required.value
+        JobStatus.status == StatusEnum.importing_error_authorization_required.value
     ).one_or_none()
 
     assert auth_result is not None  # The auth required status is in the db
@@ -303,8 +290,7 @@ def test_export_error_status_change():
 
     # Check if we still have only auth required status
     auth_result = base_query.filter(
-        JobStatus.status
-        == StatusEnum.importing_error_authorization_required.value
+        JobStatus.status == StatusEnum.importing_error_authorization_required.value
     ).one_or_none()
 
     assert auth_result is not None  # The auth required status is in the db
