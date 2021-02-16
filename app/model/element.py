@@ -2,7 +2,7 @@ from enum import Enum
 import json
 from pydantic.dataclasses import dataclass
 from typing import List
-import dataclasses
+from pydantic import Field
 
 
 class ElementType(str, Enum):
@@ -16,7 +16,7 @@ class Element:
 
     id: str = ""
     type: ElementType = ElementType.UNKNOWN
-    children: List["Element"] = dataclasses.field(default_factory=lambda: [0])
+    children: List["Element"] = Field(default_factory=list)
     path: str = ""
     name: str = ""
 

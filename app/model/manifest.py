@@ -1,7 +1,7 @@
 import json
-import dataclasses
 from typing import List
 from pydantic.dataclasses import dataclass
+from pydantic import Field
 from .manifest_metadata import ManifestMetadata
 from app.model.element import ElementType, Element
 from app.model.user import User
@@ -13,8 +13,8 @@ class Manifest:
     project_name: str = ""
     project_id: str = ""
     project_description: str = ""
-    elements: List[Element] = dataclasses.field(default_factory=lambda: [0])
-    collaborators: List[User] = dataclasses.field(default_factory=lambda: [0])
+    elements: List[Element] = Field(default_factory=list)
+    collaborators: List[User] = Field(default_factory=list)
     source_url: str = ""
     file_elements: int = 0
 

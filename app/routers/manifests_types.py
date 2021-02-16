@@ -14,9 +14,9 @@ class JobRequest(BaseModel):
     export_url: str
     import_service: str
     export_service: str
-    import_token: Optional[str] = ""
-    export_token: Optional[str] = ""
-    type: Optional[OperationType] = OperationType.IMPORT_EXPORT.value
+    import_token: Optional[str]
+    export_token: Optional[str]
+    type: Optional[OperationType]
 
     def toJson(self):
 
