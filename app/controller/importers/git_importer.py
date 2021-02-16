@@ -1,14 +1,19 @@
 from app.model.importer import Importer
 import os
 import git
+from re import search
 
 from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
 from app.models import StatusEnum
 
+
 temp_folder_path = "/tmp/gitimports/"
 
 ignored_folders = [".git"]
+
+
+git_repo_regex = r"^(((git|ssh|http(s)?)|(git@[\w\.]+))(:(\/\/)?)([\w\.@\:\/\-~]+)(\.git)(\/)?)|(^http(s)?:\/\/github\.com(?:\/[^\s\/]+){2}$)"
 
 
 class Progress(git.remote.RemoteProgress):
@@ -42,8 +47,8 @@ class GitImporter(Importer):
             print(e)
             self.set_status(StatusEnum.importing_error_data_unreachable.value)
 
-    def validate_url():
-        pass
+    def validate_url(url):
+        return bool(search(git_repo_regex, url))
 
     def process_url(self, url, auth_token):
         print("GIT: Starting process")

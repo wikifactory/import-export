@@ -14,7 +14,9 @@ from app.celery_tasks import (
 )
 
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
+
+from app.routers.service_discover import discover_service_for_url_list
 
 router = APIRouter()
 OUTPUT_FOLDER = "/tmp/outputs/"
@@ -130,3 +132,20 @@ def get_jobs():
 @router.get("/unfinished_jobs")
 def get_unfinished_jobs():
     return handle_get_unfinished_jobs()
+
+
+class URLsServices(BaseModel):
+    urls: List[str]
+
+
+@router.post("/identify_service")
+def identify_service(body: URLsServices):
+
+    result = discover_service_for_url_list(body.urls)
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "services": result,
+        },
+    )

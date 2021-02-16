@@ -1,4 +1,5 @@
 import os
+from re import search
 from app.model.importer import Importer
 from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
@@ -7,6 +8,9 @@ import dropbox
 from pathlib import Path
 
 temp_folder_path = "/tmp/dropboximports/"
+
+
+dropbox_folder_regex = r"^(http(s)*:\/\/(www)?.dropbox\.com\/home\/.+)$"
 
 
 class DropboxImporter(Importer):
@@ -27,6 +31,9 @@ class DropboxImporter(Importer):
 
         except Exception as e:
             print(e)
+
+    def validate_url(url):
+        return bool(search(dropbox_folder_regex, url))
 
     def process_url(self, url, auth_token):
 
