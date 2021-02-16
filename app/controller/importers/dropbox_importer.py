@@ -1,12 +1,9 @@
-import os
 from app.model.importer import Importer
 from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
 from app.models import StatusEnum
 import dropbox
 from pathlib import Path
-
-temp_folder_path = "/tmp/dropboximports/"
 
 
 class DropboxImporter(Importer):
@@ -17,21 +14,15 @@ class DropboxImporter(Importer):
         self.elements_list = []
         self.dropbox_path_for_element = {}
 
-        # Check if the tmp folder exists
-        try:
-            if not os.path.exists(temp_folder_path):
-                print("Creating tmp folder")
-                os.makedirs(temp_folder_path)
+        self.temp_folder_path = "/tmp/dropboximports/"
 
-            self.path = temp_folder_path + self.job_id
-
-        except Exception as e:
-            print(e)
+        self.make_sure_tmp_folder_is_created(self.temp_folder_path)
 
     def process_url(self, url, auth_token):
 
         print("Dropbox: Starting process of URL: {}".format(url))
-        # Create the manifest instance
+
+        super().process_url(url, auth_token)
 
         try:
             dropbox_handler = dropbox.Dropbox(auth_token)

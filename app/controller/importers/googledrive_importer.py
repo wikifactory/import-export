@@ -1,4 +1,3 @@
-import os
 import io
 from app.model.importer import Importer
 from app.model.manifest import Manifest
@@ -10,9 +9,6 @@ from googleapiclient.http import MediaIoBaseDownload
 import httplib2
 from oauth2client.client import AccessTokenCredentials
 from app.models import StatusEnum
-
-
-temp_folder_path = "/tmp/gdimports/"
 
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
@@ -29,21 +25,15 @@ class GoogleDriveImporter(Importer):
 
         self.elements_list = []
 
-        # Check if the tmp folder exists
-        try:
-            if not os.path.exists(temp_folder_path):
-                print("Creating tmp folder")
-                os.makedirs(temp_folder_path)
+        self.temp_folder_path = "/tmp/gdimports/"
 
-            self.path = temp_folder_path + self.job_id
-
-        except Exception as e:
-            print(e)
+        self.make_sure_tmp_folder_is_created(self.temp_folder_path)
 
     def process_url(self, url, auth_token):
 
-        print("Google Drive: Starting process of folder:")
-        print(url)
+        print("Google Drive: Starting process")
+
+        super().process_url(url, auth_token)
 
         try:
             creds = AccessTokenCredentials(

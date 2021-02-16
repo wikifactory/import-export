@@ -6,7 +6,6 @@ from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
 from app.models import StatusEnum
 
-temp_folder_path = "/tmp/gitimports/"
 
 ignored_folders = [".git"]
 
@@ -26,36 +25,20 @@ class GitImporter(Importer):
         # This id will identify the tmp folder
         self.job_id = job_id
 
-        self.path = None
+        self.temp_folder_path = "/tmp/gitimports/"
 
-        self.set_status(StatusEnum.importing.value)
-
-        # Check if the tmp folder exists
-        try:
-            if not os.path.exists(temp_folder_path):
-                print("Creating tmp folder")
-                os.makedirs(temp_folder_path)
-
-            self.path = temp_folder_path + self.job_id
-
-        except Exception as e:
-            print(e)
-            self.set_status(StatusEnum.importing_error_data_unreachable.value)
+        self.make_sure_tmp_folder_is_created(self.temp_folder_path)
 
     def validate_url():
         pass
 
     def process_url(self, url, auth_token):
         print("GIT: Starting process")
-        # TODO: Check if the repo url is valid
 
-        # TODO: Check if the repo is local?
-
-        # If the url / path is valid, start the process
-        # First, we clone the repo into the tmp folder
+        super().process_url(url, auth_token)
 
         try:
-
+            # First, we clone the repo into the tmp folder
             pygit2.clone_repository(
                 url, self.path, callbacks=IgnoreCredentialsCallbacks()
             )
@@ -80,18 +63,6 @@ class GitImporter(Importer):
             self.on_import_error_found(e)
             print(e)
             return None
-
-    def fill_contributors(self, manifest, repo):
-        branch = repo.active_branch
-
-        # Extract a list of commits to retrieve the emails
-        email_list = []
-        commits = list(repo.iter_commits(branch.name))
-        for c in commits:
-            if c.author.email not in email_list:
-                email_list.append(c.author.email)
-
-        manifest.collaborators = email_list
 
     def populate_manifest_from_repository_path(self, manifest, repo_path):
         elements_dic = {}

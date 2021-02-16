@@ -12,9 +12,6 @@ from app.models import StatusEnum
 from enum import Enum
 
 
-temp_folder_path = "/tmp/wikifactoryimports/"
-temp_zip_folder_path = "/tmp/wikifactoryzips/"
-
 endpoint_url = wikifactory_connection_url
 client_username = "dGVzdHVzZXJhZG1pbg=="  # QUESTION: Where do I get this?
 
@@ -70,29 +67,22 @@ class WikifactoryImporter(Importer):
         # This id will identify the tmp folder
         self.job_id = job_id
 
-        self.path = None
+        self.temp_folder_path = "/tmp/wikifactoryimports/"
+        self.temp_zip_folder_path = "/tmp/wikifactoryzips/"
 
-        # Check if the tmp folder exists
-        try:
-            if not os.path.exists(temp_folder_path):
-                print("Creating tmp folder")
-                os.makedirs(temp_folder_path)
+        self.make_sure_tmp_folder_is_created(self.temp_folder_path)
+        self.make_sure_tmp_folder_is_created(
+            self.temp_zip_folder_path, override_path=False
+        )
 
-            self.path = temp_folder_path + self.job_id
-
-            if not os.path.exists(temp_zip_folder_path):
-                print("Creating tmp zip folder")
-                os.makedirs(temp_zip_folder_path)
-
-        except Exception as e:
-            print(e)
-
-    def process_url(self, import_url, import_token):
+    def process_url(self, url, auth_token):
         print("WIKIFACTORY: Starting process")
 
+        super().process_url(url, auth_token)
+
         try:
 
-            project_info = self.get_project_details(import_url, import_token)
+            project_info = self.get_project_details(url, auth_token)
 
             manifest = Manifest()
             # INFO: Maybe use the name or other field here?
@@ -163,7 +153,7 @@ class WikifactoryImporter(Importer):
 
         response = requests.get(zip_url)
 
-        local_zip_path = temp_zip_folder_path + self.job_id
+        local_zip_path = self.temp_zip_folder_path + self.job_id
 
         # Write the zip file
         try:
