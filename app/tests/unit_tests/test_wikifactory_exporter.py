@@ -12,11 +12,8 @@ from app.controller.exporters.wikifactory_exporter import (
     wikifactory_api_request,
 )
 from app.controller import error
-from app.controller.exporters import wikifactory_gql
 
-from app.tests.integration_tests.test_job import create_job
-from app.tests.conftest import WIKIFACTORY_TOKEN, WIKIFACTORY_TEST_PROJECT_URL
-from app.models import add_job_to_db, get_job
+from app.models import add_job_to_db
 from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
 

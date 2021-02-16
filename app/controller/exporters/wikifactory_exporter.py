@@ -4,8 +4,6 @@ import magic
 import os
 import pygit2
 
-import base64
-
 from re import search
 
 from app.model.exporter import Exporter
@@ -249,7 +247,7 @@ class WikifactoryExporter(Exporter):
             project = wikifactory_api_request(
                 project_query, job.export_token, variables, "project.result"
             )
-        except:
+        except (WikifactoryAPINoResult, WikifactoryAPIUserErrors):
             raise ExportNotReachable("Project nof found in Wikifactory")
 
         return {
