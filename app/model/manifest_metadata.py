@@ -1,6 +1,7 @@
-from .user import User
-from datetime import date
 import json
+from datetime import date
+
+from .user import User
 
 
 class ManifestMetadata:

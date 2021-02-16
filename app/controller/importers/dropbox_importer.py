@@ -1,10 +1,12 @@
 import os
+from pathlib import Path
+
+import dropbox
+
+from app.model.element import Element, ElementType
 from app.model.importer import Importer
 from app.model.manifest import Manifest
-from app.model.element import Element, ElementType
 from app.models import StatusEnum
-import dropbox
-from pathlib import Path
 
 temp_folder_path = "/tmp/dropboximports/"
 
@@ -113,15 +115,11 @@ class DropboxImporter(Importer):
                         file_element.id = entry.id
                         file_element.type = ElementType.FILE
                         file_element.name = entry.name
-                        file_element.path = (
-                            element.path + "/" + file_element.name
-                        )
+                        file_element.path = element.path + "/" + file_element.name
 
                         element.children.append(file_element)
 
-                        self.dropbox_path_for_element[
-                            file_element
-                        ] = entry.path_lower
+                        self.dropbox_path_for_element[file_element] = entry.path_lower
 
                         self.elements_list.append(file_element)
 
@@ -191,6 +189,4 @@ class DropboxImporter(Importer):
             except Exception as e:
                 print(e)
         else:
-            raise "Dropbox path for element width id {} not found".format(
-                element.id
-            )
+            raise "Dropbox path for element width id {} not found".format(element.id)

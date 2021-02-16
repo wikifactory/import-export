@@ -1,16 +1,16 @@
-from app.model.importer import Importer
-from app.config import wikifactory_connection_url
 import os
-
-from app.model.manifest import Manifest
-from app.model.element import Element, ElementType
-from gql import Client, gql
-from gql.transport.requests import RequestsHTTPTransport
-import requests
 import zipfile
-from app.models import StatusEnum
 from enum import Enum
 
+import requests
+from gql import Client, gql
+from gql.transport.requests import RequestsHTTPTransport
+
+from app.config import wikifactory_connection_url
+from app.model.element import Element, ElementType
+from app.model.importer import Importer
+from app.model.manifest import Manifest
+from app.models import StatusEnum
 
 temp_folder_path = "/tmp/wikifactoryimports/"
 temp_zip_folder_path = "/tmp/wikifactoryzips/"
@@ -150,9 +150,7 @@ class WikifactoryImporter(Importer):
 
             zip_archive_url = (
                 server_url
-                + result["project"]["result"]["contributionUpstream"][
-                    "zipArchiveUrl"
-                ]
+                + result["project"]["result"]["contributionUpstream"]["zipArchiveUrl"]
             )
 
             return {
@@ -237,10 +235,7 @@ class WikifactoryImporter(Importer):
 
                 # If we are at root level and the file is the readme, use it
                 # for the description of the manifest
-                if (
-                    full_path == project_path
-                    and filename.lower() == "readme.md"
-                ):
+                if full_path == project_path and filename.lower() == "readme.md":
                     with open(file_element.path, "r") as file:
                         manifest.project_description = file.read()
 

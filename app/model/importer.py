@@ -1,5 +1,4 @@
-from app.models import StatusEnum, Session, JobStatus
-from app.models import set_job_status
+from app.models import JobStatus, Session, StatusEnum, set_job_status
 
 
 class Importer:

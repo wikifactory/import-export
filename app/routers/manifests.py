@@ -1,20 +1,19 @@
+from enum import Enum
+from typing import Optional
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-from enum import Enum
+from pydantic import BaseModel
 
 # from app.models import add_job_to_db, connect_to_db
 import app.models
-
 from app.celery_tasks import (
-    handle_post_manifest,
-    handle_post_export,
-    handle_get_job,
     generate_job_id,
+    handle_get_job,
     handle_get_unfinished_jobs,
+    handle_post_export,
+    handle_post_manifest,
 )
-
-from pydantic import BaseModel
-from typing import Optional
 
 router = APIRouter()
 OUTPUT_FOLDER = "/tmp/outputs/"

@@ -1,7 +1,8 @@
-from .manifest_metadata import ManifestMetadata
+import json
+
 from app.model.element import ElementType
 
-import json
+from .manifest_metadata import ManifestMetadata
 
 
 class Manifest:

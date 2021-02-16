@@ -1,9 +1,11 @@
-from app.controller.importers.git_importer import GitImporter
-import pytest
 import os
-from app.tests.test_tools import clean_folder
 import uuid
+
+import pytest
+
+from app.controller.importers.git_importer import GitImporter
 from app.models import add_job_to_db
+from app.tests.test_tools import clean_folder
 
 
 @pytest.fixture
@@ -64,9 +66,7 @@ def test_git_manifest_generation_fail(prepared_tmp_git_folder):
 
     importer = GitImporter(job_id)
 
-    manifest = importer.process_url(
-        params["import_url"], params["import_token"]
-    )
+    manifest = importer.process_url(params["import_url"], params["import_token"])
 
     clean_folder(temp_folder_path)
 
@@ -90,16 +90,12 @@ def test_git_manifest_generation_success(prepared_tmp_git_folder):
 
     importer = GitImporter(job_id)
 
-    manifest = importer.process_url(
-        params["import_url"], params["import_token"]
-    )
+    manifest = importer.process_url(params["import_url"], params["import_token"])
 
     clean_folder(temp_folder_path)
 
     assert manifest is not None
-    assert (
-        manifest.file_elements == repo_contents["num_elements"]
-    )  # Hand-calculated
+    assert manifest.file_elements == repo_contents["num_elements"]  # Hand-calculated
     assert manifest.project_name == repo_contents["project_name"]
 
     root_element = manifest.elements[0]

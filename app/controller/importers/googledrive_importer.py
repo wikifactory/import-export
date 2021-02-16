@@ -1,16 +1,16 @@
-import os
 import io
-from app.model.importer import Importer
-from app.model.manifest import Manifest
-from app.model.element import Element, ElementType
+import os
 from pathlib import Path
 
+import httplib2
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
-import httplib2
 from oauth2client.client import AccessTokenCredentials
-from app.models import StatusEnum
 
+from app.model.element import Element, ElementType
+from app.model.importer import Importer
+from app.model.manifest import Manifest
+from app.models import StatusEnum
 
 temp_folder_path = "/tmp/gdimports/"
 
@@ -83,9 +83,7 @@ class GoogleDriveImporter(Importer):
                 except Exception as e:
                     print(e)
 
-    def process_folder_recursively(
-        self, manifest, drive_service, root_folder_id
-    ):
+    def process_folder_recursively(self, manifest, drive_service, root_folder_id):
 
         # Init the folders array
         folders_ids = []
@@ -119,9 +117,7 @@ class GoogleDriveImporter(Importer):
                 element = element_for_id[next_id]
 
             # Perform a query and get all the files and subfolders given one
-            (files, subfolders) = self.get_files_and_subfolders(
-                drive_service, next_id
-            )
+            (files, subfolders) = self.get_files_and_subfolders(drive_service, next_id)
 
             # For each subfolder
             for subfolder in subfolders:
@@ -187,10 +183,7 @@ class GoogleDriveImporter(Importer):
 
                 for item in result_list:
 
-                    if (
-                        item.get("mimeType")
-                        == "application/vnd.google-apps.folder"
-                    ):
+                    if item.get("mimeType") == "application/vnd.google-apps.folder":
                         subfolders.append(item)
                     else:
                         files.append(item)

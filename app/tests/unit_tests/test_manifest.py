@@ -1,7 +1,7 @@
-from app.model.manifest import Manifest
-from app.model.element import Element, ElementType
-
 import pytest
+
+from app.model.element import Element, ElementType
+from app.model.manifest import Manifest
 
 
 @pytest.fixture()

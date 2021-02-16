@@ -1,11 +1,13 @@
-from app.model.importer import Importer
 import os
+
+from app.model.importer import Importer
+
+# from app.model.manifest import Manifest
+from app.model.thing import Thing
 
 # import aiohttp
 # from app.model.constants import THINGIVERSE_URL, THINGIVERSE_THINGS_PATH
 
-# from app.model.manifest import Manifest
-from app.model.thing import Thing
 
 # from app.models import StatusEnum
 

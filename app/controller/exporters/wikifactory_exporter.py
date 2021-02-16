@@ -1,22 +1,16 @@
-from app.model.exporter import Exporter
-from app.config import wikifactory_connection_url
+import base64
+import hashlib
+import os
+from enum import Enum
+
+import magic
+import requests
 from gql import Client, gql
 from gql.transport.requests import RequestsHTTPTransport
 
-from app.model.exporter import NotValidManifest
-from app.models import StatusEnum
-from app.models import increment_processed_element_for_job
-
-import requests
-import magic
-
-import os
-
-import base64
-import hashlib
-
-from enum import Enum
-
+from app.config import wikifactory_connection_url
+from app.model.exporter import Exporter, NotValidManifest
+from app.models import StatusEnum, increment_processed_element_for_job
 
 endpoint_url = wikifactory_connection_url
 
@@ -148,7 +142,9 @@ class WikifactoryExporter(Exporter):
 
     def validate_url(url):
 
-        pattern = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(\@|\+)[\w\-º_]*\/[\w\-\_]+$"
+        pattern = (
+            r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(\@|\+)[\w\-º_]*\/[\w\-\_]+$"
+        )
         import re
 
         result = re.search(pattern, url)
@@ -168,9 +164,7 @@ class WikifactoryExporter(Exporter):
         slug = url_parts[-1]
 
         user_id = space.replace("+", "").replace("@", "")
-        self.client_username = base64.b64encode(
-            bytes(user_id, "ascii")
-        ).decode("ascii")
+        self.client_username = base64.b64encode(bytes(user_id, "ascii")).decode("ascii")
 
         self.manifest = manifest
         self.export_token = export_token
@@ -325,9 +319,7 @@ class WikifactoryExporter(Exporter):
             # TODO: Raise custom exception
             return None
 
-    def perform_mutation_operation(
-        self, element, file_id, project_path, export_token
-    ):
+    def perform_mutation_operation(self, element, file_id, project_path, export_token):
         transport = RequestsHTTPTransport(
             url=endpoint_url,
             headers={
@@ -369,9 +361,7 @@ class WikifactoryExporter(Exporter):
                 )
                 print(response.content)
             else:
-                print(
-                    "File {} uploaded to s3".format(local_path.split("/")[-1])
-                )
+                print("File {} uploaded to s3".format(local_path.split("/")[-1]))
 
     def complete_file(self, space_id, file_id, export_token):
         transport = RequestsHTTPTransport(
