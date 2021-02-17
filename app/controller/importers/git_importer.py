@@ -84,12 +84,11 @@ class GitImporter(Importer):
             for folder_name in dirs_in_curr_path:
 
                 if folder_name not in ignored_folders:
-                    folder_element = Element()
-                    folder_element.type = ElementType.FOLDER
 
                     current_folder_path = os.path.join(current_path, folder_name)
-
-                    folder_element.path = current_folder_path
+                    folder_element = Element(
+                        type=ElementType.FOLDER, path=current_folder_path
+                    )
 
                     if full_path in elements_dic:
                         elements_dic[full_path].children.append(folder_element)
