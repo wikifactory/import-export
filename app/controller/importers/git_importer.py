@@ -44,25 +44,23 @@ class GitImporter(Importer):
             )
             print("Repo cloned")
 
-            # Create the manifest instance
-            manifest = Manifest()
-
-            # Fill some basic information of the project
-            manifest.project_name = os.path.basename(os.path.normpath(url))
-            manifest.source_url = url
-
-            # Populate the manifest from the directory
-            self.populate_manifest_from_repository_path(manifest, self.path)
-
-            # Finally, set the status
-            self.set_status(StatusEnum.importing_successfully.value)
-            return manifest
-
-        except Exception as e:
-            # self.set_status(StatusEnum.importing_error_data_unreachable.value)
-            self.on_import_error_found(e)
-            print(e)
+        except (Exception):
+            self.on_import_error_found(None)
             return None
+
+        # Create the manifest instance
+        manifest = Manifest()
+
+        # Fill some basic information of the project
+        manifest.project_name = os.path.basename(os.path.normpath(url))
+        manifest.source_url = url
+
+        # Populate the manifest from the directory
+        self.populate_manifest_from_repository_path(manifest, self.path)
+
+        # Finally, set the status
+        self.set_status(StatusEnum.importing_successfully.value)
+        return manifest
 
     def populate_manifest_from_repository_path(self, manifest, repo_path):
         elements_dic = {}
@@ -74,11 +72,11 @@ class GitImporter(Importer):
             full_path = os.path.join(repo_path, current_path)
 
             if full_path == repo_path:
+
                 # Root element
-                root_element = Element()
-                root_element.id = "root"
-                root_element.path = full_path
-                root_element.type = ElementType.FOLDER
+                root_element = Element(
+                    id="root", path=full_path, type=ElementType.FOLDER
+                )
 
                 elements_dic[full_path] = root_element
 
@@ -101,10 +99,11 @@ class GitImporter(Importer):
             for filename in files:
 
                 # Create a child element
-                file_element = Element()
-                file_element.type = ElementType.FILE
-                file_element.id = filename
-                file_element.path = os.path.join(current_path, filename)
+                file_element = Element(
+                    id=filename,
+                    path=os.path.join(current_path, filename),
+                    type=ElementType.FILE,
+                )
 
                 if current_path in elements_dic:
                     elements_dic[current_path].children.append(file_element)

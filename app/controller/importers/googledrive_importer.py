@@ -1,4 +1,5 @@
 import io
+import os
 from app.model.importer import Importer
 from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
@@ -82,10 +83,10 @@ class GoogleDriveImporter(Importer):
         # Append the initial folder id
         folders_ids.append(root_folder_id)
 
-        root_element = Element()
-        root_element.id = root_folder_id
-        root_element.type = ElementType.FOLDER
-        root_element.path = self.path
+        root_element = Element(
+            id=root_folder_id, path=self.path, type=ElementType.FOLDER
+        )
+
         element_for_id[root_folder_id] = root_element
 
         self.elements_list.append(root_element)
@@ -100,8 +101,7 @@ class GoogleDriveImporter(Importer):
             # If this is the first time that I'm processing this item
             # (either folder or file)
             if next_id not in element_for_id:
-                element = Element()
-                element.id = next_id
+                element = Element(id=next_id)
                 element_for_id[next_id] = element
             else:
                 element = element_for_id[next_id]
@@ -115,11 +115,13 @@ class GoogleDriveImporter(Importer):
 
                 # Generate the appropiate element
                 if subfolder.get("id") not in element_for_id:
-                    f_ele = Element()
-                    f_ele.type = ElementType.FOLDER
-                    f_ele.id = subfolder.get("id")
-                    f_ele.name = subfolder.get("name")
-                    f_ele.path = element.path + "/" + f_ele.name
+                    f_ele = Element(
+                        id=subfolder.get("id"),
+                        name=subfolder.get("name"),
+                        path=os.path.join(element.path, subfolder.get("name")),
+                        type=ElementType.FOLDER,
+                    )
+
                     element_for_id[f_ele.id] = f_ele
 
                     element.children.append(f_ele)
@@ -132,11 +134,12 @@ class GoogleDriveImporter(Importer):
                 # IMPORTANT: Increment the number of files for the manifest
                 manifest.file_elements += 1
 
-                # Create the element
-                ch_element = Element()
-                ch_element.id = f.get("id")
-                ch_element.path = element.path + "/" + f.get("name")
-                ch_element.type = ElementType.FILE
+                ch_element = Element(
+                    id=f.get("id"),
+                    name=f.get("name"),
+                    path=os.path.join(element.path, f.get("name")),
+                    type=ElementType.FILE,
+                )
 
                 element.children.append(ch_element)
 
