@@ -44,7 +44,7 @@ class GitImporter(Importer):
             )
             print("Repo cloned")
 
-        except (Exception):
+        except (pygit2.errors.GitError):
             self.on_import_error_found(None)
             return None
 

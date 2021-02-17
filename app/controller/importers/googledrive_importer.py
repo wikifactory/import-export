@@ -7,10 +7,16 @@ from pathlib import Path
 
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.errors import HttpError
 import httplib2
+import oauth2client
 from oauth2client.client import AccessTokenCredentials
 from app.models import StatusEnum
 
+from app.controller.importers.googledrive_errors import (
+    CredentialsNotValid,
+    DownloadError,
+)
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 query_c = "mimeType='application/vnd.google-apps.folder'"
@@ -36,33 +42,34 @@ class GoogleDriveImporter(Importer):
 
         super().process_url(url, auth_token)
 
-        try:
-            creds = AccessTokenCredentials(
-                auth_token,
-                user_agent="https://www.googleapis.com/oauth2/v1/certs",
-            )
-            http = httplib2.Http()
-            http = creds.authorize(http)
-            drive_service = build(
-                "drive", "v3", credentials=creds, cache_discovery=False
-            )
+        creds = AccessTokenCredentials(
+            auth_token,
+            user_agent="https://www.googleapis.com/oauth2/v1/certs",
+        )
 
-            # Create the manifest instance
-            manifest = Manifest()
+        http = httplib2.Http()
 
-            self.process_folder_recursively(manifest, drive_service, url)
-            self.create_folder_structure_sync(self.elements_list)
+        http = creds.authorize(http)
 
-            self.download_all_files(drive_service, self.elements_list)
+        drive_service = build("drive", "v3", credentials=creds, cache_discovery=False)
 
-            # Finally, set the status
-            self.set_status(StatusEnum.importing_successfully.value)
-            return manifest
+        # Create the manifest instance
+        manifest = Manifest()
 
-        except Exception as e:
-            print(e)
-            self.on_import_error_found(e)
-            return None
+        # Start processing the folder
+        # Here we will fill the manifest info with the googledrive files
+        self.process_folder_recursively(manifest, drive_service, url)
+
+        # Once we have the manifest, we create the folder structure
+        self.create_folder_structure_sync(self.elements_list)
+
+        # Next, download all the files to the associated folders
+        self.download_all_files(drive_service, self.elements_list)
+
+        # Finally, set the status
+        self.set_status(StatusEnum.importing_successfully.value)
+
+        return manifest
 
     def create_folder_structure_sync(self, elements):
 
@@ -188,9 +195,9 @@ class GoogleDriveImporter(Importer):
                 else:
                     last_page_token = page_token
 
-            except Exception as e:
-                print(e)
-                break
+            except (oauth2client.client.AccessTokenCredentialsError):
+                self.on_import_error_found(None)
+                raise CredentialsNotValid("")
 
         return (files, subfolders)
 
@@ -206,12 +213,9 @@ class GoogleDriveImporter(Importer):
                 while done is False:
                     status, done = downloader.next_chunk()
                     # print("{}".format(status.progress() * 100))
-            except Exception as e:
-                print(e)
 
-            try:
                 print("File {} done".format(element.path))
                 with open(element.path, "wb") as outfile:
                     outfile.write(fh.getbuffer())
-            except Exception as e:
-                print(e)
+            except (HttpError, httplib2.HttpLib2Error):
+                raise DownloadError("")
