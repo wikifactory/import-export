@@ -6,7 +6,11 @@ import oauth2client
 
 
 from app.controller.importers.googledrive_importer import GoogleDriveImporter
-from app.controller.importers.googledrive_errors import CredentialsNotValid
+from app.controller.importers.googledrive_errors import (
+    CredentialsNotValid,
+    DownloadError,
+)
+from googleapiclient.errors import HttpError
 
 
 @pytest.fixture
@@ -27,11 +31,27 @@ def basic_job():
 class FakeServiceClassSuccess:
     class FileList:
         class ExecuteObject:
+            class FakeFile:
+                info = {"name": "", "id": "", "mimeType": ""}
+
+                def __init__(self, name="", id="", mimeType="text/plain"):
+                    self.info["name"] = name
+                    self.info["id"] = id
+
+                def get(self, key):
+                    return self.info[key]
+
             def execute(self):
-                return {"files": [], "nextPageToken": None}
+                return {
+                    "files": [self.FakeFile("testname", "testid")],
+                    "nextPageToken": None,
+                }
 
         def list(self, q, fields):
             return self.ExecuteObject()
+
+        def get_media(self, fileId):
+            pass
 
     def files(self):
         return self.FileList()
@@ -80,16 +100,55 @@ def patched_googledrive_service_from_doc_auth_error(
     return FakeServiceClassFail()
 
 
+def patchedMediaIOBaseDownloadSuccess(fd, request):
+    class FakeDownloader:
+        def next_chunk():
+            return (None, True)
+
+    return FakeDownloader
+
+
+def patchedMediaIOBaseDownloadFail(fd, request):
+    class FakeDownloader:
+        def next_chunk():
+            raise HttpError(None, b"error")
+
+    return FakeDownloader
+
+
 def monkeypatched_googledrive_files_fail(url, path, callbacks):
     raise oauth2client.client.AccessTokenCredentialsError
 
 
-def test_googledrive_manifest_generation_success(monkeypatch, basic_job):
-
+@pytest.fixture
+def patch_build_from_doc(monkeypatch):
     monkeypatch.setattr(
         "googleapiclient.discovery.build_from_document",
         patched_googledrive_service_from_doc_success,
     )
+
+
+@pytest.fixture
+def patch_download_success(monkeypatch):
+    # Monkeypatch the download
+    monkeypatch.setattr(
+        "app.controller.importers.googledrive_importer.MediaIoBaseDownload",
+        patchedMediaIOBaseDownloadSuccess,
+    )
+
+
+@pytest.fixture
+def patch_download_error(monkeypatch):
+    # Monkeypatch the download
+    monkeypatch.setattr(
+        "app.controller.importers.googledrive_importer.MediaIoBaseDownload",
+        patchedMediaIOBaseDownloadFail,
+    )
+
+
+def test_googledrive_manifest_generation_success(
+    patch_build_from_doc, patch_download_success, basic_job
+):
 
     (job_id, details) = basic_job
 
@@ -98,10 +157,21 @@ def test_googledrive_manifest_generation_success(monkeypatch, basic_job):
     manifest = importer.process_url(details["import_url"], details["import_token"])
 
     assert manifest is not None
-    print(manifest)
 
 
-def test_googledrive_manifest_generation_fail(monkeypatch, basic_job):
+def test_googledrive_manifest_generation_error_downloading(
+    patch_build_from_doc, patch_download_error, basic_job
+):
+
+    (job_id, details) = basic_job
+
+    importer = GoogleDriveImporter(job_id)
+
+    with pytest.raises(DownloadError):
+        _ = importer.process_url(details["import_url"], details["import_token"])
+
+
+def test_googledrive_manifest_generation_credentials_not_valid(monkeypatch, basic_job):
 
     monkeypatch.setattr(
         "googleapiclient.discovery.build_from_document",
