@@ -21,9 +21,7 @@ query_c = "mimeType='application/vnd.google-apps.folder'"
 query_fields = "nextPageToken, files(id,name, mimeType)"
 query_idinparents = " in parents"
 
-googledrive_folder_regex = (
-    r"^(https:\/\/drive\.google\.com\/drive\/u\/[0-9]+\/folders\/.*$)"
-)
+googledrive_folder_regex = r"^(https:\/\/drive\.google\.com\/drive\/(u\/[0-9]+\/)?folders\/.*(\?usp=sharing)?$)"
 
 
 class GoogleDriveImporter(Importer):
