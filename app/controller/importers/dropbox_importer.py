@@ -1,4 +1,3 @@
-import os
 from app.model.importer import Importer
 from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
