@@ -41,6 +41,12 @@ jobs:
           when: always
 
       - run:
+          name: Import sorting
+          command: |
+            pipenv run isort --check --diff app
+          when: always
+
+      - run:
           name: Build using docker-compose
           command: |
             docker-compose build

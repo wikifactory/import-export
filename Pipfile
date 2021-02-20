@@ -24,6 +24,7 @@ flake8 = "*"
 pre-commit = "*"
 gql = "*"
 pygit2 = "*"
+isort = "*"
 
 [requires]
 python_version = "3.7"
