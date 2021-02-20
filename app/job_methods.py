@@ -47,9 +47,7 @@ def retry_job(body: dict, job_id):
 
     if manifest is None:
         return {
-            "error": "The manifest for job {} could not be generated".format(
-                job_id
-            )
+            "error": "The manifest for job {} could not be generated".format(job_id)
         }
 
     print("Importing process finished!")

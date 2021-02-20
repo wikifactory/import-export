@@ -1,4 +1,5 @@
 import io
+import os
 from app.model.importer import Importer
 from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
@@ -6,13 +7,16 @@ from pathlib import Path
 
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.errors import HttpError
 import httplib2
+import oauth2client
 from oauth2client.client import AccessTokenCredentials
 from app.models import StatusEnum
 
-
-temp_folder_path = "/tmp/gdimports/"
-
+from app.controller.importers.googledrive_errors import (
+    CredentialsNotValid,
+    DownloadError,
+)
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 query_c = "mimeType='application/vnd.google-apps.folder'"
@@ -28,46 +32,44 @@ class GoogleDriveImporter(Importer):
 
         self.elements_list = []
 
-        # Set the path for the project before the prepare_folder method,
-        # So we can ensure that the job folder is empty
+        self.temp_folder_path = "/tmp/gdimports/"
 
-        self.path = temp_folder_path + self.job_id
-
-        # Check if the tmp folder exists
-        self.prepare_folder(temp_folder_path, self.path)
+        self.make_sure_tmp_folder_is_created(self.temp_folder_path)
 
     def process_url(self, url, auth_token):
 
-        print("Google Drive: Starting process of folder:")
-        print(url)
+        print("Google Drive: Starting process")
 
-        try:
-            creds = AccessTokenCredentials(
-                auth_token,
-                user_agent="https://www.googleapis.com/oauth2/v1/certs",
-            )
-            http = httplib2.Http()
-            http = creds.authorize(http)
-            drive_service = build(
-                "drive", "v3", credentials=creds, cache_discovery=False
-            )
+        super().process_url(url, auth_token)
 
-            # Create the manifest instance
-            manifest = Manifest()
+        creds = AccessTokenCredentials(
+            auth_token,
+            user_agent="https://www.googleapis.com/oauth2/v1/certs",
+        )
 
-            self.process_folder_recursively(manifest, drive_service, url)
-            self.create_folder_structure_sync(self.elements_list)
+        http = httplib2.Http()
 
-            self.download_all_files(drive_service, self.elements_list)
+        http = creds.authorize(http)
 
-            # Finally, set the status
-            self.set_status(StatusEnum.importing_successfully.value)
-            return manifest
+        drive_service = build("drive", "v3", credentials=creds, cache_discovery=False)
 
-        except Exception as e:
-            print(e)
-            self.on_import_error_found(e)
-            return None
+        # Create the manifest instance
+        manifest = Manifest()
+
+        # Start processing the folder
+        # Here we will fill the manifest info with the googledrive files
+        self.process_folder_recursively(manifest, drive_service, url)
+
+        # Once we have the manifest, we create the folder structure
+        self.create_folder_structure_sync(self.elements_list)
+
+        # Next, download all the files to the associated folders
+        self.download_all_files(drive_service, self.elements_list)
+
+        # Finally, set the status
+        self.set_status(StatusEnum.importing_successfully.value)
+
+        return manifest
 
     def create_folder_structure_sync(self, elements):
 
@@ -88,10 +90,10 @@ class GoogleDriveImporter(Importer):
         # Append the initial folder id
         folders_ids.append(root_folder_id)
 
-        root_element = Element()
-        root_element.id = root_folder_id
-        root_element.type = ElementType.FOLDER
-        root_element.path = self.path
+        root_element = Element(
+            id=root_folder_id, path=self.path, type=ElementType.FOLDER
+        )
+
         element_for_id[root_folder_id] = root_element
 
         self.elements_list.append(root_element)
@@ -106,8 +108,7 @@ class GoogleDriveImporter(Importer):
             # If this is the first time that I'm processing this item
             # (either folder or file)
             if next_id not in element_for_id:
-                element = Element()
-                element.id = next_id
+                element = Element(id=next_id)
                 element_for_id[next_id] = element
             else:
                 element = element_for_id[next_id]
@@ -121,11 +122,13 @@ class GoogleDriveImporter(Importer):
 
                 # Generate the appropiate element
                 if subfolder.get("id") not in element_for_id:
-                    f_ele = Element()
-                    f_ele.type = ElementType.FOLDER
-                    f_ele.id = subfolder.get("id")
-                    f_ele.name = subfolder.get("name")
-                    f_ele.path = element.path + "/" + f_ele.name
+                    f_ele = Element(
+                        id=subfolder.get("id"),
+                        name=subfolder.get("name"),
+                        path=os.path.join(element.path, subfolder.get("name")),
+                        type=ElementType.FOLDER,
+                    )
+
                     element_for_id[f_ele.id] = f_ele
 
                     element.children.append(f_ele)
@@ -138,11 +141,12 @@ class GoogleDriveImporter(Importer):
                 # IMPORTANT: Increment the number of files for the manifest
                 manifest.file_elements += 1
 
-                # Create the element
-                ch_element = Element()
-                ch_element.id = f.get("id")
-                ch_element.path = element.path + "/" + f.get("name")
-                ch_element.type = ElementType.FILE
+                ch_element = Element(
+                    id=f.get("id"),
+                    name=f.get("name"),
+                    path=os.path.join(element.path, f.get("name")),
+                    type=ElementType.FILE,
+                )
 
                 element.children.append(ch_element)
 
@@ -191,9 +195,9 @@ class GoogleDriveImporter(Importer):
                 else:
                     last_page_token = page_token
 
-            except Exception as e:
-                print(e)
-                break
+            except (oauth2client.client.AccessTokenCredentialsError):
+                self.on_import_error_found(None)
+                raise CredentialsNotValid("")
 
         return (files, subfolders)
 
@@ -209,12 +213,9 @@ class GoogleDriveImporter(Importer):
                 while done is False:
                     status, done = downloader.next_chunk()
                     # print("{}".format(status.progress() * 100))
-            except Exception as e:
-                print(e)
 
-            try:
                 print("File {} done".format(element.path))
                 with open(element.path, "wb") as outfile:
                     outfile.write(fh.getbuffer())
-            except Exception as e:
-                print(e)
+            except (HttpError, httplib2.HttpLib2Error):
+                raise DownloadError("")

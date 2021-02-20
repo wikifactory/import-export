@@ -1,11 +1,11 @@
+import os
+
 from app.model.importer import Importer
 from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
 from app.models import StatusEnum
 import dropbox
 from pathlib import Path
-
-temp_folder_path = "/tmp/dropboximports/"
 
 
 class DropboxImporter(Importer):
@@ -16,18 +16,15 @@ class DropboxImporter(Importer):
         self.elements_list = []
         self.dropbox_path_for_element = {}
 
-        # Set the path for the project before the prepare_folder method,
-        # So we can ensure that the job folder is empty
+        self.temp_folder_path = "/tmp/dropboximports/"
 
-        self.path = temp_folder_path + self.job_id
-
-        # Check if the tmp folder exists
-        self.prepare_folder(temp_folder_path, self.path)
+        self.make_sure_tmp_folder_is_created(self.temp_folder_path)
 
     def process_url(self, url, auth_token):
 
         print("Dropbox: Starting process of URL: {}".format(url))
-        # Create the manifest instance
+
+        super().process_url(url, auth_token)
 
         try:
             dropbox_handler = dropbox.Dropbox(auth_token)
@@ -59,11 +56,12 @@ class DropboxImporter(Importer):
         folders_paths_to_process.append(url)
 
         # Create the root element
-        root_element = Element()
-        root_element.id = "root_element"
-        root_element.name = url.split("/")[-1]
-        root_element.type = ElementType.FOLDER
-        root_element.path = self.path
+        root_element = Element(
+            id="root",
+            name=os.path.basename(url),
+            path=self.path,
+            type=ElementType.FOLDER,
+        )
 
         element_for_path[url] = root_element
 
@@ -80,9 +78,8 @@ class DropboxImporter(Importer):
 
             # If this is the first time that I see that path,
             if next_path not in element_for_path:
-                element = Element()
-                element.id = next_path
-                element.name = next_path.split("/")[-1]
+
+                element = Element(id=next_path, name=os.path.basename(next_path))
 
                 # From now on, this DB url will have an associated element
                 element_for_path[next_path] = element
@@ -105,11 +102,12 @@ class DropboxImporter(Importer):
                         # Important: Increment the number of files to be processed
                         manifest.file_elements += 1
 
-                        file_element = Element()
-                        file_element.id = entry.id
-                        file_element.type = ElementType.FILE
-                        file_element.name = entry.name
-                        file_element.path = element.path + "/" + file_element.name
+                        file_element = Element(
+                            id=entry.id,
+                            name=entry.name,
+                            path=os.path.join(element.path, entry.name),
+                            type=ElementType.FILE,
+                        )
 
                         element.children.append(file_element)
 
@@ -123,12 +121,12 @@ class DropboxImporter(Importer):
                         # Create the manifest element for the folder
 
                         if entry.path_lower not in element_for_path:
-                            folder_element = Element()
-                            folder_element.type = ElementType.FOLDER
-                            folder_element.id = entry.id
-                            folder_element.name = entry.name
-                            folder_element.path = (
-                                element.path + "/" + folder_element.name
+
+                            folder_element = Element(
+                                id=entry.id,
+                                name=entry.name,
+                                path=os.path.join(element.path, entry.name),
+                                type=ElementType.FOLDER,
                             )
 
                             element.children.append(folder_element)
