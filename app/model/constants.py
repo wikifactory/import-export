@@ -1,6 +1,5 @@
 from typing_extensions import Final
 
-
 THINGIVERSE_SERVICE: Final = "thingiverse"
 WIKIFACTORY_SERVICE: Final = "wikifactory"
 GITHUB_SERVICE: Final = "github"

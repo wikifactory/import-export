@@ -1,6 +1,4 @@
-from app.models import StatusEnum
-
-from app.models import set_job_status
+from app.models import StatusEnum, set_job_status
 
 
 class Exporter:

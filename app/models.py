@@ -1,19 +1,22 @@
+import datetime
+import enum
 import os
 import sys
 import urllib.parse
 
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, ForeignKey, Integer, DateTime
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
-from sqlalchemy import create_engine, not_
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    create_engine,
+    not_,
+)
+from sqlalchemy.dialects.postgresql import ENUM, UUID
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.orm import sessionmaker
-
-import datetime
-from sqlalchemy.dialects.postgresql import ENUM
-import enum
-
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, sessionmaker
 
 Base = declarative_base()
 

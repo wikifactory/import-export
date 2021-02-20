@@ -1,5 +1,4 @@
 from app.model.exporter import Exporter
-
 from app.models import StatusEnum
 
 

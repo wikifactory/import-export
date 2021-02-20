@@ -1,10 +1,13 @@
 import json
-from typing import List
-from pydantic.dataclasses import dataclass
 from dataclasses import field
-from .manifest_metadata import ManifestMetadata
-from app.model.element import ElementType, Element
+from typing import List
+
+from pydantic.dataclasses import dataclass
+
+from app.model.element import Element, ElementType
 from app.model.user import User
+
+from .manifest_metadata import ManifestMetadata
 
 
 @dataclass

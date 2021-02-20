@@ -1,6 +1,7 @@
 # from certification import Certification
 import json
 from typing import List
+
 from pydantic.dataclasses import dataclass
 
 from app.model.certification import Certification

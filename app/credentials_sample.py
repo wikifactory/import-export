@@ -1,5 +1,4 @@
 from typing import Final
 
-
 GOOGLE_DRIVE_CLIENT_SECRET: Final = "SECRET_HERE"
 GOOGLE_DRIVE_CLIENT_ID: Final = "CLIENT_ID_HERE"

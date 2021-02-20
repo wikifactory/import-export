@@ -1,5 +1,5 @@
-from app.controller.importer_proxy import ImporterProxy
 from app.controller.exporter_proxy import ExporterProxy
+from app.controller.importer_proxy import ImporterProxy
 from app.models import set_retry_job
 
 

@@ -1,12 +1,12 @@
-import pytest
 import os
 import uuid
 
-from app.tests.test_tools import clean_folder
-from app.models import add_job_to_db, get_job
-from app.controller.importers.git_importer import GitImporter
-
 import pygit2
+import pytest
+
+from app.controller.importers.git_importer import GitImporter
+from app.models import add_job_to_db, get_job
+from app.tests.test_tools import clean_folder
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
