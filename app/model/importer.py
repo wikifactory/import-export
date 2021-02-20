@@ -1,8 +1,6 @@
 import os
 from app.models import StatusEnum, Session, JobStatus
 from app.models import set_job_status
-import os
-import shutil
 
 
 class Importer:

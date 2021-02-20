@@ -290,9 +290,7 @@ def import_export_job_combination_exists(import_url, export_url):
     exists = (
         session.query(Job)
         .filter(Job.import_url == import_url, Job.export_url == export_url)
-        .filter(
-            not_(Job.statuses.any(JobStatus.status.in_(finished_job_statuses)))
-        )
+        .filter(not_(Job.statuses.any(JobStatus.status.in_(finished_job_statuses))))
     ).exists()
 
     return session.query(exists).scalar()
@@ -310,9 +308,7 @@ def running_job_exists(job_id):
     exists = (
         session.query(Job)
         .filter(Job.job_id == job_id)
-        .filter(
-            not_(Job.statuses.any(JobStatus.status.in_(finished_job_statuses)))
-        )
+        .filter(not_(Job.statuses.any(JobStatus.status.in_(finished_job_statuses))))
     ).exists()
 
     return session.query(exists).scalar()
