@@ -1,39 +1,37 @@
-from typing import List
-
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 
-# from app.models import add_job_to_db, connect_to_db
-import app.models
-from app.celery_tasks import (
-    generate_job_id,
-    handle_get_job,
-    handle_get_unfinished_jobs,
-    handle_post_cancel,
-    handle_post_export,
-    handle_post_manifest,
-    handle_post_retry,
-)
-from app.models import can_retry_job
-from app.routers.manifests_types import (
-    ErrorResponse,
-    Job,
-    JobRequest,
-    JobResponse,
-    JobsResponse,
-    OperationType,
-    UnfinishedJobsResponse,
-)
-from app.routers.service_discover import discover_service_for_url_list
+# from typing import List
+
+# from pydantic import BaseModel
+
+# # from app.models import add_job_to_db, connect_to_db
+# import app.models
+# from app.models import can_retry_job
+# from app.routers.manifests_types import (
+#     ErrorResponse,
+#     Job,
+#     JobRequest,
+#     JobResponse,
+#     JobsResponse,
+#     OperationType,
+#     UnfinishedJobsResponse,
+# )
+# from app.routers.service_discover import discover_service_for_url_list
+# from app.worker import (
+#     generate_job_id,
+#     handle_get_job,
+#     handle_get_unfinished_jobs,
+#     handle_post_cancel,
+#     handle_post_export,
+#     handle_post_manifest,
+#     handle_post_retry,
+# )
+
+# OUTPUT_FOLDER = "/tmp/outputs/"
+
 
 router = APIRouter()
-OUTPUT_FOLDER = "/tmp/outputs/"
-
-
-@router.get("/manifests")
-async def get_manifests():
-    return {"manifests": []}
 
 
 @router.post(

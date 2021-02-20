@@ -3,7 +3,7 @@ import os
 from app.models import JobStatus, Session, StatusEnum, set_job_status
 
 
-class Importer:
+class BaseImporter:
 
     temp_folder_path = "/tmp"
 

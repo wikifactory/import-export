@@ -2,9 +2,9 @@ import uuid
 
 from celery.utils.log import get_task_logger
 
-from app.celery_config import celery_app
 from app.controller.exporter_proxy import ExporterProxy
 from app.controller.importer_proxy import ImporterProxy
+from app.core.celery_app import celery_app
 from app.job_methods import retry_job
 from app.models import cancel_job, get_job, get_unfinished_jobs
 

@@ -225,3 +225,11 @@ class GoogleDriveImporter(Importer):
                     outfile.write(fh.getbuffer())
             except (HttpError, httplib2.HttpLib2Error):
                 raise DownloadError("")
+
+
+class CredentialsNotValid(Exception):
+    pass
+
+
+class DownloadError(Exception):
+    pass

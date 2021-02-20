@@ -17,7 +17,7 @@ jobs:
       - image: circleci/redis
     resource_class: small
     environment:
-      POSTGRES_ROOT_DSN: postgresql://postgres:postgres@localhost/postgres
+      SQLALCHEMY_DATABASE_URI: postgresql://postgres:postgres@localhost/postgres
       POSTGRES_TEST_DSN: postgresql://postgres:postgres@localhost/dido_test
 
     working_directory: ~/dido

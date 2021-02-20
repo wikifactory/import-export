@@ -49,23 +49,6 @@ status_list = tuple(status_list)
 status_types_enum = ENUM(*status_list, name="job_status")
 
 
-class Job(Base):
-    __tablename__ = "jobs"
-
-    job_id = Column(UUID(as_uuid=True), primary_key=True)
-
-    import_service = Column(String)
-    import_token = Column(String)
-    import_url = Column(String)
-
-    export_service = Column(String)
-    export_token = Column(String)
-    export_url = Column(String)
-
-    file_elements = Column(Integer)
-    processed_elements = Column(Integer)
-
-
 class JobStatus(Base):
     __tablename__ = "job_statuses"
     status_id = Column(Integer, primary_key=True)
@@ -77,7 +60,7 @@ class JobStatus(Base):
 
 
 def init_engine():
-    root_engine = create_engine(os.environ["POSTGRES_ROOT_DSN"])
+    root_engine = create_engine(os.environ["SQLALCHEMY_DATABASE_URI"])
 
     with root_engine.connect() as root_connection:
         dsn = os.environ[

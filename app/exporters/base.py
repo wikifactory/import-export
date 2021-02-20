@@ -1,7 +1,7 @@
 from app.models import StatusEnum, set_job_status
 
 
-class Exporter:
+class BaseExporter:
 
     status = StatusEnum.exporting.value
 

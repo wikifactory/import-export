@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      - POSTGRES_ROOT_DSN=postgresql://postgres:postgres@postgres-db/postgres
+      - SQLALCHEMY_DATABASE_URI=postgresql://postgres:postgres@postgres-db/postgres
       - POSTGRES_DSN=postgresql://postgres:postgres@postgres-db/dido
       - POSTGRES_TEST_DSN=postgresql://postgres:postgres@postgres-db/dido_test
       - WIKIFACTORY_CONNECTION_URL=http://frontend:8080/api/graphql
@@ -36,7 +36,7 @@ services:
       dockerfile: Dockerfile
     command: celery -A app.celery_entrypoint worker --loglevel=info
     environment:
-      - POSTGRES_ROOT_DSN=postgresql://postgres:postgres@postgres-db/postgres
+      - SQLALCHEMY_DATABASE_URI=postgresql://postgres:postgres@postgres-db/postgres
       - POSTGRES_DSN=postgresql://postgres:postgres@postgres-db/dido
       - POSTGRES_TEST_DSN=postgresql://postgres:postgres@postgres-db/dido_test
       - WIKIFACTORY_CONNECTION_URL=http://frontend:8080/api/graphql
