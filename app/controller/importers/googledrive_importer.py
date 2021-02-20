@@ -1,4 +1,5 @@
 import io
+from re import search
 import os
 from app.model.importer import Importer
 from app.model.manifest import Manifest
@@ -23,6 +24,8 @@ query_c = "mimeType='application/vnd.google-apps.folder'"
 query_fields = "nextPageToken, files(id,name, mimeType)"
 query_idinparents = " in parents"
 
+googledrive_folder_regex = r"^(https:\/\/drive\.google\.com\/drive\/(u\/[0-9]+\/)?folders\/.*(\?usp=sharing)?$)"
+
 
 class GoogleDriveImporter(Importer):
     def __init__(self, job_id):
@@ -35,6 +38,9 @@ class GoogleDriveImporter(Importer):
         self.temp_folder_path = "/tmp/gdimports/"
 
         self.make_sure_tmp_folder_is_created(self.temp_folder_path)
+
+    def validate_url(url):
+        return bool(search(googledrive_folder_regex, url))
 
     def process_url(self, url, auth_token):
 

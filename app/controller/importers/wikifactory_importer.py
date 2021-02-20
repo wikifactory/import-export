@@ -1,5 +1,6 @@
 from app.model.importer import Importer
 from app.config import wikifactory_connection_url
+from re import search
 import os
 
 from app.model.manifest import Manifest
@@ -17,6 +18,8 @@ from app.controller.importers.wikifactory_importer_gql import (
 endpoint_url = wikifactory_connection_url
 client_username = "dGVzdHVzZXJhZG1pbg=="  # QUESTION: Where do I get this?
 
+wikifactory_project_regex = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
+
 
 class WikifactoryImporter(Importer):
     def __init__(self, job_id):
@@ -32,6 +35,9 @@ class WikifactoryImporter(Importer):
         self.make_sure_tmp_folder_is_created(
             self.temp_zip_folder_path, override_path=False
         )
+
+    def validate_url(url):
+        return bool(search(wikifactory_project_regex, url))
 
     def process_url(self, url, auth_token):
         print("WIKIFACTORY: Starting process")

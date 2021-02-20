@@ -1,13 +1,21 @@
 from app.model.importer import Importer
 import os
+
+from re import search
 import pygit2
+
 
 from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
 from app.models import StatusEnum
 
 
+temp_folder_path = "/tmp/gitimports/"
+
 ignored_folders = [".git"]
+
+
+git_repo_regex = r"^(((git|ssh|http(s)?)|(git@[\w\.]+))(:(\/\/)?)([\w\.@\:\/\-~]+)(\.git)(\/)?)|(^http(s)?:\/\/github\.com(?:\/[^\s\/]+){2}$)"
 
 
 class IgnoreCredentialsCallbacks(pygit2.RemoteCallbacks):
@@ -29,8 +37,8 @@ class GitImporter(Importer):
 
         self.make_sure_tmp_folder_is_created(self.temp_folder_path)
 
-    def validate_url():
-        pass
+    def validate_url(url):
+        return bool(search(git_repo_regex, url))
 
     def process_url(self, url, auth_token):
         print("GIT: Starting process")
