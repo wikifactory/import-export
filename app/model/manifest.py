@@ -5,7 +5,6 @@ from typing import List
 from pydantic.dataclasses import dataclass
 
 from app.model.element import Element, ElementType
-from app.model.user import User
 
 
 @dataclass
@@ -14,7 +13,6 @@ class Manifest:
     project_id: str = ""
     project_description: str = ""
     elements: List[Element] = field(default_factory=list)
-    collaborators: List[User] = field(default_factory=list)
     source_url: str = ""
     file_elements: int = 0
 
