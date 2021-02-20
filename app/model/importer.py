@@ -1,8 +1,11 @@
+import os
 from app.models import StatusEnum, Session, JobStatus
 from app.models import set_job_status
 
 
 class Importer:
+
+    temp_folder_path = "/tmp"
 
     status = StatusEnum.importing.value
 
@@ -13,8 +16,8 @@ class Importer:
     def __init__(self, job_id):
         raise NotImplementedError()
 
-    def process_url(self, url):
-        self.set_status(StatusEnum.importing)
+    def process_url(self, url, auth_token):
+        self.set_status(StatusEnum.importing.value)
 
     def validate_url(url):
         raise NotImplementedError()
@@ -67,6 +70,19 @@ class Importer:
         )
 
         set_job_status(self.job_id, status_enum.value)
+
+    def make_sure_tmp_folder_is_created(self, folder_path, override_path=True):
+        # Check if the tmp folder exists
+
+        if not os.path.exists(folder_path):
+            try:
+                print("Creating tmp folder")
+                os.makedirs(folder_path)
+            except Exception as e:
+                print(e)
+
+        if override_path is True:
+            self.path = folder_path + self.job_id
 
 
 class NotValidURLForImportException(ValueError):

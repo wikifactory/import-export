@@ -6,7 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, ForeignKey, Integer, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, not_
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
@@ -22,19 +22,17 @@ Base = declarative_base()
 class StatusEnum(enum.Enum):
     pending = "pending"
     importing = "importing"
-    importing_error_authorization_required = (
-        "importing_error_authorization_required"
-    )
+    importing_error_authorization_required = "importing_error_authorization_required"
     importing_error_data_unreachable = "importing_error_data_unreachable"
     importing_successfully = "importing_successfully"
     exporting = "exporting"
-    exporting_error_authorization_required = (
-        "exporting_error_authorization_required"
-    )
+    exporting_error_authorization_required = "exporting_error_authorization_required"
     exporting_error_data_unreachable = "exporting_error_data_unreachable"
     exporting_successfully = "exporting_successfully"
     finished_successfully = "finished_successfully"
     cancelled = "cancelled"
+
+    retry = "retry"
 
 
 status_list = []
@@ -156,9 +154,7 @@ def set_number_of_files_for_job_id(job_id, files):
     session = Session()
 
     # Find the job and update
-    session.query(Job).filter(Job.job_id == job_id).update(
-        {"file_elements": files}
-    )
+    session.query(Job).filter(Job.job_id == job_id).update({"file_elements": files})
 
     session.commit()
 
@@ -260,8 +256,7 @@ def get_unfinished_jobs():
     for key_job in jobs_dict:
         if (
             StatusEnum.importing_successfully.value not in jobs_dict[key_job]
-            or StatusEnum.exporting_successfully.value
-            not in jobs_dict[key_job]
+            or StatusEnum.exporting_successfully.value not in jobs_dict[key_job]
         ):
             unfinished.append(key_job)
 
@@ -278,7 +273,7 @@ def get_jobs():
         .order_by(JobStatus.timestamp.desc())
         .all()
     ):
-        result.append({"id": job_id, "status": status})
+        result.append({"id": str(job_id), "status": status})
 
     return result
 
@@ -295,7 +290,97 @@ def import_export_job_combination_exists(import_url, export_url):
     exists = (
         session.query(Job)
         .filter(Job.import_url == import_url, Job.export_url == export_url)
-        .filter(Job.statuses.any(JobStatus.status.in_(finished_job_statuses)))
+        .filter(not_(Job.statuses.any(JobStatus.status.in_(finished_job_statuses))))
     ).exists()
 
     return session.query(exists).scalar()
+
+
+def running_job_exists(job_id):
+
+    session = Session()
+
+    finished_job_statuses = [
+        StatusEnum.cancelled.value,
+        StatusEnum.exporting_successfully.value,
+    ]
+
+    exists = (
+        session.query(Job)
+        .filter(Job.job_id == job_id)
+        .filter(not_(Job.statuses.any(JobStatus.status.in_(finished_job_statuses))))
+    ).exists()
+
+    return session.query(exists).scalar()
+
+
+def cancel_job(job_id):
+    session = Session()
+
+    # Check if the job exists
+
+    result = session.query(Job).get(job_id)
+
+    if result is None:
+        # We didn't find the job
+        return {
+            "error": "Job with id {} not found".format(job_id),
+            "code": 404,
+        }
+
+    # Otherwise, we did find the job, but is it running at this moment?
+
+    if running_job_exists(job_id):
+        # We can cancell it
+        set_job_status(job_id, StatusEnum.cancelled.value)
+        return {"msg": "Job with id {} cancelled".format(job_id)}
+    else:
+        return {
+            "error": "The job with id {} is not running and it can't be cancelled".format(
+                job_id
+            ),
+            "code": 422,
+        }
+
+
+def can_retry_job(body: dict, job_id):
+    session = Session()
+
+    # Check if the job exists
+    result = session.query(Job).get(job_id)
+
+    if result is None:
+        # We didn't find the job, so we cannot retry
+        return {
+            "error": "Job with id {} not found".format(job_id),
+            "code": 404,
+        }
+
+    # If the job was found
+
+    if not running_job_exists(job_id):
+        # We can cancell it
+        return {"msg": "job can be retried"}
+    else:
+        return {
+            "error": "The job with id {} is not running and it can't be retried".format(
+                job_id
+            ),
+            "code": 422,
+        }
+
+
+def set_retry_job(job_id):
+    session = Session()
+
+    # Check if the job exists
+    result = session.query(Job).get(job_id)
+
+    if result is None:
+        # We didn't find the job
+        return {"error": "Job with id {} not found".format(job_id)}
+
+    # Otherwise, we did find the job, set the status to retry
+    set_job_status(job_id, StatusEnum.retry.value)
+
+    return {"msg": "Status of job {} changed to retry".format(job_id)}

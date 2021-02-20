@@ -4,7 +4,8 @@ from app.controller.importer_proxy import ImporterProxy
 from app.controller.exporter_proxy import ExporterProxy
 import uuid
 
-from app.models import get_job, get_unfinished_jobs
+from app.models import get_job, get_unfinished_jobs, cancel_job
+from app.job_methods import retry_job
 
 
 logger = get_task_logger(__name__)
@@ -48,6 +49,11 @@ def handle_post_export(body: dict, job_id):
     return result
 
 
+@celery_app.task
+def handle_post_retry(body: dict, job_id):
+    return retry_job(body, job_id)
+
+
 def handle_get_job(job_id):
     job = get_job(job_id)
 
@@ -59,3 +65,7 @@ def handle_get_job(job_id):
 
 def handle_get_unfinished_jobs():
     return get_unfinished_jobs()
+
+
+def handle_post_cancel(job_id):
+    return cancel_job(job_id)
