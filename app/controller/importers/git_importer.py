@@ -30,17 +30,13 @@ class GitImporter(Importer):
 
         self.set_status(StatusEnum.importing.value)
 
+        # Set the path for the project before the prepare_folder method,
+        # So we can ensure that the job folder is empty
+
+        self.path = temp_folder_path + self.job_id
+
         # Check if the tmp folder exists
-        try:
-            if not os.path.exists(temp_folder_path):
-                print("Creating tmp folder")
-                os.makedirs(temp_folder_path)
-
-            self.path = temp_folder_path + self.job_id
-
-        except Exception as e:
-            print(e)
-            self.set_status(StatusEnum.importing_error_data_unreachable.value)
+        self.prepare_folder(temp_folder_path, self.path)
 
     def validate_url():
         pass

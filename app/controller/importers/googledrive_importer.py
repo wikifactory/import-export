@@ -1,4 +1,3 @@
-import os
 import io
 from app.model.importer import Importer
 from app.model.manifest import Manifest
@@ -29,16 +28,13 @@ class GoogleDriveImporter(Importer):
 
         self.elements_list = []
 
+        # Set the path for the project before the prepare_folder method,
+        # So we can ensure that the job folder is empty
+
+        self.path = temp_folder_path + self.job_id
+
         # Check if the tmp folder exists
-        try:
-            if not os.path.exists(temp_folder_path):
-                print("Creating tmp folder")
-                os.makedirs(temp_folder_path)
-
-            self.path = temp_folder_path + self.job_id
-
-        except Exception as e:
-            print(e)
+        self.prepare_folder(temp_folder_path, self.path)
 
     def process_url(self, url, auth_token):
 

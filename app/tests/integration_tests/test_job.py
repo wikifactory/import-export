@@ -1,5 +1,12 @@
-from app.models import add_job_to_db, get_job
+from app.models import (
+    add_job_to_db,
+    get_job,
+    cancel_job,
+    set_job_status,
+    can_retry_job,
+)
 from app.models import Session, Job, JobStatus, StatusEnum
+from app.job_methods import retry_job
 from app.tests.conftest import WIKIFACTORY_TOKEN, WIKIFACTORY_TEST_PROJECT_URL
 from app.controller.importer_proxy import ImporterProxy
 from app.controller.exporter_proxy import ExporterProxy
@@ -300,3 +307,113 @@ def test_export_error_status_change():
         JobStatus.status == StatusEnum.importing_error_data_unreachable.value
     ).one_or_none()
     assert auth_result is not None  # The data unreachable is there
+
+
+def test_cancel_job_fail():
+
+    # If we try to
+    fake_job_id = "99999999-9999-9999-9999-999999999999"
+
+    cancel_result = cancel_job(fake_job_id)
+
+    assert "error" in cancel_result
+
+
+def test_cancel_job_running_success():
+
+    (job_id, job) = create_job(
+        import_url="testurl",
+        import_service="googledrive",
+        export_url="testurl",
+        export_service="googledrive",
+        export_token="testtoken",
+    )
+
+    # Add the job to the db
+    add_job_to_db(job, job_id)
+
+    # The job is on the database and has a "pending" status
+
+    # We can now cancel the job because it is running
+    cancel_result = cancel_job(job_id)
+
+    assert "error" not in cancel_result
+    assert "msg" in cancel_result
+
+    retrieved_job = get_job(job_id)
+
+    assert retrieved_job["job_status"] == StatusEnum.cancelled.value
+
+
+def test_cancel_job_finished_fail():
+    (job_id, job) = create_job(
+        import_url="testurl",
+        import_service="googledrive",
+        export_url="testurl",
+        export_service="googledrive",
+        export_token="testtoken",
+    )
+
+    # Add the job to the db
+    add_job_to_db(job, job_id)
+
+    # Set the status to cancel
+    set_job_status(job_id, StatusEnum.cancelled.value)
+
+    # If we try to cancel it now, we must receive an error with code 422
+    cancel_result = cancel_job(job_id)
+
+    assert "error" in cancel_result
+    assert cancel_result["code"] == 422
+
+
+def test_retry_not_found():
+    # If we try to
+    fake_job_id = "99999999-9999-9999-9999-999999999999"
+
+    retry_result = retry_job({}, fake_job_id)
+
+    assert "error" in retry_result
+
+
+def test_retry_job_fail():
+
+    # Create a test job
+    (job_id, job) = create_job(
+        import_url="testurl",
+        import_service="git",
+        export_url="testurl",
+        export_service="googledrive",
+        export_token="testtoken",
+    )
+
+    # Add it to the db
+    add_job_to_db(job, job_id)
+
+    # The job is currently running and hence we cannot cancel it
+    can_retry = can_retry_job(job, job_id)
+
+    assert "error" in can_retry
+    assert can_retry["code"] == 422
+
+
+def test_retry_success():
+    # Create a test job
+    (job_id, job) = create_job(
+        import_url="testurl",
+        import_service="git",
+        export_url="testurl",
+        export_service="googledrive",
+        export_token="testtoken",
+    )
+
+    # Add it to the db
+    add_job_to_db(job, job_id)
+
+    # Set the status to cancelled
+    set_job_status(job_id, StatusEnum.cancelled.value)
+
+    # Since the job has been cancelled, we should be able to retry
+    can_retry = can_retry_job(job, job_id)
+
+    assert "error" not in can_retry

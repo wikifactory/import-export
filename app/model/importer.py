@@ -1,5 +1,7 @@
 from app.models import StatusEnum, Session, JobStatus
 from app.models import set_job_status
+import os
+import shutil
 
 
 class Importer:
@@ -67,6 +69,23 @@ class Importer:
         )
 
         set_job_status(self.job_id, status_enum.value)
+
+    def prepare_folder(self, temp_folder_path, job_folder_path):
+        # Check if the tmp folder for this service already exists
+        if os.path.exists(temp_folder_path) is False:
+            # If we need to create it,
+
+            if not os.path.exists(temp_folder_path):
+                print("Creating tmp folder")
+                os.makedirs(temp_folder_path)
+
+        if os.path.exists(job_folder_path) is True:
+            # If the folder for this job has already been created,
+            # we need to remove it, so it can be later created
+            try:
+                shutil.rmtree(job_folder_path)
+            except OSError as e:
+                print("Error: %s : %s" % (job_folder_path, e.strerror))
 
 
 class NotValidURLForImportException(ValueError):
