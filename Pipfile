@@ -25,6 +25,7 @@ pre-commit = "*"
 gql = "*"
 pygit2 = "*"
 isort = "*"
+tenacity = "*"
 
 [requires]
 python_version = "3.7"
