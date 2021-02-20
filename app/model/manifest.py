@@ -1,26 +1,22 @@
-from .manifest_metadata import ManifestMetadata
-from app.model.element import ElementType
-
 import json
+from typing import List
+from pydantic.dataclasses import dataclass
+from dataclasses import field
+from .manifest_metadata import ManifestMetadata
+from app.model.element import ElementType, Element
+from app.model.user import User
 
 
+@dataclass
 class Manifest:
-    def __init__(
-        self,
-        project_id=None,
-        project_name=None,
-        project_description=None,
-        source_url=None,
-        elements=None,
-    ):
-        self.metatadata = ManifestMetadata()
-        self.project_name = project_name or ""
-        self.project_id = project_id or ""
-        self.project_description = project_description or ""
-        self.elements = elements or []
-        self.collaborators = []
-        self.source_url = source_url or ""
-        self.file_elements = 0
+    metatadata: ManifestMetadata = field(default_factory=ManifestMetadata)
+    project_name: str = ""
+    project_id: str = ""
+    project_description: str = ""
+    elements: List[Element] = field(default_factory=list)
+    collaborators: List[User] = field(default_factory=list)
+    source_url: str = ""
+    file_elements: int = 0
 
     def toJson(self):
         return json.dumps(self, default=lambda o: o.__dict__)

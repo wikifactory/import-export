@@ -258,7 +258,7 @@ def get_unfinished_jobs():
             StatusEnum.importing_successfully.value not in jobs_dict[key_job]
             or StatusEnum.exporting_successfully.value not in jobs_dict[key_job]
         ):
-            unfinished.append(key_job)
+            unfinished.append(str(key_job))
 
     return {"unfinished_jobs": unfinished}
 

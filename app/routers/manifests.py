@@ -1,9 +1,19 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-from enum import Enum
 
 # from app.models import add_job_to_db, connect_to_db
 import app.models
+
+from app.routers.manifests_types import (
+    JobResponse,
+    ErrorResponse,
+    JobRequest,
+    OperationType,
+    Job,
+    JobsResponse,
+    UnfinishedJobsResponse,
+)
+
 
 from app.celery_tasks import (
     handle_post_manifest,
@@ -16,7 +26,7 @@ from app.celery_tasks import (
 )
 from app.models import can_retry_job
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import List
 
 from app.routers.service_discover import discover_service_for_url_list
 
@@ -24,41 +34,24 @@ router = APIRouter()
 OUTPUT_FOLDER = "/tmp/outputs/"
 
 
-class OperationType(Enum):
-    MANIFEST = "manifest"
-    IMPORT_EXPORT = "import_export"
-
-
-class JobRequest(BaseModel):
-    import_url: str
-    export_url: str
-    import_service: str
-    export_service: str
-    import_token: Optional[str] = ""
-    export_token: Optional[str] = ""
-    type: Optional[OperationType] = OperationType.IMPORT_EXPORT.value
-
-    def toJson(self):
-
-        return {
-            "import_url": self.import_url,
-            "export_url": self.export_url,
-            "import_service": self.import_service,
-            "export_service": self.export_service,
-            "import_token": self.import_token,
-            "export_token": self.export_token,
-        }
-
-
 @router.get("/manifests")
 async def get_manifests():
     return {"manifests": []}
 
 
-@router.post("/job")
+@router.post(
+    "/job",
+    response_model=JobResponse,
+    responses={422: {"model": ErrorResponse}},
+)
 def post_job(body: JobRequest):
 
-    selected_operation = body.type
+    selected_operation = None
+
+    if hasattr(body, "type"):
+        selected_operation = body.type.value
+    else:
+        selected_operation = OperationType.IMPORT_EXPORT.value
 
     # If we need to generate the manifest...
 
@@ -121,17 +114,32 @@ def post_job(body: JobRequest):
         )
 
 
-@router.get("/job/{job_id}")
+@router.get(
+    "/job/{job_id}",
+    response_model=Job,
+    responses={404: {"model": ErrorResponse}},
+)
 def get_job(job_id):
-    return handle_get_job(job_id)
+    result = handle_get_job(job_id)
+
+    if "error" in result:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "error": result["error"],
+            },
+        )
+    else:
+        return result
 
 
-@router.get("/jobs")
+@router.get("/jobs", response_model=JobsResponse)
 def get_jobs():
-    return JSONResponse(status_code=200, content=app.models.get_jobs())
+    jobs = app.models.get_jobs()
+    return JSONResponse(status_code=200, content={"jobs": jobs})
 
 
-@router.get("/unfinished_jobs")
+@router.get("/unfinished_jobs", response_model=UnfinishedJobsResponse)
 def get_unfinished_jobs():
     return handle_get_unfinished_jobs()
 

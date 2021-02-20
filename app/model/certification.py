@@ -1,11 +1,12 @@
 import json
+from pydantic.dataclasses import dataclass
 
 
+@dataclass
 class Certification:
-    def __init__(self):
-        self.certifier_id = ""
-        self.data_awarded = ""
-        self.url = ""
+    certifier_id: str = ""
+    data_awarded: str = ""
+    url: str = ""
 
     def toJson(self):
         return json.dumps(self, default=lambda o: o.__dict__)

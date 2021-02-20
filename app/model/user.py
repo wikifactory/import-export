@@ -1,12 +1,15 @@
 import json
 
+from pydantic.dataclasses import dataclass
 
+
+@dataclass
 class User:
-    def __init__(self):
-        self.id = ""
-        self.name = ""
-        self.affiliation = ""
-        self.email = ""
+
+    id: str = ""
+    name: str = ""
+    affiliation: str = ""
+    email: str = ""
 
     def toJson(self):
         return json.dumps(self, default=lambda o: o.__dict__)
