@@ -1,9 +1,29 @@
-from app.controller.importers.git_importer import GitImporter
 import pytest
 import os
-from app.tests.test_tools import clean_folder
 import uuid
-from app.models import add_job_to_db
+
+from app.tests.test_tools import clean_folder
+from app.models import add_job_to_db, get_job
+from app.controller.importers.git_importer import GitImporter
+
+import pygit2
+
+CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+
+
+@pytest.fixture
+def basic_job():
+    options = {
+        "import_service": "git",
+        "import_url": "https://github.com/wikifactory/sample-project",
+        "import_token": None,
+        "export_service": "wikifactory",
+        "export_url": "https://wikifactory.com/@user/test-project",
+        "export_token": "---------",
+    }
+    job_id = str(uuid.uuid4())
+    add_job_to_db(options, job_id)
+    return (job_id, options)
 
 
 @pytest.fixture
@@ -100,3 +120,40 @@ def test_git_manifest_generation_success(prepared_tmp_git_folder):
 
     assert root_element.id == "root"
     assert len(root_element.children) == repo_contents["high_level_elements"]
+
+
+def monkeypatched_repo_clonation_success(url, path, callbacks):
+    pass
+
+
+def monkeypatched_repo_clonation_fail(url, path, callbacks):
+    raise pygit2.errors.GitError
+
+
+def test_git_importer_success(monkeypatch, basic_job):
+
+    monkeypatch.setattr(
+        pygit2, "clone_repository", monkeypatched_repo_clonation_success
+    )
+    (job_id, job_details) = basic_job
+    importer = GitImporter(job_id)
+
+    created_manifest = importer.process_url(job_details["import_url"], "")
+
+    assert created_manifest is not None
+
+
+def test_git_importer_error(monkeypatch, basic_job):
+
+    monkeypatch.setattr(pygit2, "clone_repository", monkeypatched_repo_clonation_fail)
+    (job_id, job_details) = basic_job
+    importer = GitImporter(job_id)
+
+    created_manifest = importer.process_url(job_details["import_url"], "")
+
+    assert created_manifest is None
+
+    retrieved_job = get_job(job_id)
+    assert retrieved_job["job_status"] == "importing_error_authorization_required"
+    assert retrieved_job["job_progress"] == 0.0
+    assert retrieved_job["overall_process"] == 40.0  # pending and importing

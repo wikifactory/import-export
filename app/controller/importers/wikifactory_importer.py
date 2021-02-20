@@ -1,66 +1,24 @@
 from app.model.importer import Importer
 from app.config import wikifactory_connection_url
+from re import search
 import os
 
 from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
-from gql import Client, gql
+from gql import Client
 from gql.transport.requests import RequestsHTTPTransport
 import requests
 import zipfile
 from app.models import StatusEnum
-from enum import Enum
 
-
-temp_folder_path = "/tmp/wikifactoryimports/"
-temp_zip_folder_path = "/tmp/wikifactoryzips/"
+from app.controller.importers.wikifactory_importer_gql import (
+    repository_zip_query,
+)
 
 endpoint_url = wikifactory_connection_url
 client_username = "dGVzdHVzZXJhZG1pbg=="  # QUESTION: Where do I get this?
 
-
-class WikifactoryImporterQuerys(Enum):
-
-    repository_zip_query = gql(
-        """
-        query RepositoryZip($space: String, $slug: String) {
-            project(space: $space, slug: $slug) {
-            result {
-                id
-                slug
-                contributionUpstream {
-                id
-                zipArchiveUrl
-                }
-            }
-            userErrors {
-                    message
-                    key
-                    code
-            }
-            }
-        }
-        """
-    )
-
-    files_for_project_query = gql(
-        """query q($space:String, $slug:String){
-            project(space:$space, slug:$slug){
-                result{
-                    id
-                    contributions{
-                        edges{
-                            node{
-                                id
-                                title
-                                files
-                            }
-                        }
-                    }
-                }
-            }
-        }"""
-    )
+wikifactory_project_regex = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
 
 
 class WikifactoryImporter(Importer):
@@ -70,29 +28,25 @@ class WikifactoryImporter(Importer):
         # This id will identify the tmp folder
         self.job_id = job_id
 
-        self.path = None
+        self.temp_folder_path = "/tmp/wikifactoryimports/"
+        self.temp_zip_folder_path = "/tmp/wikifactoryzips/"
 
-        # Check if the tmp folder exists
-        try:
-            if not os.path.exists(temp_folder_path):
-                print("Creating tmp folder")
-                os.makedirs(temp_folder_path)
+        self.make_sure_tmp_folder_is_created(self.temp_folder_path)
+        self.make_sure_tmp_folder_is_created(
+            self.temp_zip_folder_path, override_path=False
+        )
 
-            self.path = temp_folder_path + self.job_id
+    def validate_url(url):
+        return bool(search(wikifactory_project_regex, url))
 
-            if not os.path.exists(temp_zip_folder_path):
-                print("Creating tmp zip folder")
-                os.makedirs(temp_zip_folder_path)
-
-        except Exception as e:
-            print(e)
-
-    def process_url(self, import_url, import_token):
+    def process_url(self, url, auth_token):
         print("WIKIFACTORY: Starting process")
 
+        super().process_url(url, auth_token)
+
         try:
 
-            project_info = self.get_project_details(import_url, import_token)
+            project_info = self.get_project_details(url, auth_token)
 
             manifest = Manifest()
             # INFO: Maybe use the name or other field here?
@@ -132,7 +86,7 @@ class WikifactoryImporter(Importer):
         variables = {"space": project_space, "slug": project_slug}
 
         result = session.execute(
-            WikifactoryImporterQuerys.repository_zip_query,
+            repository_zip_query,
             variable_values=variables,
         )
 
@@ -163,7 +117,7 @@ class WikifactoryImporter(Importer):
 
         response = requests.get(zip_url)
 
-        local_zip_path = temp_zip_folder_path + self.job_id
+        local_zip_path = self.temp_zip_folder_path + self.job_id
 
         # Write the zip file
         try:
@@ -197,20 +151,20 @@ class WikifactoryImporter(Importer):
 
             if full_path == project_path:
                 # Root element
-                root_element = Element()
-                root_element.id = "root"
-                root_element.path = full_path
-                root_element.type = ElementType.FOLDER
+
+                root_element = Element(
+                    id="root", path=full_path, type=ElementType.FOLDER
+                )
 
                 elements_dic[full_path] = root_element
 
             # Create the elements_dic entries for the folders
             for folder_name in dirs_in_curr_path:
-
-                folder_element = Element()
-                folder_element.type = ElementType.FOLDER
-
                 current_folder_path = os.path.join(current_path, folder_name)
+
+                folder_element = Element(
+                    type=ElementType.FOLDER, path=current_folder_path
+                )
 
                 folder_element.path = current_folder_path
 
@@ -225,10 +179,11 @@ class WikifactoryImporter(Importer):
                 manifest.file_elements += 1
 
                 # Create a child element
-                file_element = Element()
-                file_element.type = ElementType.FILE
-                file_element.id = filename
-                file_element.path = os.path.join(current_path, filename)
+                file_element = Element(
+                    id=filename,
+                    path=os.path.join(current_path, filename),
+                    type=ElementType.FILE,
+                )
 
                 if current_path in elements_dic:
                     elements_dic[current_path].children.append(file_element)
