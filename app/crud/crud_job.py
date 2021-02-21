@@ -1,8 +1,8 @@
 import uuid
 
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.expression import not_
 
-from app.core.celery_app import celery_app
 from app.crud.base import CRUDBase
 from app.models.job import (
     Job,
@@ -10,6 +10,7 @@ from app.models.job import (
     JobNotCancellable,
     JobNotRetriable,
     JobStatus,
+    retriable_job_statuses,
     terminated_job_statuses,
 )
 from app.models.job_log import JobLog
@@ -23,10 +24,9 @@ class CRUDJob(CRUDBase[Job, JobCreate]):
             .filter(
                 Job.import_url == obj_in.import_url,
                 Job.export_url == obj_in.export_url,
-                Job.status in terminated_job_statuses,
+                not_(Job.status in terminated_job_statuses),
             )
-            .exists()
-            .scalar()
+            .one_or_none()
         )
         if active_job_exists:
             raise JobDuplicated()
@@ -35,8 +35,10 @@ class CRUDJob(CRUDBase[Job, JobCreate]):
             id=uuid.uuid4(),
             import_url=obj_in.import_url,
             import_token=obj_in.import_token,
+            import_service=obj_in.import_service,
             export_url=obj_in.export_url,
             export_token=obj_in.export_token,
+            export_service=obj_in.export_service,
         )
         # TODO - create folder
         db.add(db_obj)
@@ -64,14 +66,16 @@ class CRUDJob(CRUDBase[Job, JobCreate]):
         return self.update_status(db, db_obj=db_obj, status=JobStatus.CANCELLING)
 
     def retry(self, db: Session, *, db_obj: Job) -> Job:
-        if self.is_active(job=db_obj):
+        if not self.is_retriable(job=db_obj):
             raise JobNotRetriable()
 
         # mark the job as pending
         self.update_status(db, db_obj=db_obj, status=JobStatus.PENDING)
-        celery_app.send_task("app.worker.process_job", args=[db_obj])
 
         return db_obj
+
+    def is_retriable(self, job: Job) -> bool:
+        return job.status in retriable_job_statuses
 
     def is_active(self, job: Job) -> bool:
         return job.status not in terminated_job_statuses
