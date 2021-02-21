@@ -1,24 +1,26 @@
+import uuid
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 
 
-class Job(BaseModel):
-    id: str
-    status: str
-
-
-class OperationType(Enum):
-    MANIFEST = "manifest"
-    IMPORT_EXPORT = "import_export"
-
-
-class JobCreate(BaseModel):
-    import_url: str
-    export_url: str
+class BaseJob(BaseModel):
+    import_url: HttpUrl
+    export_url: HttpUrl
     import_service: str
     export_service: str
-    import_token: Optional[str]
-    export_token: Optional[str]
-    type: Optional[OperationType]
+    import_token: Optional[str] = None
+    export_token: Optional[str] = None
+
+
+class Job(BaseJob):
+    id: uuid.UUID
+    status: Enum
+
+    class Config:
+        orm_mode = True
+
+
+class JobCreate(BaseJob):
+    pass
