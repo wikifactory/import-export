@@ -29,22 +29,12 @@ googledrive_folder_regex = r"^(https:\/\/drive\.google\.com\/drive\/(u\/[0-9]+\/
 
 class GoogleDriveImporter(Importer):
     def __init__(self, job_id):
-
         self.job_id = job_id
-        self.path = None
-
-        self.elements_list = []
-
-        self.temp_folder_path = "/tmp/gdimports/"
-
-        self.make_sure_tmp_folder_is_created(self.temp_folder_path)
 
     def validate_url(url):
         return bool(search(googledrive_folder_regex, url))
 
     def process_url(self, url, auth_token):
-
-        print("Google Drive: Starting process")
 
         super().process_url(url, auth_token)
 

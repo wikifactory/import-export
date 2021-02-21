@@ -48,7 +48,7 @@ class Settings(BaseSettings):
         )
 
     # TODO - define validations
-    TMP_FOLDER: str
+    DOWNLOAD_BASE_PATH: str
     BROKER_URL: str
     BACKEND_URL: str
 

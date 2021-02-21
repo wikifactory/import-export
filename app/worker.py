@@ -1,71 +1,37 @@
-import uuid
-
+import sentry_sdk
 from celery.utils.log import get_task_logger
 
-from app.controller.exporter_proxy import ExporterProxy
-from app.controller.importer_proxy import ImporterProxy
+from app.api.deps import get_db
 from app.core.celery_app import celery_app
-from app.job_methods import retry_job
-from app.models import cancel_job, get_job, get_unfinished_jobs
+from app.core.config import settings
+from app.exporters import service_map as exporters_map
+from app.importers import service_map as importers_map
+from app.models.job import Job, JobStatus
 
 logger = get_task_logger(__name__)
-
-
-def generate_job_id():
-    return str(uuid.uuid4())
+client_sentry = sentry_sdk.init(settings.SENTRY_DSN)
 
 
 @celery_app.task
-def handle_post_manifest(body: dict, job_id):
+def process_job(job: Job):
+    db = get_db()
 
-    processing_prx = ImporterProxy(job_id)
-    manifest = processing_prx.handle_request(body)
-    return manifest.toJson()
+    if job.status in [
+        JobStatus.PENDING,
+        JobStatus.IMPORTING_ERROR_AUTHORIZATION_REQUIRED,
+        JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE,
+        JobStatus.CANCELLED,
+    ]:
+        Importer = importers_map[job.import_service]
+        importer = Importer(db, job.id)
+        importer.import()
+    elif job.status in [
+        JobStatus.IMPORTING_SUCCESSFULLY,
+        JobStatus.EXPORTING_ERROR_AUTHORIZATION_REQUIRED,
+        JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE,
+    ]:
+        Exporter = exporters_map[job.export_service]
+        exporter = Exporter(db, job.id)
+        exporter.export()
 
-
-@celery_app.task
-def handle_post_export(body: dict, job_id):
-
-    # body contains the parameters for this request (tokens and so on)
-
-    logger.info("Starting the import process...")
-
-    # Configure the importer
-    processing_prx = ImporterProxy(job_id)
-    manifest = processing_prx.handle_request(body)
-
-    if manifest is None:
-        return {"error": "The manifest could not be generated"}
-
-    logger.info("Importing process finished!")
-    # logger.info(manifest)
-    logger.info("Starting the export Process...")
-    # Configure the exporter
-    export_proxy = ExporterProxy(job_id)
-    result = export_proxy.export_manifest(manifest, body)
-
-    logger.info("Process done!")
-
-    return result
-
-
-@celery_app.task
-def handle_post_retry(body: dict, job_id):
-    return retry_job(body, job_id)
-
-
-def handle_get_job(job_id):
-    job = get_job(job_id)
-
-    if job is None:
-        return {"error": "Job not found in the DB"}
-    else:
-        return {"job": job}
-
-
-def handle_get_unfinished_jobs():
-    return get_unfinished_jobs()
-
-
-def handle_post_cancel(job_id):
-    return cancel_job(job_id)
+    return

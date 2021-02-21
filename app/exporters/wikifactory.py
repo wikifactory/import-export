@@ -7,18 +7,10 @@ import requests
 from gql import Client
 from gql.transport.requests import RequestsHTTPTransport
 
-from app.config import wikifactory_connection_url
-from app.controller.error import (
-    ExportAuthRequired,
-    ExportNotReachable,
-    FileUploadError,
-    NotValidManifest,
-    WikifactoryAPINoResult,
-    WikifactoryAPINoResultPath,
-    WikifactoryAPIUserErrors,
-)
-from app.model.exporter import Exporter
-from app.models import StatusEnum, get_db_job, increment_processed_element_for_job
+from app import crud
+from app.exporters.base import AuthRequired, BaseExporter, NotReachable
+from app.models.constants import WIKIFACTORY_URL
+from app.models.job import JobStatus
 
 from .wikifactory_gql import (
     commit_contribution_mutation,
@@ -28,7 +20,7 @@ from .wikifactory_gql import (
     project_query,
 )
 
-endpoint_url = wikifactory_connection_url
+endpoint_url = WIKIFACTORY_URL
 
 
 def wikifactory_api_request(
@@ -50,26 +42,26 @@ def wikifactory_api_request(
         execution_result = session.execute(graphql_document, variable_values=variables)
     except requests.HTTPError as http_error:
         if http_error.response.status_code == requests.codes["unauthorized"]:
-            raise ExportAuthRequired()
+            raise AuthRequired()
         raise http_error
 
     try:
         result_path_root, *result_path_rest = result_path.split(".")
     except AttributeError:
-        raise WikifactoryAPINoResultPath()
+        raise NoResultPath()
 
     if execution_result.errors:
         for error in execution_result.errors:
             if "unauthorized request" in error.get(
                 "message"
             ) or "token is invalid" in error.get("message"):
-                raise ExportAuthRequired()
+                raise AuthRequired()
         # FIXME trigger an exception on other GraphQL errors?
 
     try:
         result = execution_result.data[result_path_root]
     except KeyError:
-        raise WikifactoryAPINoResult()
+        raise NoResult()
 
     user_errors = result.get("userErrors", [])
     if user_errors:
@@ -82,14 +74,14 @@ def wikifactory_api_request(
                 # FIXME NOTFOUND should either be handled differently or
                 # the error code should be passed to the exception, so a "real" NOTFOUND
                 # can be differentiated from a "not allowed to read right now"
-                raise ExportAuthRequired()
-        raise WikifactoryAPIUserErrors()
+                raise AuthRequired()
+        raise UserErrors()
 
     try:
         for result_path_item in result_path_rest:
             result = result[result_path_item]
     except KeyError:
-        raise WikifactoryAPINoResult()
+        raise NoResult()
 
     return result
 
@@ -106,58 +98,39 @@ def space_slug_from_url(url):
     return match.groupdict()
 
 
-class WikifactoryExporter(Exporter):
-    def __init__(self, job_id):
+class WikifactoryExporter(BaseExporter):
+    def __init__(self, db, job_id):
+        self.db = db
         self.job_id = job_id
-        self.manifest = None
         self.project_details = None
 
-    def export_manifest(self, manifest):
-
-        self.set_status(StatusEnum.exporting.value)
-        print("WIKIFACTORY: Starting the exporting process")
+    def process(self):
+        job = crud.job.get(self.db, self.job_id)
+        crud.job.update_status(self.db, job, JobStatus.EXPORTING)
 
         self.project_details = self.get_project_details()
 
-        # Check if we have a manifest
-        if (
-            manifest is not None
-            and manifest.elements is not None
-            and len(manifest.elements) > 0
-        ):
+        for (dirpath, _, filenames) in os.walk(job.path):
+            for name in filenames:
+                file_path = os.path.join(dirpath, name)
+                self.on_file_cb(file_path)
 
-            self.manifest = manifest
+        self.on_finished_cb()
 
-            # FIXME - this data should be attached to the job itself
-            self.project_path = manifest.elements[0].path
+        crud.job.update_status(self.db, job, JobStatus.EXPORTING_SUCCESSFULLY)
+        crud.job.update_status(self.db, job, JobStatus.FINISHED_SUCCESSFULLY)
 
-            # FIXME - we should look into this.
-            # Why exporter has to call back to manifest
-            # which then will call then exporter methods?
-            self.manifest.iterate_through_elements(
-                self, self.on_file_cb, self.on_folder_cb, self.on_finished_cb
-            )
-
-            # FIXME - probably would be better to do this on the final callback
-            self.set_status(StatusEnum.exporting_successfully.value)
-
-            # FIXME - should it return "true" as a string?
-            return {"exported": "true", "manifest": self.manifest.toJson()}
-
-        else:
-            raise NotValidManifest("Manifest not valid")
-
-    def on_file_cb(self, file_element):
+    def on_file_cb(self, file_path):
 
         try:
-            file_result = self.process_element(file_element)
-        except WikifactoryAPIUserErrors:
-            raise FileUploadError("Wikifactory file couldn't be created")
+            file_result = self.process_file(file_path)
+        except UserErrors:
+            raise FileUploadFailed("Wikifactory file couldn't be created")
 
         wikifactory_file_id = file_result.get("id")
 
         if not wikifactory_file_id:
-            raise FileUploadError(
+            raise FileUploadFailed(
                 "Wikifactory file couldn't be created. Missing File ID"
             )
 
@@ -171,27 +144,21 @@ class WikifactoryExporter(Exporter):
             )
         else:
             # Upload to S3
-            with open(file_element.path, "rb") as data:
+            with open(file_path, "rb") as data:
                 self.upload_file(data, s3_upload_url)
 
             # Once finished do the ADD operation
             self.perform_mutation_operation(
-                file_element,
+                file_path,
                 wikifactory_file_id,
             )
 
             # Mark the file as completed
             self.complete_file(wikifactory_file_id)
 
-        # Increment the processed elements in the database
-        increment_processed_element_for_job(self.job_id)
-
-    def on_folder_cb(self, folder_element):
-        print("Ignoring folder element")
-
     def on_finished_cb(self):
         # In order to finish, I need to perform the commit
-        job = get_db_job(self.job_id)
+        job = crud.job.get(self.db, self.job_id)
 
         variables = {
             "commitData": {
@@ -208,18 +175,18 @@ class WikifactoryExporter(Exporter):
             "commit.project",
         )
 
-    def process_element(self, element):
-        job = get_db_job(self.job_id)
+    def process_file(self, path):
+        job = crud.job.get(self.db, self.job_id)
 
         variables = {
             "fileInput": {
-                "filename": os.path.basename(element.path),
+                "filename": os.path.basename(path),
                 "spaceId": self.project_details["space_id"],
-                "size": os.path.getsize(element.path),
-                "projectPath": os.path.relpath(element.path, self.project_path),
-                "gitHash": str(pygit2.hashfile(element.path)),
+                "size": os.path.getsize(path),
+                "projectPath": os.path.relpath(path, job.path),
+                "gitHash": str(pygit2.hashfile(path)),
                 "completed": False,
-                "contentType": magic.from_file(element.path, mime=True),
+                "contentType": magic.from_file(path, mime=True),
             }
         }
 
@@ -228,8 +195,7 @@ class WikifactoryExporter(Exporter):
         )
 
     def get_project_details(self):
-
-        job = get_db_job(self.job_id)
+        job = crud.job.get(self.db, self.job_id)
 
         variables = space_slug_from_url(job.export_url)
 
@@ -237,8 +203,8 @@ class WikifactoryExporter(Exporter):
             project = wikifactory_api_request(
                 project_query, job.export_token, variables, "project.result"
             )
-        except (WikifactoryAPINoResult, WikifactoryAPIUserErrors):
-            raise ExportNotReachable("Project nof found in Wikifactory")
+        except (NoResult, UserErrors):
+            raise NotReachable("Project nof found in Wikifactory")
 
         return {
             "project_id": project["id"],
@@ -246,15 +212,14 @@ class WikifactoryExporter(Exporter):
             "private": project["private"],
         }
 
-    def perform_mutation_operation(self, element, file_id):
-
-        job = get_db_job(self.job_id)
+    def perform_mutation_operation(self, file_path, file_id):
+        job = crud.job.get(self.db, self.job_id)
 
         variables = {
             "operationData": {
                 "fileId": file_id,
                 "opType": "ADD",
-                "path": os.path.relpath(element.path, self.project_path),
+                "path": os.path.relpath(file_path, job.path),
                 "projectId": self.project_details["project_id"],
             }
         }
@@ -279,7 +244,7 @@ class WikifactoryExporter(Exporter):
             response = requests.put(file_url, data=file_handle, headers=headers)
             response.raise_for_status()
         except requests.HTTPError:
-            raise FileUploadError(
+            raise FileUploadFailed(
                 f"There was an error uploading the file. Error code: {response.status_code}"
             )
 
@@ -287,7 +252,7 @@ class WikifactoryExporter(Exporter):
         print(f"File {file_name} uploaded to s3")
 
     def complete_file(self, file_id):
-        job = get_db_job(self.job_id)
+        job = crud.job.get(self.db, self.job_id)
 
         variables = {
             "fileInput": {
@@ -302,3 +267,19 @@ class WikifactoryExporter(Exporter):
             variables,
             "file.file",
         )
+
+
+class FileUploadFailed(Exception):
+    pass
+
+
+class NoResult(Exception):
+    pass
+
+
+class NoResultPath(Exception):
+    pass
+
+
+class UserErrors(Exception):
+    pass

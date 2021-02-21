@@ -20,9 +20,9 @@ if settings.BACKEND_CORS_ORIGINS:
     )
 
 try:
-    if not os.path.exists(settings.TMP_FOLDER):
+    if not os.path.exists(settings.DOWNLOAD_BASE_PATH):
         print("Creating tmp folder")
-        os.makedirs(settings.TMP_FOLDER)
+        os.makedirs(settings.DOWNLOAD_BASE_PATH)
 
 except Exception as e:
     print(e)

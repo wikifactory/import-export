@@ -1,12 +1,18 @@
-from app.models import Job, JobStatus, Session
+from typing import Generator
 
-WIKIFACTORY_TOKEN = "eyJfcGVybWFuZW50Ijp0cnVlLCJ1c2VybmFtZSI6InRlc3R1c2VyMyJ9.YButtw.ksOvNRFeFmq5BHU1JjcS3AiVilg"
-WIKIFACTORY_TEST_PROJECT_URL = "http://frontend:8080/@testuser3/newyork"
+import pytest
+from fastapi.testclient import TestClient
+
+from app.db.session import SessionLocal
+from app.main import app
 
 
-def pytest_sessionfinish(session, exitstatus):
-    session = Session()
-    session.query(JobStatus).delete()
-    session.query(Job).delete()
+@pytest.fixture(scope="session")
+def db() -> Generator:
+    yield SessionLocal()
 
-    session.commit()
+
+@pytest.fixture(scope="module")
+def client() -> Generator:
+    with TestClient(app) as c:
+        yield c
