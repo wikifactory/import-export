@@ -1,3 +1,4 @@
+import sys
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import AnyHttpUrl, BaseSettings, HttpUrl, PostgresDsn, validator
@@ -39,6 +40,14 @@ class Settings(BaseSettings):
     def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
         if isinstance(v, str):
             return v
+        if "pytest" in sys.modules:
+            return PostgresDsn.build(
+                scheme="postgresql",
+                user=values.get("POSTGRES_USER"),
+                password=values.get("POSTGRES_PASSWORD"),
+                host=values.get("POSTGRES_SERVER"),
+                path="/test",
+            )
         return PostgresDsn.build(
             scheme="postgresql",
             user=values.get("POSTGRES_USER"),
