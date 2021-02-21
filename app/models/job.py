@@ -7,19 +7,26 @@ from app.db.base_class import Base
 
 
 class JobStatus(enum.Enum):
-    PENDING = 1
-    IMPORTING = 2
-    IMPORTING_ERROR_AUTHORIZATION_REQUIRED = 3
-    IMPORTING_ERROR_DATA_UNREACHABLE = 4
-    IMPORTING_SUCCESSFULLY = 5
-    EXPORTING = 6
-    EXPORTING_ERROR_AUTHORIZATION_REQUIRED = 7
-    EXPORTING_ERROR_DATA_UNREACHABLE = 8
-    EXPORTING_SUCCESSFULLY = 9
-    FINISHED_SUCCESSFULLY = 10
-    CANCELLING = 11
-    CANCELLED = 12
+    PENDING = "pending"
+    IMPORTING = "importing"
+    IMPORTING_ERROR_AUTHORIZATION_REQUIRED = "importing_error_authorization_required"
+    IMPORTING_ERROR_DATA_UNREACHABLE = "importing_error_data_unreachable"
+    IMPORTING_SUCCESSFULLY = "importing_successfully"
+    EXPORTING = "exporting"
+    EXPORTING_ERROR_AUTHORIZATION_REQUIRED = "exporting_error_authorization_required"
+    EXPORTING_ERROR_DATA_UNREACHABLE = "exporting_error_data_unreachable"
+    EXPORTING_SUCCESSFULLY = "exporting_successfully"
+    FINISHED_SUCCESSFULLY = "finished_successfully"
+    CANCELLING = "cancelling"
+    CANCELLED = "cancelled"
 
+
+retriable_job_statuses = [
+    JobStatus.IMPORTING_ERROR_AUTHORIZATION_REQUIRED,
+    JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE,
+    JobStatus.EXPORTING_ERROR_AUTHORIZATION_REQUIRED,
+    JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE,
+]
 
 terminated_job_statuses = [
     JobStatus.FINISHED_SUCCESSFULLY,
