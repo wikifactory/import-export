@@ -11,7 +11,7 @@ RUN pip install pipenv
 COPY Pipfile Pipfile.lock /app/
 RUN pipenv install --system --dev
 
-# COPY ./app /app
-ENV PYTHONPATH=/
+COPY . /app
+ENV PYTHONPATH=/app
 
 

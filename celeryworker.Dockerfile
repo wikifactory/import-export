@@ -8,10 +8,10 @@ COPY Pipfile Pipfile.lock /app/
 RUN pipenv install --system --dev
 
 # COPY ./app /app
-ENV PYTHONPATH=/
+ENV PYTHONPATH=/app
 
-COPY ./scripts/worker-start.sh /worker-start.sh
+COPY ./scripts/worker-start.sh /app/worker-start.sh
 
-RUN chmod +x /worker-start.sh
+RUN chmod +x /app/worker-start.sh
 
-CMD ["bash", "/worker-start.sh"]
+CMD ["bash", "/app/worker-start.sh"]
