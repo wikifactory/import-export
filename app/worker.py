@@ -13,25 +13,26 @@ client_sentry = sentry_sdk.init(settings.SENTRY_DSN)
 
 
 @celery_app.task
-def process_job(job: Job):
-    db = get_db()
+def process_job(job_id: str):
+    # db = get_db()
+    # job =
 
-    if job.status in [
-        JobStatus.PENDING,
-        JobStatus.IMPORTING_ERROR_AUTHORIZATION_REQUIRED,
-        JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE,
-        JobStatus.CANCELLED,
-    ]:
-        Importer = importers_map[job.import_service]
-        importer = Importer(db, job.id)
-        importer.import()
-    elif job.status in [
-        JobStatus.IMPORTING_SUCCESSFULLY,
-        JobStatus.EXPORTING_ERROR_AUTHORIZATION_REQUIRED,
-        JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE,
-    ]:
-        Exporter = exporters_map[job.export_service]
-        exporter = Exporter(db, job.id)
-        exporter.export()
+    # if job.status in [
+    #     JobStatus.PENDING,
+    #     JobStatus.IMPORTING_ERROR_AUTHORIZATION_REQUIRED,
+    #     JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE,
+    #     JobStatus.CANCELLED,
+    # ]:
+    #     Importer = importers_map[job.import_service]
+    #     importer = Importer(db, job.id)
+    #     importer.import()
+    # elif job.status in [
+    #     JobStatus.IMPORTING_SUCCESSFULLY,
+    #     JobStatus.EXPORTING_ERROR_AUTHORIZATION_REQUIRED,
+    #     JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE,
+    # ]:
+    #     Exporter = exporters_map[job.export_service]
+    #     exporter = Exporter(db, job.id)
+    #     exporter.export()
 
     return
