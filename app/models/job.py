@@ -21,6 +21,18 @@ class JobStatus(enum.Enum):
     CANCELLED = "cancelled"
 
 
+can_import_job_statuses = [
+    JobStatus.PENDING,
+    JobStatus.IMPORTING_ERROR_AUTHORIZATION_REQUIRED,
+    JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE,
+]
+
+can_export_job_statuses = [
+    JobStatus.IMPORTING_SUCCESSFULLY,
+    JobStatus.EXPORTING_ERROR_AUTHORIZATION_REQUIRED,
+    JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE,
+]
+
 retriable_job_statuses = [
     JobStatus.IMPORTING_ERROR_AUTHORIZATION_REQUIRED,
     JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE,

@@ -1,12 +1,12 @@
 import sentry_sdk
 from celery.utils.log import get_task_logger
 
+from app import crud
 from app.api.deps import get_db
 from app.core.celery_app import celery_app
 from app.core.config import settings
 from app.exporters import service_map as exporters_map
 from app.importers import service_map as importers_map
-from app.models.job import Job, JobStatus
 
 logger = get_task_logger(__name__)
 client_sentry = sentry_sdk.init(settings.SENTRY_DSN)
@@ -14,25 +14,17 @@ client_sentry = sentry_sdk.init(settings.SENTRY_DSN)
 
 @celery_app.task
 def process_job(job_id: str):
-    # db = get_db()
-    # job =
+    db = get_db()
+    job = crud.job.get(job_id)
 
-    # if job.status in [
-    #     JobStatus.PENDING,
-    #     JobStatus.IMPORTING_ERROR_AUTHORIZATION_REQUIRED,
-    #     JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE,
-    #     JobStatus.CANCELLED,
-    # ]:
-    #     Importer = importers_map[job.import_service]
-    #     importer = Importer(db, job.id)
-    #     importer.import()
-    # elif job.status in [
-    #     JobStatus.IMPORTING_SUCCESSFULLY,
-    #     JobStatus.EXPORTING_ERROR_AUTHORIZATION_REQUIRED,
-    #     JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE,
-    # ]:
-    #     Exporter = exporters_map[job.export_service]
-    #     exporter = Exporter(db, job.id)
-    #     exporter.export()
+    if not crud.job.is_active(job):
+        return
 
-    return
+    if crud.job.can_import(job):
+        Importer = importers_map[job.import_service]
+        importer = Importer(db, job.id)
+        importer.process()
+    elif crud.job.can_export(job):
+        Exporter = exporters_map[job.export_service]
+        exporter = Exporter(db, job.id)
+        exporter.process()

@@ -10,6 +10,8 @@ from app.models.job import (
     JobNotCancellable,
     JobNotRetriable,
     JobStatus,
+    can_export_job_statuses,
+    can_import_job_statuses,
     retriable_job_statuses,
     terminated_job_statuses,
 )
@@ -79,6 +81,12 @@ class CRUDJob(CRUDBase[Job, JobCreate]):
 
     def is_active(self, job: Job) -> bool:
         return job.status not in terminated_job_statuses
+
+    def can_import(self, job: Job) -> bool:
+        return job.status in can_import_job_statuses
+
+    def can_export(self, job: Job) -> bool:
+        return job.status in can_export_job_statuses
 
 
 job = CRUDJob(Job)
