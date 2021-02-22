@@ -9,7 +9,6 @@ from gql.transport.requests import RequestsHTTPTransport
 
 from app import crud
 from app.exporters.base import AuthRequired, BaseExporter, NotReachable
-from app.models.constants import WIKIFACTORY_URL
 from app.models.job import JobStatus
 
 from .wikifactory_gql import (
@@ -20,7 +19,7 @@ from .wikifactory_gql import (
     project_query,
 )
 
-endpoint_url = WIKIFACTORY_URL
+endpoint_url = "https://wikifactory.com/api/graphql"
 
 
 def wikifactory_api_request(
