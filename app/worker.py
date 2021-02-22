@@ -15,7 +15,7 @@ client_sentry = sentry_sdk.init(settings.SENTRY_DSN)
 @celery_app.task
 def process_job(job_id: str):
     db = get_db()
-    job = crud.job.get(job_id)
+    job = crud.job.get(db, job_id)
 
     if not crud.job.is_active(job):
         return
@@ -24,6 +24,7 @@ def process_job(job_id: str):
         Importer = importers_map[job.import_service]
         importer = Importer(db, job.id)
         importer.process()
+
     elif crud.job.can_export(job):
         Exporter = exporters_map[job.export_service]
         exporter = Exporter(db, job.id)
