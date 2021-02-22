@@ -1,15 +1,15 @@
-import json
-import os
+from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy.dialects.postgresql import UUID
 
-from pydantic.dataclasses import dataclass
+from app.db.base_class import Base
 
 
-@dataclass
-class Manifest:
-    project_name: str = ""
-    project_description: str = ""
-    path: str = ""
-    source_url: str = ""
+class Manifest(Base):
+    __tablename__ = "manifest"
 
-    def to_json(self) -> str:
-        return json.dumps(self, default=lambda o: o.__dict__)
+    id = Column(Integer, primary_key=True)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("job.id"), unique=True)
+
+    project_name = Column(String, nullable=False, server_default="")
+    project_description = Column(String, nullable=False, server_default="")
+    source_url = Column(String, nullable=False)
