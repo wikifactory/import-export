@@ -40,7 +40,6 @@ class GitImporter(BaseImporter):
             )
             return
 
-        # Create the manifest
         manifest_input = ManifestInput(job_id=job.id, source_url=url)
 
         # Fill some basic information of the project
@@ -63,7 +62,7 @@ class GitImporter(BaseImporter):
                 # FIXME maybe just read up to a certain length
                 manifest_input.project_description = file_handle.read()
 
-        crud.manifest.create_or_update(self.db, obj_in=manifest_input)
+        crud.manifest.update_or_create(self.db, obj_in=manifest_input)
         crud.job.update_status(
             self.db, db_obj=job, status=JobStatus.IMPORTING_SUCCESSFULLY
         )

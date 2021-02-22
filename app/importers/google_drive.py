@@ -67,6 +67,7 @@ class GoogleDriveImporter(BaseImporter):
 
         # TODO - populate manifest
 
+        crud.manifest.update_or_create(self.db, obj_in=manifest_input)
         crud.job.update_status(
             self.db, db_obj=job, status=JobStatus.IMPORTING_SUCCESSFULLY
         )

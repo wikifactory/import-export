@@ -6,7 +6,7 @@ from app.schemas import ManifestInput
 
 
 class CRUDManifest(CRUDBase[Manifest, ManifestInput, ManifestInput]):
-    def create_or_update(self, db: Session, *, obj_in: ManifestInput) -> Manifest:
+    def update_or_create(self, db: Session, *, obj_in: ManifestInput) -> Manifest:
         db_manifest = db.query(Manifest).filter_by(job_id=obj_in.job_id).one_or_none()
 
         if db_manifest:
