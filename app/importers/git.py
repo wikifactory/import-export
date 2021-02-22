@@ -24,7 +24,7 @@ class GitImporter(BaseImporter):
 
     def process(self):
         job = crud.job.get(self.db, self.job_id)
-        crud.job.update_status(self.db, job, JobStatus.IMPORTING)
+        crud.job.update_status(self.db, db_obj=job, status=JobStatus.IMPORTING)
         url = job.import_url
 
         try:
@@ -35,7 +35,7 @@ class GitImporter(BaseImporter):
         except pygit2.errors.GitError:
             # TODO support "auth required" status when support for private repos is added
             crud.job.update_status(
-                self.db, job, JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE
+                self.db, db_obj=job, status=JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE
             )
             return
 
@@ -46,19 +46,23 @@ class GitImporter(BaseImporter):
         manifest_input.project_name = os.path.basename(os.path.normpath(url))
 
         # use readme contents as project description
-        readme_candidates = [
-            readme
-            for readme in os.listdir(job.path)
-            if re.search(r"README.md$", readme, re.IGNORECASE)
-        ]
+        with os.scandir(job.path) as directory_iterator:
+            readme_candidates = [
+                readme
+                for readme in directory_iterator
+                if readme.is_file()
+                and re.search(r"README.md$", readme.name, re.IGNORECASE)
+            ]
 
         if readme_candidates:
             chosen_readme = readme_candidates[0]
             # FIXME potentially dangerous!
             # we are opening and dumping the contents of a user-provided file
-            with open(chosen_readme, "r") as file_handle:
+            with open(chosen_readme.path, "r") as file_handle:
                 # FIXME maybe just read up to a certain length
                 manifest_input.project_description = file_handle.read()
 
-        crud.manifest.create_or_update(self.db, manifest_input)
-        crud.job.update_status(self.db, job, JobStatus.IMPORTING_SUCCESSFULLY)
+        crud.manifest.create_or_update(self.db, obj_in=manifest_input)
+        crud.job.update_status(
+            self.db, db_obj=job, status=JobStatus.IMPORTING_SUCCESSFULLY
+        )
