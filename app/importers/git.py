@@ -6,7 +6,7 @@ import pygit2
 from app import crud
 from app.importers.base import BaseImporter
 from app.models.job import JobStatus
-from app.models.manifest import Manifest
+from app.schemas import ManifestInput
 
 
 class IgnoreCredentialsCallbacks(pygit2.RemoteCallbacks):
@@ -39,17 +39,16 @@ class GitImporter(BaseImporter):
             )
             return
 
-        # Create the manifest instance
-        manifest = Manifest(path=job.path)
+        # Create the manifest
+        manifest_input = ManifestInput(job_id=job.id, source_url=url)
 
         # Fill some basic information of the project
-        manifest.project_name = os.path.basename(os.path.normpath(url))
-        manifest.source_url = url
+        manifest_input.project_name = os.path.basename(os.path.normpath(url))
 
         # use readme contents as project description
         readme_candidates = [
             readme
-            for readme in os.listdir(manifest.path)
+            for readme in os.listdir(job.path)
             if re.search(r"README.md$", readme, re.IGNORECASE)
         ]
 
@@ -58,6 +57,8 @@ class GitImporter(BaseImporter):
             # FIXME potentially dangerous!
             # we are opening and dumping the contents of a user-provided file
             with open(chosen_readme, "r") as file_handle:
-                manifest.project_description = file_handle.read()
+                # FIXME maybe just read up to a certain length
+                manifest_input.project_description = file_handle.read()
 
+        crud.manifest.create_or_update(self.db, manifest_input)
         crud.job.update_status(self.db, job, JobStatus.IMPORTING_SUCCESSFULLY)
