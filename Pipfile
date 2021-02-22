@@ -29,6 +29,7 @@ tenacity = "*"
 sentry-sdk = "*"
 alembic = "*"
 sqlalchemy-utils = "*"
+pydrive = "*"
 
 [requires]
 python_version = "3.7"
