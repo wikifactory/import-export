@@ -52,13 +52,13 @@ class Job(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True)
 
-    import_service = Column(String)
+    import_service = Column(String, nullable=False)
+    import_url = Column(String, nullable=False)
     import_token = Column(String)
-    import_url = Column(String)
 
-    export_service = Column(String)
+    export_service = Column(String, nullable=False)
+    export_url = Column(String, nullable=False)
     export_token = Column(String)
-    export_url = Column(String)
 
     status = Column(Enum(JobStatus), default=JobStatus.PENDING, nullable=False)
 
