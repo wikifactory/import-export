@@ -1,159 +1,77 @@
 import os
-import uuid
 
 import pygit2
 import pytest
+from sqlalchemy.orm import Session
 
-from app.controller.importers.git_importer import GitImporter
-from app.models import add_job_to_db, get_job
-from app.tests.test_tools import clean_folder
-
-CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
-
-
-@pytest.fixture
-def basic_job():
-    options = {
-        "import_service": "git",
-        "import_url": "https://github.com/wikifactory/sample-project",
-        "import_token": None,
-        "export_service": "wikifactory",
-        "export_url": "https://wikifactory.com/@user/test-project",
-        "export_token": "---------",
-    }
-    job_id = str(uuid.uuid4())
-    add_job_to_db(options, job_id)
-    return (job_id, options)
+from app import crud
+from app.core.config import settings
+from app.importers.git import GitImporter
+from app.models.job import JobStatus
+from app.models.job_log import JobLog
+from app.schemas import JobCreate
+from app.tests.utils import utils
 
 
-@pytest.fixture
-def prepared_tmp_git_folder():
-
-    # Disable the connection with the db, since we are unittesting
-
-    job_id = str(uuid.uuid4())
-    temp_folder_path = "/tmp/gitimports/" + job_id
-    test_git_repo = "https://github.com/rievo/icosphere"
-
-    repo_contents = {
-        "num_elements": 11,
-        "project_name": "icosphere",
-        "high_level_elements": 5,
-    }
-
-    # Add the job to the db
-    add_job_to_db(
-        {
-            "import_service": "git",
-            "import_token": "",
-            "import_url": test_git_repo,
-            "export_service": "",
-            "export_token": "",
-            "export_url": "",
-        },
-        job_id,
+@pytest.fixture(scope="function")
+def basic_job(db: Session) -> dict:
+    random_project_name = utils.random_lower_string()
+    job_input = JobCreate(
+        import_service="git",
+        import_url=f"https://github.com/wikifactory/{random_project_name}",
+        export_service="wikifactory",
+        export_url=f"https://wikifactory.com/@user/{random_project_name}",
     )
-
-    try:
-        if not os.path.exists(temp_folder_path):
-            print("Creating tmp folder")
-            os.makedirs(temp_folder_path)
-
-    except Exception as e:
-        print(e)
-        raise Exception("Error creating tmp folder")
-
-    yield (job_id, temp_folder_path, test_git_repo, repo_contents)
-
-
-def test_git_manifest_generation_fail(prepared_tmp_git_folder):
-
-    (
-        job_id,
-        temp_folder_path,
-        test_git_repo,
-        repo_contents,
-    ) = prepared_tmp_git_folder
-
-    # Use a false url (the original reversed)
-    params = {
-        "import_url": test_git_repo[::-1],
-        "import_token": "",
-        "import_service": "git",
+    db_job = crud.job.create(db, obj_in=job_input)
+    db_job.path = os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project")
+    yield {
+        "job_input": job_input,
+        "db_job": db_job,
+        "project_name": random_project_name,
     }
-
-    importer = GitImporter(job_id)
-
-    manifest = importer.process_url(params["import_url"], params["import_token"])
-
-    clean_folder(temp_folder_path)
-
-    assert manifest is None
+    crud.job.remove(db, id=db_job.id)
 
 
-def test_git_manifest_generation_success(prepared_tmp_git_folder):
+@pytest.fixture()
+def clone_error(monkeypatch):
+    def mock_clone_repository_error(*args, **kwargs):
+        raise pygit2.errors.GitError
 
-    (
-        job_id,
-        temp_folder_path,
-        test_git_repo,
-        repo_contents,
-    ) = prepared_tmp_git_folder
-
-    params = {
-        "import_url": test_git_repo,
-        "import_token": "",
-        "import_service": "git",
-    }
-
-    importer = GitImporter(job_id)
-
-    manifest = importer.process_url(params["import_url"], params["import_token"])
-
-    clean_folder(temp_folder_path)
-
-    assert manifest is not None
-    assert manifest.file_elements == repo_contents["num_elements"]  # Hand-calculated
-    assert manifest.project_name == repo_contents["project_name"]
-
-    root_element = manifest.elements[0]
-
-    assert root_element.id == "root"
-    assert len(root_element.children) == repo_contents["high_level_elements"]
+    monkeypatch.setattr(pygit2, "clone_repository", mock_clone_repository_error)
 
 
-def monkeypatched_repo_clonation_success(url, path, callbacks):
-    pass
+@pytest.fixture()
+def clone_repository(monkeypatch):
+    def mock_clone_repository(*args, **kwargs):
+        return pygit2.Repository()
+
+    monkeypatch.setattr(pygit2, "clone_repository", mock_clone_repository)
 
 
-def monkeypatched_repo_clonation_fail(url, path, callbacks):
-    raise pygit2.errors.GitError
-
-
-def test_git_importer_success(monkeypatch, basic_job):
-
-    monkeypatch.setattr(
-        pygit2, "clone_repository", monkeypatched_repo_clonation_success
+@pytest.mark.usefixtures("clone_repository")
+def test_git_importer(db: Session, basic_job: dict):
+    job = basic_job["db_job"]
+    importer = GitImporter(db, job.id)
+    importer.process()
+    importing_status_log = (
+        db.query(JobLog).filter_by(job_id=job.id, to_status=JobStatus.IMPORTING).one()
     )
-    (job_id, job_details) = basic_job
-    importer = GitImporter(job_id)
+    assert importing_status_log
+    assert job.status is JobStatus.IMPORTING_SUCCESSFULLY
+    assert job.manifest
+    assert job.manifest.project_name == basic_job["project_name"]
+    assert (
+        job.manifest.project_description
+        == """# sample-project
 
-    created_manifest = importer.process_url(job_details["import_url"], "")
+This is sample-project's README file"""
+    )
+    assert job.manifest.source_url == job.import_url
 
-    assert created_manifest is not None
 
-
-def test_git_importer_error(monkeypatch, basic_job):
-
-    monkeypatch.setattr(pygit2, "clone_repository", monkeypatched_repo_clonation_fail)
-    (job_id, job_details) = basic_job
-    importer = GitImporter(job_id)
-
-    created_manifest = importer.process_url(job_details["import_url"], "")
-
-    assert created_manifest is None
-
-    retrieved_job = get_job(job_id)
-    assert retrieved_job["job_status"] == "importing_error_authorization_required"
-    assert retrieved_job["job_progress"] == 0.0
-    assert retrieved_job["overall_process"] == 40.0  # pending and importing
+@pytest.mark.usefixtures("clone_error")
+def test_git_importer_error(db: Session, basic_job: dict):
+    job = basic_job["db_job"]
+    importer = GitImporter(db, job.id)
+    importer.process()
+    assert job.status is JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE
