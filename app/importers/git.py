@@ -2,6 +2,7 @@ import os
 import re
 
 import pygit2
+from sqlalchemy.orm import Session
 
 from app import crud
 from app.importers.base import BaseImporter
@@ -18,7 +19,7 @@ class IgnoreCredentialsCallbacks(pygit2.RemoteCallbacks):
 
 
 class GitImporter(BaseImporter):
-    def __init__(self, db, job_id):
+    def __init__(self, db: Session, job_id: str):
         self.job_id = job_id
         self.db = db
 
