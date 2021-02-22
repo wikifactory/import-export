@@ -25,7 +25,7 @@ def process_job(job_id: str):
         importer = Importer(db, job.id)
         importer.process()
 
-    elif crud.job.can_export(job):
+    if crud.job.can_export(job):
         Exporter = exporters_map[job.export_service]
         exporter = Exporter(db, job.id)
         exporter.process()
