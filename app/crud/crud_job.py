@@ -19,7 +19,7 @@ from app.models.job_log import JobLog
 from app.schemas.job import JobCreate
 
 
-class CRUDJob(CRUDBase[Job, JobCreate]):
+class CRUDJob(CRUDBase[Job, JobCreate, None]):
     def create(self, db: Session, *, obj_in: JobCreate) -> Job:
         active_job_exists = (
             db.query(Job)
