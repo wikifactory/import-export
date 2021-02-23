@@ -6,18 +6,17 @@ import pytest
 import requests
 from graphql.execution import ExecutionResult
 
-from app.controller import error
-from app.controller.exporters.wikifactory_exporter import (
+from app.exporters.base import AuthRequired
+from app.exporters.wikifactory import (
+    FileUploadFailed,
+    NoResult,
+    NoResultPath,
+    UserErrors,
     WikifactoryExporter,
     space_slug_from_url,
     validate_url,
     wikifactory_api_request,
 )
-from app.model.element import Element, ElementType
-from app.model.manifest import Manifest
-from app.models import add_job_to_db
-
-CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
 @pytest.mark.parametrize(
@@ -152,9 +151,9 @@ def exporter(basic_job):
         },
     ],
 )
+@pytest.mark.usefixtures("mock_gql_response")
 def test_api_auth_error(monkeypatch, response_dict):
-    mock_gql_response(monkeypatch, response_dict=response_dict)
-    with pytest.raises(error.ExportAuthRequired):
+    with pytest.raises(AuthRequired):
         wikifactory_api_request(dummy_gql, "this-is-a-token", {}, "dummy.result")
 
 
@@ -517,44 +516,3 @@ def test_export_manifest_invalid(monkeypatch, exporter, manifest):
 
     with pytest.raises(error.NotValidManifest):
         exporter.export_manifest(manifest)
-
-
-@pytest.mark.parametrize(
-    "manifest",
-    [
-        Manifest(
-            project_id="project-id",
-            project_name="Test Project",
-            project_description="This is a test project",
-            source_url="https://github.com/wikifactory/sample-project",
-            elements=[
-                Element(
-                    id="element-id",
-                    type=ElementType.FILE,
-                    name="README.md",
-                    path=f"{CURRENT_DIR}/test_files/sample-project/README.md",
-                )
-            ],
-        )
-    ],
-)
-def test_export_manifest(monkeypatch, exporter, manifest):
-    def mock_get_project_details(*args, **kwargs):
-        return {
-            "space_id": "space-id",
-            "project_id": "project-id",
-            "private": False,
-        }
-
-    def mock_iterate_through_elements(*args, **kwargs):
-        pass
-
-    monkeypatch.setattr(exporter, "get_project_details", mock_get_project_details)
-    monkeypatch.setattr(
-        manifest, "iterate_through_elements", mock_iterate_through_elements
-    )
-
-    result = exporter.export_manifest(manifest)
-    assert exporter.manifest is manifest
-    assert result.get("exported") == "true"
-    assert result.get("manifest") == manifest.toJson()
