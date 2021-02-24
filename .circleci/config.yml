@@ -51,8 +51,8 @@ jobs:
       - run:
           name: pre-commit checks
           command: |
-            pre-commit install
-            pre-commit run --all --show-diff-on-failure
+            pipenv run pre-commit install
+            pipenv run pre-commit run --all --show-diff-on-failure
           when: always
 
       - run:
