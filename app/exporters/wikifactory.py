@@ -6,6 +6,7 @@ import pygit2
 import requests
 from gql import Client
 from gql.transport.requests import RequestsHTTPTransport
+from sqlalchemy.orm import Session
 
 from app import crud
 from app.exporters.base import AuthRequired, BaseExporter, NotReachable
@@ -20,6 +21,22 @@ from .wikifactory_gql import (
 )
 
 endpoint_url = "https://wikifactory.com/api/graphql"
+
+
+class FileUploadFailed(Exception):
+    pass
+
+
+class NoResult(Exception):
+    pass
+
+
+class NoResultPath(Exception):
+    pass
+
+
+class UserErrors(Exception):
+    pass
 
 
 def wikifactory_api_request(
@@ -88,36 +105,46 @@ def wikifactory_api_request(
 wikifactory_project_regex = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
 
 
-def validate_url(url):
+def validate_url(url: str):
     return bool(search(wikifactory_project_regex, url))
 
 
-def space_slug_from_url(url):
+def space_slug_from_url(url: str):
     match = search(wikifactory_project_regex, url)
     return match.groupdict()
 
 
 class WikifactoryExporter(BaseExporter):
-    def __init__(self, db, job_id):
+    def __init__(self, db: Session, job_id: str):
         self.db = db
         self.job_id = job_id
         self.project_details = None
 
     def process(self):
         job = crud.job.get(self.db, self.job_id)
-        crud.job.update_status(self.db, job, JobStatus.EXPORTING)
+        crud.job.update_status(self.db, db_obj=job, status=JobStatus.EXPORTING)
 
         self.project_details = self.get_project_details()
 
-        for (dirpath, _, filenames) in os.walk(job.path):
-            for name in filenames:
-                file_path = os.path.join(dirpath, name)
-                self.on_file_cb(file_path)
+        try:
+            for (dirpath, _, filenames) in os.walk(job.path):
+                for name in filenames:
+                    file_path = os.path.join(dirpath, name)
+                    self.on_file_cb(file_path)
 
-        self.on_finished_cb()
+            self.on_finished_cb()
 
-        crud.job.update_status(self.db, job, JobStatus.EXPORTING_SUCCESSFULLY)
-        crud.job.update_status(self.db, job, JobStatus.FINISHED_SUCCESSFULLY)
+            crud.job.update_status(
+                self.db, db_obj=job, status=JobStatus.EXPORTING_SUCCESSFULLY
+            )
+            crud.job.update_status(
+                self.db, db_obj=job, status=JobStatus.FINISHED_SUCCESSFULLY
+            )
+        except (FileUploadFailed, UserErrors):
+            # FIXME - improve error handling
+            crud.job.update_status(
+                self.db, db_obj=job, status=JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE
+            )
 
     def on_file_cb(self, file_path):
 
@@ -266,19 +293,3 @@ class WikifactoryExporter(BaseExporter):
             variables,
             "file.file",
         )
-
-
-class FileUploadFailed(Exception):
-    pass
-
-
-class NoResult(Exception):
-    pass
-
-
-class NoResultPath(Exception):
-    pass
-
-
-class UserErrors(Exception):
-    pass

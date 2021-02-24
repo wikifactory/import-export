@@ -1,11 +1,14 @@
 import os
-import uuid
+from typing import Any
 
 import gql
 import pytest
 import requests
 from graphql.execution import ExecutionResult
+from sqlalchemy.orm import Session
 
+from app import crud
+from app.core.config import settings
 from app.exporters.base import AuthRequired
 from app.exporters.wikifactory import (
     FileUploadFailed,
@@ -17,6 +20,10 @@ from app.exporters.wikifactory import (
     validate_url,
     wikifactory_api_request,
 )
+from app.models.job import JobStatus
+from app.models.job_log import JobLog
+from app.schemas import JobCreate
+from app.tests.utils import utils
 
 
 @pytest.mark.parametrize(
@@ -34,7 +41,7 @@ from app.exporters.wikifactory import (
         ("https://wikifactory.com/@/not-here", False),
     ],
 )
-def test_validate_url(project_url, is_valid):
+def test_validate_url(project_url: str, is_valid: bool):
     assert validate_url(project_url) is is_valid
 
 
@@ -49,7 +56,7 @@ def test_validate_url(project_url, is_valid):
         ("http://wikifactory.com/+wikifactory/试验", "+wikifactory", "试验"),
     ],
 )
-def test_space_slug_from_url(project_url, space, slug):
+def test_space_slug_from_url(project_url: str, space: str, slug: str):
     result = space_slug_from_url(project_url)
     assert result.get("space") == space
     assert result.get("slug") == slug
@@ -67,41 +74,60 @@ dummy_gql = gql.gql(
 )
 
 
-def mock_gql_response(monkeypatch, response_dict={}, expected_variables=None):
-    # mocking the response is a direct mock on the output/result
-    # it doesn't use any data from the query/mutation requested
+def generate_mock_gql_response(response_dict):
+    response = requests.Response()
+    response.status_code = response_dict.get("status_code") or requests.codes["ok"]
+    response.raise_for_status()
+    return ExecutionResult(
+        data=response_dict.get("data"), errors=response_dict.get("errors")
+    )
+
+
+@pytest.fixture
+def mock_gql_response_assert_variables(
+    monkeypatch, response_dict: dict, expected_variables: dict
+):
     def mock_execute(*args, **kwargs):
         if expected_variables:
             assert kwargs.get("variable_values") == expected_variables
 
-        response = requests.Response()
-        response.status_code = response_dict.get("status_code") or requests.codes["ok"]
-        response.raise_for_status()
-        return ExecutionResult(
-            data=response_dict.get("data"), errors=response_dict.get("errors")
-        )
+        return generate_mock_gql_response(response_dict)
 
     monkeypatch.setattr(gql.Client, "execute", mock_execute)
 
 
 @pytest.fixture
-def basic_job():
-    options = {
-        "import_service": "git",
-        "import_url": "https://github.com/wikifactory/sample-project",
-        "import_token": None,
-        "export_service": "wikifactory",
-        "export_url": "https://wikifactory.com/@botler/sample-project",
-        "export_token": "this-is-a-token",
-    }
-    job_id = str(uuid.uuid4())
-    add_job_to_db(options, job_id)
-    return job_id
+def mock_gql_response(monkeypatch, response_dict: dict):
+    # mocking the response is a direct mock on the output/result
+    # it doesn't use any data from the query/mutation requested
+    def mock_execute(*args, **kwargs):
+        return generate_mock_gql_response(response_dict)
+
+    monkeypatch.setattr(gql.Client, "execute", mock_execute)
 
 
 @pytest.fixture
-def exporter(basic_job):
-    return WikifactoryExporter(basic_job)
+def basic_job(db: Session) -> dict:
+    random_project_name = utils.random_lower_string()
+    job_input = JobCreate(
+        import_service="git",
+        import_url=f"https://github.com/wikifactory/{random_project_name}",
+        export_service="wikifactory",
+        export_url=f"https://wikifactory.com/@user/{random_project_name}",
+    )
+    db_job = crud.job.create(db, obj_in=job_input)
+    db_job.path = os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project")
+    yield {
+        "job_input": job_input,
+        "db_job": db_job,
+        "project_name": random_project_name,
+    }
+    crud.job.remove(db, id=db_job.id)
+
+
+@pytest.fixture
+def exporter(db: Session, basic_job: dict) -> WikifactoryExporter:
+    return WikifactoryExporter(db, basic_job["db_job"].id)
 
 
 @pytest.mark.parametrize(
@@ -152,7 +178,7 @@ def exporter(basic_job):
     ],
 )
 @pytest.mark.usefixtures("mock_gql_response")
-def test_api_auth_error(monkeypatch, response_dict):
+def test_api_auth_error():
     with pytest.raises(AuthRequired):
         wikifactory_api_request(dummy_gql, "this-is-a-token", {}, "dummy.result")
 
@@ -175,33 +201,34 @@ def test_api_auth_error(monkeypatch, response_dict):
         },
     ],
 )
-def test_api_user_error(monkeypatch, response_dict):
-    mock_gql_response(monkeypatch, response_dict=response_dict)
-    with pytest.raises(error.WikifactoryAPIUserErrors):
+@pytest.mark.usefixtures("mock_gql_response")
+def test_api_user_error():
+    with pytest.raises(UserErrors):
         wikifactory_api_request(dummy_gql, "this-is-a-token", {}, "dummy.result")
 
 
-def test_api_no_result_path_error(monkeypatch):
-    mock_gql_response(monkeypatch, response_dict={"data": {}})
-    with pytest.raises(error.WikifactoryAPINoResultPath):
+@pytest.mark.parametrize("response_dict", [{"data": {}}])
+@pytest.mark.usefixtures("mock_gql_response")
+def test_api_no_result_path_error():
+    with pytest.raises(NoResultPath):
         wikifactory_api_request(dummy_gql, "this-is-a-token", {}, None)
 
 
 @pytest.mark.parametrize(
-    "result_path,response_dict",
+    "result_path, response_dict",
     [
         ("dummy", {"data": {}}),
         ("dummy.result", {"data": {"dummy": {}}}),
     ],
 )
-def test_api_no_result_error(monkeypatch, result_path, response_dict):
-    mock_gql_response(monkeypatch, response_dict=response_dict)
-    with pytest.raises(error.WikifactoryAPINoResult):
+@pytest.mark.usefixtures("mock_gql_response")
+def test_api_no_result_error(result_path):
+    with pytest.raises(NoResult):
         wikifactory_api_request(dummy_gql, "this-is-a-token", {}, result_path)
 
 
 @pytest.mark.parametrize(
-    "result_path,response_dict,expected_result",
+    "result_path, response_dict, expected_result",
     [
         ("dummy.result", {"data": {"dummy": {"result": "ok"}}}, "ok"),
         (
@@ -216,48 +243,73 @@ def test_api_no_result_error(monkeypatch, result_path, response_dict):
         ),
     ],
 )
-def test_api_success(monkeypatch, result_path, response_dict, expected_result):
-    mock_gql_response(monkeypatch, response_dict=response_dict)
-
+@pytest.mark.usefixtures("mock_gql_response")
+def test_api_success(result_path, expected_result):
     result = wikifactory_api_request(dummy_gql, "this-is-a-token", {}, result_path)
-
     assert result == expected_result
 
 
 @pytest.mark.parametrize(
-    "project_id, private, space_id",
+    "response_dict, expected_details",
     [
-        ("project-id", True, "space-id"),
-        ("project-id", False, "space-id"),
+        (
+            {
+                "data": {
+                    "project": {
+                        "result": {
+                            "id": "project-id",
+                            "private": True,
+                            "inSpace": {"id": "space-id"},
+                        }
+                    }
+                }
+            },
+            {"project_id": "project-id", "private": True, "space_id": "space-id"},
+        ),
+        (
+            {
+                "data": {
+                    "project": {
+                        "result": {
+                            "id": "project-id",
+                            "private": False,
+                            "inSpace": {"id": "space-id"},
+                        }
+                    }
+                }
+            },
+            {"project_id": "project-id", "private": False, "space_id": "space-id"},
+        ),
     ],
 )
-def test_get_project_details(monkeypatch, exporter, project_id, private, space_id):
-    project_data = {
-        "project": {
-            "result": {
-                "id": project_id,
-                "private": private,
-                "inSpace": {"id": space_id},
-            }
-        }
-    }
-    mock_gql_response(monkeypatch, response_dict={"data": project_data})
+@pytest.mark.usefixtures("mock_gql_response")
+def test_get_project_details(exporter, expected_details):
     project_details = exporter.get_project_details()
-    assert project_details["project_id"] == project_id
-    assert project_details["private"] == private
-    assert project_details["space_id"] == space_id
+    assert project_details == expected_details
+
+
+@pytest.fixture
+def dummy_file_response():
+    return
 
 
 @pytest.mark.parametrize(
-    "project_path, project_details, element, expected_variables",
+    "project_details, job_path, file_path, response_dict, expected_variables",
     [
         (
-            f"{CURRENT_DIR}/test_files/sample-project",
             {"space_id": "space-id", "project_id": "project-id"},
-            Element(
-                path=f"{CURRENT_DIR}/test_files/sample-project/README.md",
-                type=ElementType.FILE,
-            ),
+            os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project"),
+            os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project", "README.md"),
+            {
+                "data": {
+                    "file": {
+                        "file": {
+                            "id": "file-id",
+                            "uploadUrl": "http://upload-domain/upload-endpoint",
+                        }
+                    }
+                }
+            },
             {
                 "fileInput": {
                     "filename": "README.md",
@@ -272,37 +324,21 @@ def test_get_project_details(monkeypatch, exporter, project_id, private, space_i
         ),
     ],
 )
+@pytest.mark.usefixtures("mock_gql_response_assert_variables")
 def test_process_element_mutation_variables(
-    monkeypatch,
-    exporter,
-    project_path,
-    project_details,
-    element,
-    expected_variables,
+    basic_job, exporter, project_details, job_path, file_path
 ):
-    exporter.project_path = project_path
+    job = basic_job["db_job"]
+    job.path = job_path
     exporter.project_details = project_details
-    dummy_file_data = {
-        "file": {
-            "file": {
-                "id": "file-id",
-                "uploadUrl": "http://upload-domain/upload-endpoint",
-            }
-        }
-    }
-    mock_gql_response(
-        monkeypatch,
-        response_dict={"data": dummy_file_data},
-        expected_variables=expected_variables,
-    )
-    exporter.process_element(element)
+    exporter.process_file(file_path)
 
 
 @pytest.mark.parametrize(
     "file_path, project_details, expected_headers",
     [
         (
-            f"{CURRENT_DIR}/test_files/sample-project/README.md",
+            os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project", "README.md"),
             {
                 "space_id": "space-id",
                 "project_id": "project-id",
@@ -311,7 +347,7 @@ def test_process_element_mutation_variables(
             {"x-amz-acl": "public-read", "Content-Type": "text/plain"},
         ),
         (
-            f"{CURRENT_DIR}/test_files/sample-project/README.md",
+            os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project", "README.md"),
             {
                 "space_id": "space-id",
                 "project_id": "project-id",
@@ -356,18 +392,27 @@ def test_upload_file_error(monkeypatch, exporter):
     }
 
     file_url = "http://upload-domain/upload-endpoint"
-    file_path = f"{CURRENT_DIR}/test_files/sample-project/README.md"
+    file_path = os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project", "README.md")
 
-    with open(file_path, "rb") as file_handle, pytest.raises(error.FileUploadError):
+    with open(file_path, "rb") as file_handle, pytest.raises(FileUploadFailed):
         exporter.upload_file(file_handle, file_url)
 
 
 @pytest.mark.parametrize(
-    "project_details, file_id, expected_variables",
+    "project_details, file_id, response_dict, expected_variables",
     [
         (
             {"space_id": "space-id", "project_id": "project-id"},
             "file-id",
+            {
+                "data": {
+                    "file": {
+                        "file": {
+                            "id": "file-id",
+                        }
+                    }
+                }
+            },
             {
                 "fileInput": {
                     "id": "file-id",
@@ -378,37 +423,29 @@ def test_upload_file_error(monkeypatch, exporter):
         ),
     ],
 )
-def test_complete_file_mutation_variables(
-    monkeypatch,
-    exporter,
-    project_details,
-    file_id,
-    expected_variables,
-):
+@pytest.mark.usefixtures("mock_gql_response_assert_variables")
+def test_complete_file_mutation_variables(exporter, project_details, file_id):
     exporter.project_details = project_details
-    dummy_file_data = {
-        "file": {
-            "file": {
-                "id": file_id,
-            }
-        }
-    }
-    mock_gql_response(
-        monkeypatch,
-        response_dict={"data": dummy_file_data},
-        expected_variables=expected_variables,
-    )
     exporter.complete_file(file_id)
 
 
 @pytest.mark.parametrize(
-    "project_path, project_details, element, file_id, expected_variables",
+    "project_path, project_details, file_path, file_id, response_dict, expected_variables",
     [
         (
-            f"{CURRENT_DIR}/test_files/sample-project",
+            os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project"),
             {"space_id": "space-id", "project_id": "project-id"},
-            Element(path=f"{CURRENT_DIR}/test_files/sample-project/README.md"),
+            os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project", "README.md"),
             "file-id",
+            {
+                "data": {
+                    "operation": {
+                        "project": {
+                            "id": "project-id",
+                        }
+                    }
+                }
+            },
             {
                 "operationData": {
                     "fileId": "file-id",
@@ -420,37 +457,35 @@ def test_complete_file_mutation_variables(
         ),
     ],
 )
-def test_perform_operation_mutation_variables(
-    monkeypatch,
+@pytest.mark.usefixtures("mock_gql_response_assert_variables")
+def test_perform_mutation_operation_variables(
+    basic_job,
     exporter,
     project_path,
     project_details,
-    element,
     file_id,
-    expected_variables,
+    file_path,
 ):
-    exporter.project_path = project_path
+    job = basic_job["db_job"]
+    job.path = project_path
     exporter.project_details = project_details
-    dummy_operation_data = {
-        "operation": {
-            "project": {
-                "id": project_details.get("project_id"),
-            }
-        }
-    }
-    mock_gql_response(
-        monkeypatch,
-        response_dict={"data": dummy_operation_data},
-        expected_variables=expected_variables,
-    )
-    exporter.perform_mutation_operation(element, file_id)
+    exporter.perform_mutation_operation(file_path, file_id)
 
 
 @pytest.mark.parametrize(
-    "project_details, expected_variables",
+    "project_details, response_dict, expected_variables",
     [
         (
             {"space_id": "space-id", "project_id": "project-id"},
+            {
+                "data": {
+                    "commit": {
+                        "project": {
+                            "id": "project-id",
+                        }
+                    }
+                }
+            },
             {
                 "commitData": {
                     "projectId": "project-id",
@@ -461,58 +496,94 @@ def test_perform_operation_mutation_variables(
         ),
     ],
 )
-def test_on_finished_cb_mutation_variables(
-    monkeypatch,
-    exporter,
-    project_details,
-    expected_variables,
-):
+@pytest.mark.usefixtures("mock_gql_response_assert_variables")
+def test_on_finished_cb_mutation_variables(exporter, project_details):
     exporter.project_details = project_details
-    dummy_commit_data = {
-        "commit": {
-            "project": {
-                "id": project_details.get("project_id"),
-            }
-        }
-    }
-    mock_gql_response(
-        monkeypatch,
-        response_dict={"data": dummy_commit_data},
-        expected_variables=expected_variables,
-    )
     exporter.on_finished_cb()
 
 
 def test_on_file_cb_user_errors(monkeypatch, exporter):
-    def mock_process_element(*args, **kwargs):
-        raise error.WikifactoryAPIUserErrors()
+    def mock_process_file(*args, **kwargs):
+        raise UserErrors()
 
-    monkeypatch.setattr(exporter, "process_element", mock_process_element)
+    monkeypatch.setattr(exporter, "process_file", mock_process_file)
 
-    with pytest.raises(error.FileUploadError):
-        exporter.on_file_cb(Element())
+    with pytest.raises(FileUploadFailed):
+        exporter.on_file_cb("")
 
 
-def test_on_file_cb_no_file_id(monkeypatch, exporter):
-    def mock_process_element(*args, **kwargs):
+def test_on_file_cb_no_file_id(monkeypatch: Any, exporter: WikifactoryExporter):
+    def mock_process_file(*args, **kwargs):
         return {"id": None, "uploadUrl": None}
 
-    monkeypatch.setattr(exporter, "process_element", mock_process_element)
+    monkeypatch.setattr(exporter, "process_file", mock_process_file)
 
-    with pytest.raises(error.FileUploadError):
-        exporter.on_file_cb(Element())
+    with pytest.raises(FileUploadFailed):
+        exporter.on_file_cb("")
 
 
-@pytest.mark.parametrize("manifest", [None, Manifest()])
-def test_export_manifest_invalid(monkeypatch, exporter, manifest):
+@pytest.mark.parametrize(
+    "job_path, project_details",
+    [
+        (
+            os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project"),
+            {"project_id": "project-id", "private": True, "space_id": "space-id"},
+        )
+    ],
+)
+def test_wikifactory_exporter(
+    monkeypatch: Any,
+    db: Session,
+    project_details: dict,
+    basic_job: dict,
+    exporter: WikifactoryExporter,
+    job_path: str,
+):
     def mock_get_project_details(*args, **kwargs):
-        return {
-            "space_id": "space-id",
-            "project_id": "project-id",
-            "private": False,
-        }
+        return project_details
 
     monkeypatch.setattr(exporter, "get_project_details", mock_get_project_details)
 
-    with pytest.raises(error.NotValidManifest):
-        exporter.export_manifest(manifest)
+    def mock_on_file_cb(*args, **kwargs):
+        pass
+
+    monkeypatch.setattr(exporter, "on_file_cb", mock_on_file_cb)
+
+    def mock_on_finished_cb(*args, **kwargs):
+        pass
+
+    monkeypatch.setattr(exporter, "on_finished_cb", mock_on_finished_cb)
+
+    job = basic_job["db_job"]
+    job.path = job_path
+    exporter.process()
+
+    # TODO check that on_file_cb has been called for each file
+
+    # TODO check that on_finished_cb has been called
+
+    # check log
+    exporting_status_log = (
+        db.query(JobLog).filter_by(job_id=job.id, to_status=JobStatus.EXPORTING).one()
+    )
+    assert exporting_status_log
+    exporting_successfully_status_log = (
+        db.query(JobLog)
+        .filter_by(
+            job_id=job.id,
+            from_status=JobStatus.EXPORTING,
+            to_status=JobStatus.EXPORTING_SUCCESSFULLY,
+        )
+        .one()
+    )
+    assert exporting_successfully_status_log
+    finished_successfully_status_log = (
+        db.query(JobLog)
+        .filter_by(
+            job_id=job.id,
+            from_status=JobStatus.EXPORTING_SUCCESSFULLY,
+            to_status=JobStatus.FINISHED_SUCCESSFULLY,
+        )
+        .one()
+    )
+    assert finished_successfully_status_log
