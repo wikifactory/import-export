@@ -16,7 +16,7 @@ By performing the import-export process, the user will have a copy of the projec
 First, the user must select the import service, from where the project will be imported. In order to abstract the process as much as possible, the service requires the URL of the project. This URL will have different meanings given the associated service (e.g. the web address of a github repository or the addres of a project from the Wikifactory platform). At this point, it may be required to perform some authentication or authorization steps, to give the service access to the original files. As the result of this authorization step, a new piece of information is added to the request: the **import_token** and **export_token** .
 
 Next we can see a schema of the request as sent to the ImportExport service, in JSON format:
-  
+
 
       {
    	    "import_url":"https://github.com/nasa-jpl/open-source-rover",
@@ -25,7 +25,7 @@ Next we can see a schema of the request as sent to the ImportExport service, in 
    	    "export_url":"http://wikifactory.com/@dummyuser/imported_rover_project",
    	    "export_service":"wikifactory",
    	    "export_token":"TOKEN_HERE"
-       } 
+       }
 
 At this point of the implementation we assume that the **export_url** directs to an already created project, be it a github repository, a Google Drive folder or a Wikifactory project
 
@@ -40,7 +40,7 @@ All the source code can be found inside the `app` folder
 
 In order to implement a new **importer**, you have to perform the following steps:
 
- 1. Create the import class inside the `importers` folder. The newly created class must extend from the Importer class. At this point, you can define your own initialization steps, or you can copy the basic schema from any of the already implemented ones. In particular, you have to define the path to which the imported projects will be imported. 
+ 1. Create the import class inside the `importers` folder. The newly created class must extend from the Importer class. At this point, you can define your own initialization steps, or you can copy the basic schema from any of the already implemented ones. In particular, you have to define the path to which the imported projects will be imported.
  2. Next, you have to implement the `process_url` method inside the recently created importer taking into account the details of the **import_service**. The result of this process is an instance of a **Manifest**, which holds a reference to all the files included in the project as well as some metadata.
  3. Create the appropiate method in the `importer_proxy.py` file. In this point the service checks the identifier of the **import_service** and dispatch the appropiate importer. That identifier can be defined inside the `app/model/constants.py` file.
 

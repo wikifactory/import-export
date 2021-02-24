@@ -1,4 +1,25 @@
+exclude: (\.step)
 repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: "v3.4.0"
+    hooks:
+    - id: check-added-large-files
+    - id: check-json
+    - id: check-symlinks
+    - id: check-toml
+    - id: fix-byte-order-marker
+    - id: check-case-conflict
+    - id: check-merge-conflict
+    - id: debug-statements
+    - id: check-yaml
+    - id: check-builtin-literals
+    - id: mixed-line-ending
+      args: [--fix, lf]
+    - id: end-of-file-fixer
+    - id: trailing-whitespace
+    - id: detect-aws-credentials
+      args: [--allow-missing-credentials]
+    - id: detect-private-key
 -   repo: https://github.com/timothycrosley/isort
     rev: "5.7.0"
     hooks:

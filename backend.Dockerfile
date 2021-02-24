@@ -13,5 +13,3 @@ RUN pipenv install --system --dev
 
 COPY . /app
 ENV PYTHONPATH=/app
-
-

@@ -33,7 +33,7 @@ jobs:
             sudo pip install pipenv
             pipenv install --pre --dev
           when: always
-            
+
       - run:
           name: Code formatting
           command: |
@@ -56,7 +56,7 @@ jobs:
           command: |
             pipenv run flake8
           when: always
-      
+
       - run:
           name: unit-tests
           command: |
