@@ -1,12 +1,23 @@
+from typing import Any, Dict, List
+
 import pytest
 import requests
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app import crud
+from app.core.celery_app import celery_app
 from app.core.config import settings
 from app.models.job import JobStatus
 from app.schemas.job import JobCreate
+
+
+@pytest.fixture
+def dummy_process_job(monkeypatch: Any) -> None:
+    def send_task_mock(*args: List, **kwargs: Dict) -> None:
+        pass
+
+    monkeypatch.setattr(celery_app, "send_task", send_task_mock)
 
 
 @pytest.mark.parametrize(
@@ -28,6 +39,7 @@ from app.schemas.job import JobCreate
         },
     ],
 )
+@pytest.mark.usefixtures("dummy_process_job")
 def test_post_job(client: TestClient, data: dict) -> None:
     response = client.post(f"{settings.API_V1_STR}/job/", json=data)
     assert response.status_code == requests.codes["ok"]
@@ -111,6 +123,7 @@ def test_get_job_error(client: TestClient) -> None:
         ),
     ],
 )
+@pytest.mark.usefixtures("dummy_process_job")
 def test_retry_job(
     db: Session, client: TestClient, job_create: JobCreate, status: JobStatus
 ) -> None:
