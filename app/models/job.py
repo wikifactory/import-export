@@ -1,4 +1,5 @@
 import enum
+import uuid
 
 from sqlalchemy import Column, Enum, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -51,7 +52,7 @@ terminated_job_statuses = [
 class Job(Base):
     __tablename__ = "job"
 
-    id = Column(UUID(as_uuid=True), primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     import_service = Column(String, nullable=False)
     import_url = Column(String, nullable=False)
