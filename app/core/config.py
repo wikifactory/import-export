@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
+
+    PYTEST_POSTGRES_SERVER: Optional[str]
+    PYTEST_POSTGRES_USER: Optional[str]
+    PYTEST_POSTGRES_PASSWORD: Optional[str]
+    PYTEST_POSTGRES_DB: Optional[str]
+
     SQLALCHEMY_DATABASE_URI: Optional[PostgresDsn] = None
 
     @validator("SQLALCHEMY_DATABASE_URI", pre=True)
