@@ -30,6 +30,8 @@ sentry-sdk = "*"
 alembic = "*"
 sqlalchemy-utils = "*"
 pydrive = "*"
+mypy = "*"
+sqlalchemy-stubs = "*"
 
 [requires]
 python_version = "3.7"
