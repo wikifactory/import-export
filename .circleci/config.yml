@@ -19,7 +19,7 @@ jobs:
     environment:
       SERVER_NAME: localhost
       SERVER_HOST: http://localhost
-      PROJECT_NAME: dido
+      PROJECT_NAME: import-export
       BACKEND_CORS_ORIGINS: "[\"http://localhost:8000\"]"
       POSTGRES_SERVER: localhost
       POSTGRES_USER: postgres
@@ -33,7 +33,7 @@ jobs:
       BROKER_URL: redis://redis:6379/0
       BACKEND_URL: redis://redis:6379/0
 
-    working_directory: ~/dido
+    working_directory: ~/import-export
 
     steps:
 
