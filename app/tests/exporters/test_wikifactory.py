@@ -305,7 +305,7 @@ def test_get_project_details(
                     "spaceId": "space-id",
                     "size": 54,
                     "projectPath": "README.md",
-                    "gitHash": "692f66f8b675de33548ce2fdb66b196e287c8971",
+                    "gitHash": "19ed54249da4a5666d2617144508a897303660be",
                     "completed": False,
                     "contentType": "text/plain",
                 }
