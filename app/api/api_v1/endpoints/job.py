@@ -1,3 +1,4 @@
+import uuid
 from typing import Any
 
 import requests
@@ -30,7 +31,7 @@ def post_job(
 
 
 @router.get("/{job_id}", response_model=schemas.Job)
-def get_job(*, db: Session = Depends(deps.get_db), job_id: str) -> Any:
+def get_job(*, db: Session = Depends(deps.get_db), job_id: uuid.UUID) -> Any:
     job = crud.job.get(db, job_id)
     if not job:
         raise HTTPException(
@@ -42,7 +43,7 @@ def get_job(*, db: Session = Depends(deps.get_db), job_id: str) -> Any:
 
 
 @router.post("/{job_id}/retry", response_model=schemas.Job)
-def retry(*, db: Session = Depends(deps.get_db), job_id: str) -> Any:
+def retry(*, db: Session = Depends(deps.get_db), job_id: uuid.UUID) -> Any:
     job = crud.job.get(db, job_id)
     if not job:
         raise HTTPException(
@@ -64,7 +65,7 @@ def retry(*, db: Session = Depends(deps.get_db), job_id: str) -> Any:
 
 
 @router.post("/{job_id}/cancel", response_model=schemas.Job)
-def cancel(*, db: Session = Depends(deps.get_db), job_id: str) -> Any:
+def cancel(*, db: Session = Depends(deps.get_db), job_id: uuid.UUID) -> Any:
     job = crud.job.get(db, job_id)
     if not job:
         raise HTTPException(
