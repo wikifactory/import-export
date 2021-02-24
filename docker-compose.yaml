@@ -36,7 +36,6 @@ services:
     volumes:
       - ./app:/app/app
     depends_on: 
-      - "redis"
       - "postgres-db"
     networks:
       - default

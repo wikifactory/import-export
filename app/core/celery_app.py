@@ -1,9 +1,7 @@
-import os
-
 from celery import Celery
 
+from app.core.config import settings
+
 celery_app = Celery(
-    "import_export_tasks",
-    broker=os.environ["BROKER_URL"],
-    backend=os.environ["BACKEND_URL"],
+    "import_export_tasks", task_always_eager=not bool(settings.BROKER_URL)
 )

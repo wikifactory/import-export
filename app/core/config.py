@@ -2,7 +2,7 @@ import os
 import sys
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import AnyHttpUrl, BaseSettings, HttpUrl, PostgresDsn, validator
+from pydantic import AnyHttpUrl, AnyUrl, BaseSettings, HttpUrl, PostgresDsn, validator
 
 
 class Settings(BaseSettings):
@@ -74,8 +74,7 @@ class Settings(BaseSettings):
         # if directory can't be written, raise ValueError(v)
         return v
 
-    BROKER_URL: str
-    BACKEND_URL: str
+    BROKER_URL: Optional[AnyUrl]
 
     class Config:
         case_sensitive = True
