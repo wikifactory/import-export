@@ -20,11 +20,11 @@ jobs:
       SERVER_NAME: localhost
       SERVER_HOST: http://localhost
       BACKEND_CORS_ORIGINS: "[\"http://localhost:8000\"]"
-      POSTGRES_SERVER: postgres-db
+      POSTGRES_SERVER: localhost
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
-      PYTEST_POSTGRES_SERVER: postgres-db
+      PYTEST_POSTGRES_SERVER: localhost
       PYTEST_POSTGRES_USER: postgres
       PYTEST_POSTGRES_PASSWORD: postgres
       PYTEST_POSTGRES_DB: test
