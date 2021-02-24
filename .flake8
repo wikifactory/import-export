@@ -16,4 +16,3 @@ exclude =
     __init__.py
     .mypy_cache
     .pytest_cache
-
