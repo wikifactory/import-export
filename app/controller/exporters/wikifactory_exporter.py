@@ -1,37 +1,31 @@
-import requests
-import magic
-
 import os
-import pygit2
-
 from re import search
 
-from app.model.exporter import Exporter
-from app.config import wikifactory_connection_url
+import magic
+import pygit2
+import requests
 from gql import Client
 from gql.transport.requests import RequestsHTTPTransport
 
+from app.config import wikifactory_connection_url
 from app.controller.error import (
-    NotValidManifest,
+    ExportAuthRequired,
     ExportNotReachable,
     FileUploadError,
-    ExportAuthRequired,
-    WikifactoryAPIUserErrors,
-    WikifactoryAPINoResultPath,
+    NotValidManifest,
     WikifactoryAPINoResult,
+    WikifactoryAPINoResultPath,
+    WikifactoryAPIUserErrors,
 )
-from app.models import (
-    get_db_job,
-    increment_processed_element_for_job,
-    StatusEnum,
-)
+from app.model.exporter import Exporter
+from app.models import StatusEnum, get_db_job, increment_processed_element_for_job
 
 from .wikifactory_gql import (
-    project_query,
+    commit_contribution_mutation,
+    complete_file_mutation,
     file_mutation,
     operation_mutation,
-    complete_file_mutation,
-    commit_contribution_mutation,
+    project_query,
 )
 
 endpoint_url = wikifactory_connection_url

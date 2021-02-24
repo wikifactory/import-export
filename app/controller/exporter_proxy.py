@@ -1,7 +1,12 @@
-from app.model.constants import EXPORT_SERVICE, EXPORT_URL, EXPORT_TOKEN
-from app.model.constants import WIKIFACTORY_SERVICE, GOOGLEDRIVE_SERVICE
-from app.controller.exporters.wikifactory_exporter import WikifactoryExporter
 from app.controller.exporters.google_drive_exporter import GoogleDriveExporter
+from app.controller.exporters.wikifactory_exporter import WikifactoryExporter
+from app.model.constants import (
+    EXPORT_SERVICE,
+    EXPORT_TOKEN,
+    EXPORT_URL,
+    GOOGLEDRIVE_SERVICE,
+    WIKIFACTORY_SERVICE,
+)
 
 
 class ExporterProxy:

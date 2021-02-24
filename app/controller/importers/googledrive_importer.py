@@ -1,23 +1,23 @@
 import io
-from re import search
 import os
-from app.model.importer import Importer
-from app.model.manifest import Manifest
-from app.model.element import Element, ElementType
 from pathlib import Path
+from re import search
 
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
-from googleapiclient.errors import HttpError
 import httplib2
 import oauth2client
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaIoBaseDownload
 from oauth2client.client import AccessTokenCredentials
-from app.models import StatusEnum
 
 from app.controller.importers.googledrive_errors import (
     CredentialsNotValid,
     DownloadError,
 )
+from app.model.element import Element, ElementType
+from app.model.importer import Importer
+from app.model.manifest import Manifest
+from app.models import StatusEnum
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 query_c = "mimeType='application/vnd.google-apps.folder'"

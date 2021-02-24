@@ -32,23 +32,17 @@ jobs:
           command: |
             sudo pip install pipenv
             pipenv install --pre --dev
-          when: always
             
       - run:
-          name: Code formatting
+          name: Code formatting and linting
           command: |
-            cd app & pipenv run black --check .
-          when: always
+            sudo pip install pre-commit
+            pre-commit run --all --show-diff-on-failure
 
       - run:
           name: Build using docker-compose
           command: |
             docker-compose build
-
-      - run:
-          name: flake8
-          command: |
-            pipenv run flake8
           when: always
       
       - run:

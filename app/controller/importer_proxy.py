@@ -1,24 +1,20 @@
-from app.model.constants import (
-    THINGIVERSE_SERVICE,
-    MYMINIFACTORY_SERVICE,
-    WIKIFACTORY_SERVICE,
-)
-from app.model.constants import IMPORT_SERVICE, IMPORT_URL, IMPORT_TOKEN
-from app.model.constants import (
-    GIT_SERVICE,
-    DROPBOX_SERVICE,
-    GOOGLEDRIVE_SERVICE,
-)
-
-from app.controller.importers.thingiverse_importer import ThingiverseImporter
+from app.controller.importers.dropbox_importer import DropboxImporter
 from app.controller.importers.git_importer import GitImporter
 from app.controller.importers.googledrive_importer import GoogleDriveImporter
-from app.controller.importers.dropbox_importer import DropboxImporter
-from app.controller.importers.myminifactory_importer import (
-    MyMiniFactoryImporter,
-)
+from app.controller.importers.myminifactory_importer import MyMiniFactoryImporter
+from app.controller.importers.thingiverse_importer import ThingiverseImporter
 from app.controller.importers.wikifactory_importer import WikifactoryImporter
-
+from app.model.constants import (
+    DROPBOX_SERVICE,
+    GIT_SERVICE,
+    GOOGLEDRIVE_SERVICE,
+    IMPORT_SERVICE,
+    IMPORT_TOKEN,
+    IMPORT_URL,
+    MYMINIFACTORY_SERVICE,
+    THINGIVERSE_SERVICE,
+    WIKIFACTORY_SERVICE,
+)
 from app.models import set_number_of_files_for_job_id
 
 

@@ -1,21 +1,21 @@
 import os
-import pytest
 import uuid
+
 import gql
+import pytest
 import requests
 from graphql.execution import ExecutionResult
 
+from app.controller import error
 from app.controller.exporters.wikifactory_exporter import (
     WikifactoryExporter,
-    validate_url,
     space_slug_from_url,
+    validate_url,
     wikifactory_api_request,
 )
-from app.controller import error
-
-from app.models import add_job_to_db
-from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
+from app.model.manifest import Manifest
+from app.models import add_job_to_db
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 

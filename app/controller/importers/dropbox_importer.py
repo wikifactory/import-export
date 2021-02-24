@@ -1,12 +1,13 @@
 import os
+from pathlib import Path
 from re import search
+
+import dropbox
+
+from app.model.element import Element, ElementType
 from app.model.importer import Importer
 from app.model.manifest import Manifest
-from app.model.element import Element, ElementType
 from app.models import StatusEnum
-import dropbox
-from pathlib import Path
-
 
 dropbox_folder_regex = r"^(http(s)*:\/\/(www)?.dropbox\.com\/home\/.+)$"
 

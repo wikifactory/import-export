@@ -1,8 +1,10 @@
-from .user import User
-from datetime import date
 import json
-from pydantic.dataclasses import dataclass
 from dataclasses import field
+from datetime import date
+
+from pydantic.dataclasses import dataclass
+
+from .user import User
 
 
 @dataclass

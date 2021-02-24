@@ -1,4 +1,5 @@
 import pytest
+
 from app.routers.service_discover import discover_service_for_url_list
 
 

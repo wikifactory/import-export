@@ -1,18 +1,22 @@
-from app.models import (
-    add_job_to_db,
-    get_job,
-    cancel_job,
-    set_job_status,
-    can_retry_job,
-)
-from app.models import Session, Job, JobStatus, StatusEnum
-from app.job_methods import retry_job
-from app.tests.conftest import WIKIFACTORY_TOKEN, WIKIFACTORY_TEST_PROJECT_URL
-from app.controller.importer_proxy import ImporterProxy
-from app.controller.exporter_proxy import ExporterProxy
+import uuid
 
 import pytest
-import uuid
+
+from app.controller.exporter_proxy import ExporterProxy
+from app.controller.importer_proxy import ImporterProxy
+from app.job_methods import retry_job
+from app.models import (
+    Job,
+    JobStatus,
+    Session,
+    StatusEnum,
+    add_job_to_db,
+    can_retry_job,
+    cancel_job,
+    get_job,
+    set_job_status,
+)
+from app.tests.conftest import WIKIFACTORY_TEST_PROJECT_URL, WIKIFACTORY_TOKEN
 
 test_url = "http://testurl.com"
 

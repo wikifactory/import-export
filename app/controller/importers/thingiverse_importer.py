@@ -1,5 +1,6 @@
-from app.model.importer import Importer
 import os
+
+from app.model.importer import Importer
 
 # import aiohttp
 # from app.model.constants import THINGIVERSE_URL, THINGIVERSE_THINGS_PATH

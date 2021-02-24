@@ -1,8 +1,9 @@
-from enum import Enum
 import json
-from pydantic.dataclasses import dataclass
 from dataclasses import field
+from enum import Enum
 from typing import List
+
+from pydantic.dataclasses import dataclass
 
 
 class ElementType(str, Enum):

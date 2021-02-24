@@ -1,14 +1,12 @@
-from app.model.importer import Importer
 import os
-
 from re import search
+
 import pygit2
 
-
-from app.model.manifest import Manifest
 from app.model.element import Element, ElementType
+from app.model.importer import Importer
+from app.model.manifest import Manifest
 from app.models import StatusEnum
-
 
 temp_folder_path = "/tmp/gitimports/"
 

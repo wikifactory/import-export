@@ -1,19 +1,17 @@
-from app.model.importer import Importer
-from app.config import wikifactory_connection_url
-from re import search
 import os
+import zipfile
+from re import search
 
-from app.model.manifest import Manifest
-from app.model.element import Element, ElementType
+import requests
 from gql import Client
 from gql.transport.requests import RequestsHTTPTransport
-import requests
-import zipfile
-from app.models import StatusEnum
 
-from app.controller.importers.wikifactory_importer_gql import (
-    repository_zip_query,
-)
+from app.config import wikifactory_connection_url
+from app.controller.importers.wikifactory_importer_gql import repository_zip_query
+from app.model.element import Element, ElementType
+from app.model.importer import Importer
+from app.model.manifest import Manifest
+from app.models import StatusEnum
 
 endpoint_url = wikifactory_connection_url
 client_username = "dGVzdHVzZXJhZG1pbg=="  # QUESTION: Where do I get this?
