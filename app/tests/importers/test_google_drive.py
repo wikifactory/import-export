@@ -1,6 +1,7 @@
 import os
 import shutil
 from re import search
+from typing import Any, Dict, Generator, List, Optional
 
 import pytest
 from pydrive.drive import GoogleDrive
@@ -17,7 +18,10 @@ from app.tests.utils import utils
 
 
 class GoogleDriveFileListMock:
-    def GetList(self):
+    mocked_list: Optional[List]
+
+    def GetList(self) -> List:
+        assert self.mocked_list
         return [
             GoogleDriveFile(metadata=file_metadata, uploaded=True)
             for file_metadata in self.mocked_list
@@ -25,9 +29,10 @@ class GoogleDriveFileListMock:
 
 
 @pytest.fixture
-def pydrive_mock(monkeypatch, remote_data: dict):
-    def mock_list_file(self, param={}):
+def pydrive_mock(monkeypatch: Any, remote_data: dict) -> None:
+    def mock_list_file(self: Any, param: Dict = {}) -> GoogleDriveFileListMock:
         match = search(r"'(?P<item_id>[-\w]+)'(?P<in_parents> in parents)?", param["q"])
+        assert match
         item_id = match.group("item_id")
         get_children = bool(match.group("in_parents"))
 
@@ -45,10 +50,10 @@ def pydrive_mock(monkeypatch, remote_data: dict):
 
 
 @pytest.fixture
-def download_mock(monkeypatch, basic_job):
+def download_mock(monkeypatch: Any, basic_job: dict) -> Generator:
     tmp_directory = basic_job["db_job"].path
 
-    def mock_get_content(self, download_path):
+    def mock_get_content(self: Any, download_path: str) -> None:
         assert download_path.startswith(tmp_directory)
         with open(download_path, "wb") as file_handle:
             file_handle.write(b"dummy")
@@ -59,7 +64,7 @@ def download_mock(monkeypatch, basic_job):
 
 
 @pytest.fixture(scope="function")
-def basic_job(db: Session) -> dict:
+def basic_job(db: Session) -> Generator[Dict, None, None]:
     random_folder_id = utils.random_lower_string()
     job_input = JobCreate(
         import_service="google_drive",
@@ -139,15 +144,17 @@ def basic_job(db: Session) -> dict:
     ],
 )
 @pytest.mark.usefixtures("pydrive_mock")
-def test_build_tree_recursively(db: Session, basic_job: dict, expected_tree: dict):
+def test_build_tree_recursively(
+    db: Session, basic_job: dict, expected_tree: dict
+) -> None:
     importer = GoogleDriveImporter(db, basic_job["db_job"].id)
     importer.drive = GoogleDrive()
-    tree = {}
+    tree: Dict = {}
     importer.build_tree_recursively(tree, "root-folder")
     assert tree == expected_tree
 
 
-def assert_tree_directory_recursive(current_level, accumulated_path):
+def assert_tree_directory_recursive(current_level: Dict, accumulated_path: str) -> None:
     for (name, node) in current_level.items():
         check_path = os.path.join(accumulated_path, name)
         item = node.get("item")
@@ -201,7 +208,7 @@ def assert_tree_directory_recursive(current_level, accumulated_path):
     ],
 )
 @pytest.mark.usefixtures("download_mock")
-def test_download_tree_recursively(db: Session, basic_job: dict, tree: dict):
+def test_download_tree_recursively(db: Session, basic_job: dict, tree: dict) -> None:
     importer = GoogleDriveImporter(db, basic_job["db_job"].id)
     importer.drive = GoogleDrive()
     importer.download_tree_recursively(tree, basic_job["db_job"].path)
@@ -209,7 +216,7 @@ def test_download_tree_recursively(db: Session, basic_job: dict, tree: dict):
 
 
 @pytest.fixture
-def remote_data(basic_job: dict):
+def remote_data(basic_job: Dict) -> Dict:
     folder_id = basic_job["folder_id"]
 
     return {
@@ -250,7 +257,7 @@ def remote_data(basic_job: dict):
 
 
 @pytest.mark.usefixtures("pydrive_mock", "download_mock")
-def test_google_drive_importer(db: Session, basic_job: dict, remote_data: dict):
+def test_google_drive_importer(db: Session, basic_job: dict, remote_data: dict) -> None:
     job = basic_job["db_job"]
     importer = GoogleDriveImporter(db, basic_job["db_job"].id)
     importer.process()
@@ -271,16 +278,16 @@ def test_google_drive_importer(db: Session, basic_job: dict, remote_data: dict):
 
 
 @pytest.fixture
-def api_error(monkeypatch, exception: Exception):
-    def mock_list_file(self, param={}):
-        raise exception()
+def api_error(monkeypatch: Any, exception: Exception) -> None:
+    def mock_list_file(self: Any, param: Dict = {}) -> None:
+        raise exception
 
     monkeypatch.setattr(GoogleDrive, "ListFile", mock_list_file)
 
 
 @pytest.mark.parametrize("exception", [ApiRequestError, FileNotDownloadableError])
 @pytest.mark.usefixtures("api_error")
-def test_google_drive_importer_api_error(db: Session, basic_job: dict):
+def test_google_drive_importer_api_error(db: Session, basic_job: dict) -> None:
     job = basic_job["db_job"]
     importer = GoogleDriveImporter(db, basic_job["db_job"].id)
     importer.process()

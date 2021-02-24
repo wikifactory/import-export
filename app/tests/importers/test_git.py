@@ -1,4 +1,5 @@
 import os
+from typing import Any, Dict, Generator, List
 
 import pygit2
 import pytest
@@ -14,7 +15,7 @@ from app.tests.utils import utils
 
 
 @pytest.fixture(scope="function")
-def basic_job(db: Session) -> dict:
+def basic_job(db: Session) -> Generator[Dict, None, None]:
     random_project_name = utils.random_lower_string()
     job_input = JobCreate(
         import_service="git",
@@ -33,23 +34,23 @@ def basic_job(db: Session) -> dict:
 
 
 @pytest.fixture()
-def clone_error(monkeypatch):
-    def mock_clone_repository_error(*args, **kwargs):
+def clone_error(monkeypatch: Any) -> None:
+    def mock_clone_repository_error(*args: List, **kwargs: Dict) -> None:
         raise pygit2.errors.GitError
 
     monkeypatch.setattr(pygit2, "clone_repository", mock_clone_repository_error)
 
 
 @pytest.fixture()
-def clone_repository(monkeypatch):
-    def mock_clone_repository(*args, **kwargs):
+def clone_repository(monkeypatch: Any) -> None:
+    def mock_clone_repository(*args: List, **kwargs: Dict) -> pygit2.Repository:
         return pygit2.Repository()
 
     monkeypatch.setattr(pygit2, "clone_repository", mock_clone_repository)
 
 
 @pytest.mark.usefixtures("clone_repository")
-def test_git_importer(db: Session, basic_job: dict):
+def test_git_importer(db: Session, basic_job: dict) -> None:
     job = basic_job["db_job"]
     importer = GitImporter(db, job.id)
     importer.process()
@@ -70,7 +71,7 @@ This is sample-project's README file"""
 
 
 @pytest.mark.usefixtures("clone_error")
-def test_git_importer_error(db: Session, basic_job: dict):
+def test_git_importer_error(db: Session, basic_job: dict) -> None:
     job = basic_job["db_job"]
     importer = GitImporter(db, job.id)
     importer.process()

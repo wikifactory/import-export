@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
+from app.models.job_log import JobLog
 
 
 class JobStatus(enum.Enum):
@@ -66,7 +67,7 @@ class Job(Base):
 
     path = Column(String)
 
-    log = relationship("JobLog", cascade="all, delete")
+    log = relationship(JobLog, cascade="all, delete")
 
 
 class JobDuplicated(Exception):

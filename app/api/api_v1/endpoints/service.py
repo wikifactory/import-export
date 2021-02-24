@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter
 
 from app import schemas
@@ -8,7 +10,7 @@ router = APIRouter()
 
 
 @router.post("/validate", response_model=schemas.Service)
-def validate_url(*, service_input: schemas.ServiceInput):
+def validate_url(*, service_input: schemas.ServiceInput) -> Any:
     # FIXME - rethink URL validation, as currently:
     #   - it's tied to specific platforms for git
     #   - in the code, it's tied to an exporter or importer, while it should sit on top

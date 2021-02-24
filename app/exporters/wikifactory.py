@@ -1,5 +1,6 @@
 import os
 from re import search
+from typing import IO, Dict, Optional
 
 import magic
 import pygit2
@@ -44,7 +45,7 @@ def wikifactory_api_request(
     auth_token: str,
     variables: object,
     result_path: str,
-):
+) -> Dict:
     headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else None
     transport = RequestsHTTPTransport(
         url=endpoint_url,
@@ -105,12 +106,13 @@ def wikifactory_api_request(
 wikifactory_project_regex = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
 
 
-def validate_url(url: str):
+def validate_url(url: str) -> bool:
     return bool(search(wikifactory_project_regex, url))
 
 
-def space_slug_from_url(url: str):
+def space_slug_from_url(url: str) -> Dict:
     match = search(wikifactory_project_regex, url)
+    assert match
     return match.groupdict()
 
 
@@ -118,13 +120,15 @@ class WikifactoryExporter(BaseExporter):
     def __init__(self, db: Session, job_id: str):
         self.db = db
         self.job_id = job_id
-        self.project_details = None
+        self.project_details: Optional[Dict] = None
 
-    def process(self):
+    def process(self) -> None:
         job = crud.job.get(self.db, self.job_id)
+        assert job
         crud.job.update_status(self.db, db_obj=job, status=JobStatus.EXPORTING)
 
         self.project_details = self.get_project_details()
+        assert self.project_details
 
         try:
             for (dirpath, _, filenames) in os.walk(job.path):
@@ -146,7 +150,7 @@ class WikifactoryExporter(BaseExporter):
                 self.db, db_obj=job, status=JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE
             )
 
-    def on_file_cb(self, file_path):
+    def on_file_cb(self, file_path: str) -> None:
 
         try:
             file_result = self.process_file(file_path)
@@ -182,9 +186,11 @@ class WikifactoryExporter(BaseExporter):
             # Mark the file as completed
             self.complete_file(wikifactory_file_id)
 
-    def on_finished_cb(self):
+    def on_finished_cb(self) -> None:
         # In order to finish, I need to perform the commit
         job = crud.job.get(self.db, self.job_id)
+        assert job
+        assert self.project_details
 
         variables = {
             "commitData": {
@@ -201,8 +207,10 @@ class WikifactoryExporter(BaseExporter):
             "commit.project",
         )
 
-    def process_file(self, path):
+    def process_file(self, path: str) -> Dict:
         job = crud.job.get(self.db, self.job_id)
+        assert job
+        assert self.project_details
 
         variables = {
             "fileInput": {
@@ -220,8 +228,9 @@ class WikifactoryExporter(BaseExporter):
             file_mutation, job.export_token, variables, "file.file"
         )
 
-    def get_project_details(self):
+    def get_project_details(self) -> Dict:
         job = crud.job.get(self.db, self.job_id)
+        assert job
 
         variables = space_slug_from_url(job.export_url)
 
@@ -238,8 +247,10 @@ class WikifactoryExporter(BaseExporter):
             "private": project["private"],
         }
 
-    def perform_mutation_operation(self, file_path, file_id):
+    def perform_mutation_operation(self, file_path: str, file_id: str) -> None:
         job = crud.job.get(self.db, self.job_id)
+        assert job
+        assert self.project_details
 
         variables = {
             "operationData": {
@@ -257,7 +268,8 @@ class WikifactoryExporter(BaseExporter):
             "operation.project",
         )
 
-    def upload_file(self, file_handle, file_url):
+    def upload_file(self, file_handle: IO, file_url: str) -> None:
+        assert self.project_details
 
         headers = {
             "x-amz-acl": "private"
@@ -277,8 +289,10 @@ class WikifactoryExporter(BaseExporter):
         file_name = os.path.basename(file_handle.name)
         print(f"File {file_name} uploaded to s3")
 
-    def complete_file(self, file_id):
+    def complete_file(self, file_id: str) -> None:
         job = crud.job.get(self.db, self.job_id)
+        assert job
+        assert self.project_details
 
         variables = {
             "fileInput": {

@@ -1,6 +1,7 @@
 import os
 import re
 from re import search
+from typing import Any
 
 import pygit2
 from sqlalchemy.orm import Session
@@ -15,14 +16,14 @@ popular_git_regex = r"^https?:\/\/(www\.)?git(hub|lab)\.com\/(?P<organization>[\
 
 
 class IgnoreCredentialsCallbacks(pygit2.RemoteCallbacks):
-    def credentials(self, url, username_from_url, allowed_types):
+    def credentials(self, url: str, username_from_url: str, allowed_types: int) -> None:
         return None
 
-    def certificate_check(self, certificate, valid, host):
+    def certificate_check(self, certificate: Any, valid: bool, host: str) -> bool:
         return True
 
 
-def validate_url(url):
+def validate_url(url: str) -> bool:
     return bool(search(popular_git_regex, url))
 
 
@@ -31,8 +32,9 @@ class GitImporter(BaseImporter):
         self.job_id = job_id
         self.db = db
 
-    def process(self):
+    def process(self) -> None:
         job = crud.job.get(self.db, self.job_id)
+        assert job
         crud.job.update_status(self.db, db_obj=job, status=JobStatus.IMPORTING)
         url = job.import_url
 

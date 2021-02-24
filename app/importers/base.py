@@ -1,6 +1,9 @@
+from sqlalchemy.orm import Session
+
+
 class BaseImporter:
-    def __init__(self, db, job_id):
+    def __init__(self, db: Session, job_id: str):
         raise NotImplementedError()
 
-    def process(self):
+    def process(self) -> None:
         raise NotImplementedError()

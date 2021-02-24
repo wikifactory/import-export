@@ -1,10 +1,11 @@
 import os
 from pathlib import Path
 from re import search
+from typing import Dict
 
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
-from pydrive.files import ApiRequestError, FileNotDownloadableError
+from pydrive.files import ApiRequestError, FileNotDownloadableError, GoogleDriveFile
 from sqlalchemy.orm import Session
 
 from app import crud
@@ -17,16 +18,17 @@ googledrive_folder_regex = r"^https?:\/\/drive\.google\.com\/drive\/(u\/[0-9]+\/
 folder_mimetype = "application/vnd.google-apps.folder"
 
 
-def is_folder(item):
+def is_folder(item: GoogleDriveFile) -> bool:
     return item.get("mimeType") == folder_mimetype
 
 
-def folder_id_from_url(url):
+def folder_id_from_url(url: str) -> str:
     match = search(googledrive_folder_regex, url)
+    assert match
     return match.group("folder_id")
 
 
-def validate_url(url):
+def validate_url(url: str) -> bool:
     return bool(search(googledrive_folder_regex, url))
 
 
@@ -34,10 +36,10 @@ class GoogleDriveImporter(BaseImporter):
     def __init__(self, db: Session, job_id: str):
         self.db = db
         self.job_id = job_id
-        self.drive = None
-        self.tree_root = {"item": None, "children": {}}
+        self.drive: GoogleDrive = None
+        self.tree_root: Dict = {"item": None, "children": {}}
 
-    def build_tree_recursively(self, current_level, folder_id):
+    def build_tree_recursively(self, current_level: Dict, folder_id: str) -> None:
         item_list = self.drive.ListFile(
             {"q": f"'{folder_id}' in parents and trashed=false"}
         ).GetList()
@@ -51,7 +53,9 @@ class GoogleDriveImporter(BaseImporter):
             if is_folder(item):
                 self.build_tree_recursively(node.get("children"), item.get("id"))
 
-    def download_tree_recursively(self, current_level, accumulated_path):
+    def download_tree_recursively(
+        self, current_level: Dict, accumulated_path: str
+    ) -> None:
         Path(accumulated_path).mkdir(parents=True, exist_ok=True)
 
         for (name, node) in current_level.items():
@@ -62,8 +66,9 @@ class GoogleDriveImporter(BaseImporter):
             else:
                 item.GetContentFile(item_full_path)
 
-    def process(self):
+    def process(self) -> None:
         job = crud.job.get(self.db, self.job_id)
+        assert job
         crud.job.update_status(self.db, db_obj=job, status=JobStatus.IMPORTING)
 
         gauth = GoogleAuth()
@@ -103,7 +108,9 @@ class GoogleDriveImporter(BaseImporter):
             return
 
         manifest_input = ManifestInput(job_id=job.id, source_url=job.import_url)
-        manifest_input.project_name = self.tree_root.get("item").get("title")
+        root_item = self.tree_root.get("item")
+        assert root_item
+        manifest_input.project_name = root_item.get("title")
         # TODO - add project_description to manifest
 
         crud.manifest.update_or_create(self.db, obj_in=manifest_input)

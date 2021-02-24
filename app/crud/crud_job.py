@@ -1,5 +1,6 @@
 import os
 
+from pydantic.main import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import not_
 
@@ -20,7 +21,7 @@ from app.models.job_log import JobLog
 from app.schemas.job import JobCreate
 
 
-class CRUDJob(CRUDBase[Job, JobCreate, None]):
+class CRUDJob(CRUDBase[Job, JobCreate, BaseModel]):
     def create(self, db: Session, *, obj_in: JobCreate) -> Job:
         active_job_exists = (
             db.query(Job)

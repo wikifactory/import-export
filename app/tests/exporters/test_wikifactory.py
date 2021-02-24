@@ -1,5 +1,5 @@
 import os
-from typing import Any
+from typing import Any, Dict, Generator, List
 
 import gql
 import pytest
@@ -41,7 +41,7 @@ from app.tests.utils import utils
         ("https://wikifactory.com/@/not-here", False),
     ],
 )
-def test_validate_url(project_url: str, is_valid: bool):
+def test_validate_url(project_url: str, is_valid: bool) -> None:
     assert validate_url(project_url) is is_valid
 
 
@@ -56,7 +56,7 @@ def test_validate_url(project_url: str, is_valid: bool):
         ("http://wikifactory.com/+wikifactory/试验", "+wikifactory", "试验"),
     ],
 )
-def test_space_slug_from_url(project_url: str, space: str, slug: str):
+def test_space_slug_from_url(project_url: str, space: str, slug: str) -> None:
     result = space_slug_from_url(project_url)
     assert result.get("space") == space
     assert result.get("slug") == slug
@@ -74,7 +74,7 @@ dummy_gql = gql.gql(
 )
 
 
-def generate_mock_gql_response(response_dict):
+def generate_mock_gql_response(response_dict: Dict) -> ExecutionResult:
     response = requests.Response()
     response.status_code = response_dict.get("status_code") or requests.codes["ok"]
     response.raise_for_status()
@@ -85,9 +85,9 @@ def generate_mock_gql_response(response_dict):
 
 @pytest.fixture
 def mock_gql_response_assert_variables(
-    monkeypatch, response_dict: dict, expected_variables: dict
-):
-    def mock_execute(*args, **kwargs):
+    monkeypatch: Any, response_dict: dict, expected_variables: dict
+) -> None:
+    def mock_execute(*args: List, **kwargs: Dict) -> ExecutionResult:
         if expected_variables:
             assert kwargs.get("variable_values") == expected_variables
 
@@ -97,17 +97,17 @@ def mock_gql_response_assert_variables(
 
 
 @pytest.fixture
-def mock_gql_response(monkeypatch, response_dict: dict):
+def mock_gql_response(monkeypatch: Any, response_dict: dict) -> None:
     # mocking the response is a direct mock on the output/result
     # it doesn't use any data from the query/mutation requested
-    def mock_execute(*args, **kwargs):
+    def mock_execute(*args: List, **kwargs: Dict) -> ExecutionResult:
         return generate_mock_gql_response(response_dict)
 
     monkeypatch.setattr(gql.Client, "execute", mock_execute)
 
 
 @pytest.fixture
-def basic_job(db: Session) -> dict:
+def basic_job(db: Session) -> Generator[Dict, None, None]:
     random_project_name = utils.random_lower_string()
     job_input = JobCreate(
         import_service="git",
@@ -178,7 +178,7 @@ def exporter(db: Session, basic_job: dict) -> WikifactoryExporter:
     ],
 )
 @pytest.mark.usefixtures("mock_gql_response")
-def test_api_auth_error():
+def test_api_auth_error() -> None:
     with pytest.raises(AuthRequired):
         wikifactory_api_request(dummy_gql, "this-is-a-token", {}, "dummy.result")
 
@@ -202,16 +202,16 @@ def test_api_auth_error():
     ],
 )
 @pytest.mark.usefixtures("mock_gql_response")
-def test_api_user_error():
+def test_api_user_error() -> None:
     with pytest.raises(UserErrors):
         wikifactory_api_request(dummy_gql, "this-is-a-token", {}, "dummy.result")
 
 
 @pytest.mark.parametrize("response_dict", [{"data": {}}])
 @pytest.mark.usefixtures("mock_gql_response")
-def test_api_no_result_path_error():
+def test_api_no_result_path_error() -> None:
     with pytest.raises(NoResultPath):
-        wikifactory_api_request(dummy_gql, "this-is-a-token", {}, None)
+        wikifactory_api_request(dummy_gql, "this-is-a-token", {}, "")
 
 
 @pytest.mark.parametrize(
@@ -222,7 +222,7 @@ def test_api_no_result_path_error():
     ],
 )
 @pytest.mark.usefixtures("mock_gql_response")
-def test_api_no_result_error(result_path):
+def test_api_no_result_error(result_path: str) -> None:
     with pytest.raises(NoResult):
         wikifactory_api_request(dummy_gql, "this-is-a-token", {}, result_path)
 
@@ -244,7 +244,7 @@ def test_api_no_result_error(result_path):
     ],
 )
 @pytest.mark.usefixtures("mock_gql_response")
-def test_api_success(result_path, expected_result):
+def test_api_success(result_path: str, expected_result: Dict) -> None:
     result = wikifactory_api_request(dummy_gql, "this-is-a-token", {}, result_path)
     assert result == expected_result
 
@@ -283,14 +283,11 @@ def test_api_success(result_path, expected_result):
     ],
 )
 @pytest.mark.usefixtures("mock_gql_response")
-def test_get_project_details(exporter, expected_details):
+def test_get_project_details(
+    exporter: WikifactoryExporter, expected_details: Dict
+) -> None:
     project_details = exporter.get_project_details()
     assert project_details == expected_details
-
-
-@pytest.fixture
-def dummy_file_response():
-    return
 
 
 @pytest.mark.parametrize(
@@ -326,8 +323,12 @@ def dummy_file_response():
 )
 @pytest.mark.usefixtures("mock_gql_response_assert_variables")
 def test_process_element_mutation_variables(
-    basic_job, exporter, project_details, job_path, file_path
-):
+    basic_job: Dict,
+    exporter: WikifactoryExporter,
+    project_details: Dict,
+    job_path: str,
+    file_path: str,
+) -> None:
     job = basic_job["db_job"]
     job.path = job_path
     exporter.project_details = project_details
@@ -358,9 +359,13 @@ def test_process_element_mutation_variables(
     ],
 )
 def test_upload_file_headers(
-    monkeypatch, exporter, file_path, project_details, expected_headers
-):
-    def mock_put_assert_headers(*args, **kwargs):
+    monkeypatch: Any,
+    exporter: WikifactoryExporter,
+    file_path: str,
+    project_details: Dict,
+    expected_headers: Dict,
+) -> None:
+    def mock_put_assert_headers(*args: List, **kwargs: Dict) -> requests.Response:
         headers = kwargs.get("headers")
         assert headers == expected_headers
         response = requests.Response()
@@ -377,8 +382,8 @@ def test_upload_file_headers(
         exporter.upload_file(file_handle, file_url)
 
 
-def test_upload_file_error(monkeypatch, exporter):
-    def mock_put_status_error(*args, **kwargs):
+def test_upload_file_error(monkeypatch: Any, exporter: WikifactoryExporter) -> None:
+    def mock_put_status_error(*args: List, **kwargs: Dict) -> requests.Response:
         response = requests.Response()
         response.status_code = requests.codes["expectation_failed"]
         return response
@@ -424,7 +429,9 @@ def test_upload_file_error(monkeypatch, exporter):
     ],
 )
 @pytest.mark.usefixtures("mock_gql_response_assert_variables")
-def test_complete_file_mutation_variables(exporter, project_details, file_id):
+def test_complete_file_mutation_variables(
+    exporter: WikifactoryExporter, project_details: Dict, file_id: str
+) -> None:
     exporter.project_details = project_details
     exporter.complete_file(file_id)
 
@@ -459,13 +466,13 @@ def test_complete_file_mutation_variables(exporter, project_details, file_id):
 )
 @pytest.mark.usefixtures("mock_gql_response_assert_variables")
 def test_perform_mutation_operation_variables(
-    basic_job,
-    exporter,
-    project_path,
-    project_details,
-    file_id,
-    file_path,
-):
+    basic_job: Dict,
+    exporter: WikifactoryExporter,
+    project_path: str,
+    project_details: Dict,
+    file_id: str,
+    file_path: str,
+) -> None:
     job = basic_job["db_job"]
     job.path = project_path
     exporter.project_details = project_details
@@ -497,13 +504,17 @@ def test_perform_mutation_operation_variables(
     ],
 )
 @pytest.mark.usefixtures("mock_gql_response_assert_variables")
-def test_on_finished_cb_mutation_variables(exporter, project_details):
+def test_on_finished_cb_mutation_variables(
+    exporter: WikifactoryExporter, project_details: Dict
+) -> None:
     exporter.project_details = project_details
     exporter.on_finished_cb()
 
 
-def test_on_file_cb_user_errors(monkeypatch, exporter):
-    def mock_process_file(*args, **kwargs):
+def test_on_file_cb_user_errors(
+    monkeypatch: Any, exporter: WikifactoryExporter
+) -> None:
+    def mock_process_file(*args: List, **kwargs: Dict) -> None:
         raise UserErrors()
 
     monkeypatch.setattr(exporter, "process_file", mock_process_file)
@@ -512,8 +523,8 @@ def test_on_file_cb_user_errors(monkeypatch, exporter):
         exporter.on_file_cb("")
 
 
-def test_on_file_cb_no_file_id(monkeypatch: Any, exporter: WikifactoryExporter):
-    def mock_process_file(*args, **kwargs):
+def test_on_file_cb_no_file_id(monkeypatch: Any, exporter: WikifactoryExporter) -> None:
+    def mock_process_file(*args: List, **kwargs: Dict) -> Dict:
         return {"id": None, "uploadUrl": None}
 
     monkeypatch.setattr(exporter, "process_file", mock_process_file)
@@ -538,18 +549,18 @@ def test_wikifactory_exporter(
     basic_job: dict,
     exporter: WikifactoryExporter,
     job_path: str,
-):
-    def mock_get_project_details(*args, **kwargs):
+) -> None:
+    def mock_get_project_details(*args: List, **kwargs: Dict) -> Dict:
         return project_details
 
     monkeypatch.setattr(exporter, "get_project_details", mock_get_project_details)
 
-    def mock_on_file_cb(*args, **kwargs):
+    def mock_on_file_cb(*args: List, **kwargs: Dict) -> None:
         pass
 
     monkeypatch.setattr(exporter, "on_file_cb", mock_on_file_cb)
 
-    def mock_on_finished_cb(*args, **kwargs):
+    def mock_on_finished_cb(*args: List, **kwargs: Dict) -> None:
         pass
 
     monkeypatch.setattr(exporter, "on_finished_cb", mock_on_finished_cb)
