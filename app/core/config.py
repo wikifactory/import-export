@@ -50,9 +50,9 @@ class Settings(BaseSettings):
         if "pytest" in sys.modules:
             return PostgresDsn.build(
                 scheme="postgresql",
-                user=values.get("PYTEST_POSTGRES_SERVER"),
-                password=values.get("PYTEST_POSTGRES_USER"),
-                host=values.get("PYTEST_POSTGRES_PASSWORD"),
+                user=values.get("PYTEST_POSTGRES_USER"),
+                password=values.get("PYTEST_POSTGRES_PASSWORD"),
+                host=values.get("PYTEST_POSTGRES_SERVER"),
                 path=f"/{values.get('PYTEST_POSTGRES_DB') or ''}",
             )
         return PostgresDsn.build(
