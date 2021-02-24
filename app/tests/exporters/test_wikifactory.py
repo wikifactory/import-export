@@ -13,7 +13,6 @@ from app.exporters.base import AuthRequired
 from app.exporters.wikifactory import (
     FileUploadFailed,
     NoResult,
-    NoResultPath,
     UserErrors,
     WikifactoryExporter,
     space_slug_from_url,
@@ -205,13 +204,6 @@ def test_api_auth_error() -> None:
 def test_api_user_error() -> None:
     with pytest.raises(UserErrors):
         wikifactory_api_request(dummy_gql, "this-is-a-token", {}, "dummy.result")
-
-
-@pytest.mark.parametrize("response_dict", [{"data": {}}])
-@pytest.mark.usefixtures("mock_gql_response")
-def test_api_no_result_path_error() -> None:
-    with pytest.raises(NoResultPath):
-        wikifactory_api_request(dummy_gql, "this-is-a-token", {}, "")
 
 
 @pytest.mark.parametrize(

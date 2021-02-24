@@ -32,10 +32,6 @@ class NoResult(Exception):
     pass
 
 
-class NoResultPath(Exception):
-    pass
-
-
 class UserErrors(Exception):
     pass
 
@@ -62,10 +58,7 @@ def wikifactory_api_request(
             raise AuthRequired()
         raise http_error
 
-    try:
-        result_path_root, *result_path_rest = result_path.split(".")
-    except AttributeError:
-        raise NoResultPath()
+    result_path_root, *result_path_rest = result_path.split(".")
 
     if execution_result.errors:
         for error in execution_result.errors:
