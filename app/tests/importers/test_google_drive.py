@@ -271,7 +271,7 @@ def test_google_drive_importer(db: Session, basic_job: dict, remote_data: dict):
 
 
 @pytest.fixture
-def api_error(monkeypatch, remote_data: dict, exception: Exception):
+def api_error(monkeypatch, exception: Exception):
     def mock_list_file(self, param={}):
         raise exception()
 
