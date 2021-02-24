@@ -1,8 +1,9 @@
-import uuid
+import os
 
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import not_
 
+from app.core.config import settings
 from app.crud.base import CRUDBase
 from app.models.job import (
     Job,
@@ -33,20 +34,9 @@ class CRUDJob(CRUDBase[Job, JobCreate, None]):
         if active_job_exists:
             raise JobDuplicated()
 
-        db_obj = Job(
-            id=uuid.uuid4(),
-            import_url=obj_in.import_url,
-            import_token=obj_in.import_token,
-            import_service=obj_in.import_service,
-            export_url=obj_in.export_url,
-            export_token=obj_in.export_token,
-            export_service=obj_in.export_service,
-        )
-        # TODO - create folder
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
+        db_job = super().create(db, obj_in=obj_in)
+        db_job.path = os.path.join(settings.DOWNLOAD_BASE_PATH, str(db_job.id))
+        return db_job
 
     def update_status(self, db: Session, *, db_obj: Job, status: JobStatus) -> Job:
         if db_obj.status is status:
