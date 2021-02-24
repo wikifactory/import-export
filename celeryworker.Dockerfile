@@ -7,10 +7,10 @@ RUN pip install pipenv
 COPY Pipfile Pipfile.lock /app/
 RUN pipenv install --system --dev
 
-# COPY ./app /app
+COPY . /app
 ENV PYTHONPATH=/app
 
-COPY ./scripts/worker-start.sh /app/worker-start.sh
+COPY ./worker-start.sh /app/worker-start.sh
 
 RUN chmod +x /app/worker-start.sh
 
