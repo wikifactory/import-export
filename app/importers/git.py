@@ -1,5 +1,6 @@
 import os
 import re
+from re import search
 
 import pygit2
 from sqlalchemy.orm import Session
@@ -9,6 +10,9 @@ from app.importers.base import BaseImporter
 from app.models.job import JobStatus
 from app.schemas import ManifestInput
 
+# FIXME - there's git beyond github and gitlab
+popular_git_regex = r"^https?:\/\/(www\.)?git(hub|lab)\.com\/(?P<organization>[\w-]+)/(?P<project>[\w-]+)"
+
 
 class IgnoreCredentialsCallbacks(pygit2.RemoteCallbacks):
     def credentials(self, url, username_from_url, allowed_types):
@@ -16,6 +20,10 @@ class IgnoreCredentialsCallbacks(pygit2.RemoteCallbacks):
 
     def certificate_check(self, certificate, valid, host):
         return True
+
+
+def validate_url(url):
+    return bool(search(popular_git_regex, url))
 
 
 class GitImporter(BaseImporter):

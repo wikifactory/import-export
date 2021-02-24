@@ -26,15 +26,16 @@ def folder_id_from_url(url):
     return match.group("folder_id")
 
 
+def validate_url(url):
+    return bool(search(googledrive_folder_regex, url))
+
+
 class GoogleDriveImporter(BaseImporter):
     def __init__(self, db: Session, job_id: str):
         self.db = db
         self.job_id = job_id
         self.drive = None
         self.tree_root = {"item": None, "children": {}}
-
-    def validate_url(self, url):
-        return bool(search(googledrive_folder_regex, url))
 
     def build_tree_recursively(self, current_level, folder_id):
         item_list = self.drive.ListFile(

@@ -1,24 +1,29 @@
 import pytest
+import requests
+from fastapi.testclient import TestClient
 
-from app.routers.service_discover import discover_service_for_url_list
+from app.core.config import settings
+from app.tests.utils import utils
 
 
 @pytest.mark.parametrize(
-    "url, right_service",
+    "data, service_name",
     [
-        ("https://www.dropbox.com/home/folder/otherfolder/file", "dropbox"),
-        ("http://www.dropbox.com/home/anyfolder/anotherone", "dropbox"),
+        ({"url": "https://github.com/wikifactory/sample-project"}, "git"),
         (
-            "https://drive.google.com/drive/u/0/folders/1-123456sYN8jsTeEpqrr5hSB0adKasdf",
-            "googledrive",
+            {
+                "url": f"https://drive.google.com/drive/u/0/folders/{utils.random_lower_string()}"
+            },
+            "google_drive",
         ),
-        ("https://github.com/user/repo", "git"),
-        ("ssh://git@github.com/<user>/<repository name>.git", "unknown"),
-        ("ssh://git@github.com/user/repository_name.git", "git"),
-        ("www.com", "unknown"),
-        ("https://www.thingiverse.com/thing:1234567", "unknown"),
+        ({"url": "https://wikifactory.com/+wikifactory/sample-project"}, "wikifactory"),
+        ({"url": "https://wikifactory.com/@user/sample-project"}, "wikifactory"),
+        ({"url": "https://www.thingiverse.com/thing:1234567"}, "unknown"),
     ],
 )
-def test_service_discover(url, right_service):
-    discovered_service = discover_service_for_url_list([url])
-    assert right_service == discovered_service[url]
+def test_validate_service(client: TestClient, data: dict, service_name: str) -> None:
+    response = client.post(f"{settings.API_V1_STR}/service/validate", json=data)
+    assert response.status_code == requests.codes["ok"]
+    validation = response.json()
+    assert validation
+    assert validation.get("name") == service_name
