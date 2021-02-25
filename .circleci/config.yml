@@ -51,7 +51,7 @@ jobs:
           name: pipenv
           command: |
             sudo pip install pipenv
-            pipenv install --pre --dev
+            pipenv install --dev
           when: always
 
       - save_cache:
