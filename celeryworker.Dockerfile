@@ -2,16 +2,14 @@ FROM python:3.7
 
 WORKDIR /app
 
-# Install dependencies
-RUN pip install pipenv
-COPY Pipfile Pipfile.lock /app/
-RUN pipenv install --system --dev
-
 COPY . /app
 ENV PYTHONPATH=/app
+COPY ./worker-start.sh /worker-start.sh
+RUN chmod +x /worker-start.sh
 
-COPY ./worker-start.sh /app/worker-start.sh
+# Install dependencies
+RUN pip install pipenv
+ARG INSTALL_DEV=false
+RUN bash -c "if [ $INSTALL_DEV == 'true' ] ; then pipenv install --system --dev ; else pipenv install --system ; fi"
 
-RUN chmod +x /app/worker-start.sh
-
-CMD ["bash", "/app/worker-start.sh"]
+CMD ["bash", "/worker-start.sh"]

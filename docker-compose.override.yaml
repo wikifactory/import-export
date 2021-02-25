@@ -1,0 +1,62 @@
+version: "3.8"
+services: 
+
+  postgres-db:
+    image: "postgres:12.6"
+    env_file:
+      - .env
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - database-data:/var/lib/postgresql/data # To persist content
+    command: ["postgres", "-c", "log_statement=all"]
+    networks:
+      - default
+
+  backend:
+    depends_on: 
+      - "postgres-db"
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+      args:
+        INSTALL_DEV: ${INSTALL_DEV-true}
+    working_dir: /app
+    env_file:
+      - .env
+    environment:
+      - SERVER_HOST=https://${DOMAIN?Variable not set}
+      - DAP_PORT=5678
+      - DOWNLOAD_BASE_PATH=${DOWNLOAD_BASE_PATH}
+    ports: 
+      - "8000:80"
+      - 127.0.0.1:5678:5678
+    volumes:
+      - ./app:/app/app
+    command: /start-reload.sh
+ 
+    networks:
+      - default
+
+  celeryworker:
+    depends_on: 
+      - "postgres-db"
+    build:
+      context: .
+      dockerfile: celeryworker.Dockerfile
+      args:
+        INSTALL_DEV: ${INSTALL_DEV-true}
+    env_file:
+      - .env
+    environment:
+      - SERVER_HOST=https://${DOMAIN?Variable not set}
+      - DAP_PORT=5679
+    ports:
+      - 127.0.0.1:5679:5679
+    volumes:
+      - ./app:/app/app
+    networks:
+      - default
+
+volumes:
+  database-data:

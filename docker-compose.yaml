@@ -1,68 +1,40 @@
 version: "3.8"
 services: 
-
-  postgres-db:
-    image: "postgres:12.6"
-    env_file:
-      - .env
-    environment:
-      - PGDATA=/var/lib/postgresql/data/pgdata
-    volumes:
-      - database-data:/var/lib/postgresql/data # To persist content
-    ports:
-      - "8004:5432"
-    command: ["postgres", "-c", "log_statement=all"]
-    networks:
-      - default
-
   redis: 
     image: "redis:6.0.10-alpine"
-    ports:
-      - "8002:6379"
     networks:
       - default
 
-  backend: 
+  backend:
+    depends_on: 
+      - "redis"
     build:
       context: .
       dockerfile: backend.Dockerfile
-    env_file:
-      - .env
+      args:
+        INSTALL_DEV: ${INSTALL_DEV-false}
+    working_dir: /app
     environment:
       - SERVER_NAME=${DOMAIN?Variable not set}
       - SERVER_HOST=https://${DOMAIN?Variable not set}
     ports: 
-      - "8000:80"
-    volumes:
-      - ./app:/app/app
-    depends_on: 
-      - "postgres-db"
+      - "80:80"
     networks:
       - default
-    command: /start-reload.sh
 
   celeryworker:
+    depends_on: 
+      - "redis"
     build:
       context: .
       dockerfile: celeryworker.Dockerfile
-    env_file:
-      - .env
+      args:
+        INSTALL_DEV: ${INSTALL_DEV-false}
     environment:
-      - RUN=celery worker -A app.worker -l info -Q main-queue -c 1
       - SERVER_NAME=${DOMAIN?Variable not set}
       - SERVER_HOST=https://${DOMAIN?Variable not set}
-    depends_on: 
-      - "redis"
-      - "postgres-db"
-    ports:
-      - "8003:8000"
     networks:
       - default
-
-networks:
-  traefik-public:
-    # Allow setting it to false for testing
-    external: ${TRAEFIK_PUBLIC_NETWORK_IS_EXTERNAL-true}
 
 volumes:
   database-data:
