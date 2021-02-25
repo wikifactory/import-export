@@ -9,6 +9,8 @@ jobs:
 
     docker:
       - image: "circleci/python:3.7"
+        environment:
+          PIPENV_VENV_IN_PROJECT: true
       - image: circleci/postgres
         command: postgres -c 'fsync=off' -c 'synchronous_commit=off' -c 'full_page_writes=off'
         environment:
@@ -31,7 +33,6 @@ jobs:
       PYTEST_POSTGRES_DB: test
       DOWNLOAD_BASE_PATH: /tmp
       BROKER_URL: redis://redis:6379/0
-      BACKEND_URL: redis://redis:6379/0
 
     working_directory: ~/import-export
 
@@ -42,19 +43,39 @@ jobs:
       - setup_remote_docker:
           docker_layer_caching: true
 
+      - restore_cache:
+          name: restore pipenv cache
+          key: venv-python-3.7-{{ checksum "Pipfile.lock" }}
+
       - run:
-          name: python VENV
+          name: pipenv
           command: |
             sudo pip install pipenv
             pipenv install --pre --dev
           when: always
+
+      - save_cache:
+          name: save pipenv cache
+          key: venv-python-3.7-{{ checksum "Pipfile.lock" }}
+          paths:
+            - .venv
             
+      - restore_cache:
+          name: restore pre-commit cache
+          key: pre-commit-{{ checksum ".pre-commit-config.yaml" }}
+
       - run:
           name: pre-commit checks
           command: |
             pipenv run pre-commit install
             pipenv run pre-commit run --all --show-diff-on-failure
           when: always
+
+      - save_cache:
+          name: save pre-commit cache
+          key: pre-commit-{{ checksum ".pre-commit-config.yaml" }}
+          paths:
+            - ~/.cache/pre-commit
 
       - run:
           name: Build using docker-compose
