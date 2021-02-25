@@ -3,6 +3,8 @@ import uuid
 
 from sqlalchemy import Column, Enum, String
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.sql.sqltypes import Integer
 
 from app.db.base_class import Base
 
@@ -47,6 +49,21 @@ terminated_job_statuses = [
     JobStatus.CANCELLED,
 ]
 
+importing_statuses = [
+    JobStatus.IMPORTING,
+    JobStatus.IMPORTING_ERROR_AUTHORIZATION_REQUIRED,
+    JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE,
+    JobStatus.IMPORTING_SUCCESSFULLY,
+]
+
+
+exporting_statuses = [
+    JobStatus.EXPORTING,
+    JobStatus.EXPORTING_ERROR_AUTHORIZATION_REQUIRED,
+    JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE,
+    JobStatus.EXPORTING_SUCCESSFULLY,
+]
+
 
 class Job(Base):
     __tablename__ = "job"
@@ -63,7 +80,37 @@ class Job(Base):
 
     status = Column(Enum(JobStatus), default=JobStatus.PENDING, nullable=False)
 
+    total_items = Column(Integer, nullable=False, server_default="0")
+    imported_items = Column(Integer, nullable=False, server_default="0")
+    exported_items = Column(Integer, nullable=False, server_default="0")
+
     path = Column(String)
+
+    @hybrid_property
+    def general_progress(self) -> float:
+        # FIXME
+
+        if self.status is JobStatus.PENDING:
+            return 0
+        elif self.status in terminated_job_statuses:
+            return 1
+
+        if self.status in importing_statuses:
+            return 0.25
+        elif self.status in exporting_statuses:
+            return 0.75
+
+        return 0.5
+
+    @hybrid_property
+    def status_progress(self) -> float:
+        if self.total_items:
+            if self.status in importing_statuses:
+                return self.imported_items / self.total_items
+            elif self.status in exporting_statuses:
+                return self.exported_items / self.total_items
+
+        return 0
 
 
 class JobDuplicated(Exception):

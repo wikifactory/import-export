@@ -18,6 +18,8 @@ class BaseJob(BaseModel):
 class Job(BaseJob):
     id: uuid.UUID
     status: JobStatus
+    general_progress: float
+    status_progress: float
 
     class Config:
         orm_mode = True
