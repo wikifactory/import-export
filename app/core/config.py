@@ -2,7 +2,7 @@ import os
 import sys
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import AnyHttpUrl, BaseSettings, HttpUrl, PostgresDsn, validator
+from pydantic import AnyHttpUrl, AnyUrl, BaseSettings, HttpUrl, PostgresDsn, validator
 
 
 class Settings(BaseSettings):
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     @validator("SENTRY_DSN", pre=True)
     def sentry_dsn_can_be_blank(cls, v: str) -> Optional[str]:
-        if len(v) == 0:
+        if not v:
             return None
         return v
 
@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
+
+    PYTEST_POSTGRES_SERVER: Optional[str]
+    PYTEST_POSTGRES_USER: Optional[str]
+    PYTEST_POSTGRES_PASSWORD: Optional[str]
+    PYTEST_POSTGRES_DB: Optional[str]
+
     SQLALCHEMY_DATABASE_URI: Optional[PostgresDsn] = None
 
     @validator("SQLALCHEMY_DATABASE_URI", pre=True)
@@ -44,9 +50,9 @@ class Settings(BaseSettings):
         if "pytest" in sys.modules:
             return PostgresDsn.build(
                 scheme="postgresql",
-                user=values.get("PYTEST_POSTGRES_SERVER"),
-                password=values.get("PYTEST_POSTGRES_USER"),
-                host=values.get("PYTEST_POSTGRES_PASSWORD"),
+                user=values.get("PYTEST_POSTGRES_USER"),
+                password=values.get("PYTEST_POSTGRES_PASSWORD"),
+                host=values.get("PYTEST_POSTGRES_SERVER"),
                 path=f"/{values.get('PYTEST_POSTGRES_DB') or ''}",
             )
         return PostgresDsn.build(
@@ -68,8 +74,7 @@ class Settings(BaseSettings):
         # if directory can't be written, raise ValueError(v)
         return v
 
-    BROKER_URL: str
-    BACKEND_URL: str
+    BROKER_URL: Optional[AnyUrl]
 
     class Config:
         case_sensitive = True

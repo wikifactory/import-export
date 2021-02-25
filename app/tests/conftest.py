@@ -10,14 +10,20 @@ from app.db.session import SessionLocal, engine
 from app.main import app
 
 
-@pytest.fixture(scope="session")
-def db() -> Generator:
+@pytest.fixture(scope="session", autouse=True)
+def setup_db() -> None:
     session = SessionLocal()
     if not database_exists(engine.url):
         create_database(engine.url)
     else:
         Base.metadata.drop_all(engine)
     init_db(session)
+    session.close()
+
+
+@pytest.fixture(scope="session")
+def db() -> Generator:
+    session = SessionLocal()
     yield session
     session.close()
 
