@@ -1,8 +1,9 @@
 import uuid
-from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, HttpUrl
+
+from app.models.job import JobStatus
 
 
 class BaseJob(BaseModel):
@@ -16,7 +17,7 @@ class BaseJob(BaseModel):
 
 class Job(BaseJob):
     id: uuid.UUID
-    status: Enum
+    status: JobStatus
 
     class Config:
         orm_mode = True
