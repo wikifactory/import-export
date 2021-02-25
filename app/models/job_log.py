@@ -17,5 +17,5 @@ class JobLog(Base):
         backref=backref("log", uselist=False, cascade="all, delete"),
     )
     timestamp = Column(DateTime, server_default=func.now())
-    from_status = Column(Enum(JobStatus), nullable=False)
+    from_status = Column(Enum(JobStatus))
     to_status = Column(Enum(JobStatus), nullable=False)
