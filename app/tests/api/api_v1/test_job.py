@@ -1,4 +1,5 @@
-from typing import Any, Dict, List
+import os
+from typing import Any, Dict, Generator, List
 
 import pytest
 import requests
@@ -10,6 +11,7 @@ from app.core.celery_app import celery_app
 from app.core.config import settings
 from app.models.job import JobStatus
 from app.schemas.job import JobCreate
+from app.tests.utils import utils
 
 
 @pytest.fixture
@@ -18,6 +20,25 @@ def dummy_process_job(monkeypatch: Any) -> None:
         pass
 
     monkeypatch.setattr(celery_app, "send_task", send_task_mock)
+
+
+@pytest.fixture
+def basic_job(db: Session) -> Generator[Dict, None, None]:
+    random_project_name = utils.random_lower_string()
+    job_input = JobCreate(
+        import_service="git",
+        import_url=f"https://github.com/wikifactory/{random_project_name}",
+        export_service="wikifactory",
+        export_url=f"https://wikifactory.com/@user/{random_project_name}",
+    )
+    db_job = crud.job.create(db, obj_in=job_input)
+    db_job.path = os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project")
+    yield {
+        "job_input": job_input,
+        "db_job": db_job,
+        "project_name": random_project_name,
+    }
+    crud.job.remove(db, id=db_job.id)
 
 
 @pytest.mark.parametrize(
@@ -82,14 +103,43 @@ def test_post_job_error(
     assert response.status_code == status_code
 
 
-def test_get_job(db: Session, client: TestClient) -> None:
-    job_create = JobCreate(
-        import_url="https://github.com/wikifactory/job-progress",
-        import_service="git",
-        export_url="https://wikifactory.com/+wikifactory/job-progress",
-        export_service="wikifactory",
-    )
-    db_job = crud.job.create(db, obj_in=job_create)
+# FIXME - generate more test cases
+@pytest.mark.parametrize(
+    "status, item_data, expected_progress",
+    [
+        (JobStatus.PENDING, None, {"general": 0, "status": 0}),
+        (JobStatus.IMPORTING, None, {"general": 0.25, "status": 0}),
+        (
+            JobStatus.IMPORTING,
+            {"total": 2, "imported": 1},
+            {"general": 0.25, "status": 0.5},
+        ),
+        (JobStatus.EXPORTING, None, {"general": 0.75, "status": 0}),
+        (
+            JobStatus.EXPORTING,
+            {"total": 2, "exported": 1},
+            {"general": 0.75, "status": 0.5},
+        ),
+    ],
+)
+def test_get_job(
+    db: Session,
+    basic_job: dict,
+    client: TestClient,
+    status: JobStatus,
+    item_data: dict,
+    expected_progress: dict,
+) -> None:
+    db_job = basic_job["db_job"]
+    db_job.status = status
+
+    if item_data:
+        db_job.total_items = item_data.get("total", 0)
+        db_job.imported_items = item_data.get("imported", 0)
+        db_job.exported_items = item_data.get("exported", 0)
+
+    db.add(db_job)
+    db.commit()
     response = client.get(f"{settings.API_V1_STR}/job/{db_job.id}")
     job = response.json()
     assert job
@@ -100,6 +150,9 @@ def test_get_job(db: Session, client: TestClient) -> None:
     assert job.get("export_url") == db_job.export_url
     assert job.get("export_service") == db_job.export_service
     assert job.get("export_token") == db_job.export_token
+    if expected_progress:
+        assert job.get("general_progress") == expected_progress.get("general")
+        assert job.get("status_progress") == expected_progress.get("status")
 
 
 def test_get_job_error(client: TestClient) -> None:
