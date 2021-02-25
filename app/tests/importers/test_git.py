@@ -65,7 +65,7 @@ def test_git_importer(db: Session, basic_job: dict) -> None:
         job.manifest.project_description
         == """# sample-project
 
-This is sample-project's README file"""
+This is sample-project's README file\n"""
     )
     assert job.manifest.source_url == job.import_url
 
