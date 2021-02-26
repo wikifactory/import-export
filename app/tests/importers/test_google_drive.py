@@ -4,6 +4,7 @@ from re import search
 from typing import Any, Dict, Generator, List, Optional
 
 import pytest
+from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 from pydrive.files import ApiRequestError, FileNotDownloadableError, GoogleDriveFile
 from sqlalchemy.orm import Session
@@ -30,23 +31,33 @@ class GoogleDriveFileListMock:
 
 @pytest.fixture
 def pydrive_mock(monkeypatch: Any, remote_data: dict) -> None:
+    def mock_fetch_metadata(self: Any, *args: List, **kwargs: Dict) -> None:
+        item_id = self.metadata.get("id") or self.get("id")
+        if not item_id:
+            raise ApiRequestError
+        file_metadata = remote_data[item_id].get("item")
+        self.UpdateMetadata(file_metadata)
+
     def mock_list_file(self: Any, param: Dict = {}) -> GoogleDriveFileListMock:
-        match = search(r"'(?P<item_id>[-\w]+)'(?P<in_parents> in parents)?", param["q"])
-        assert match
-        item_id = match.group("item_id")
-        get_children = bool(match.group("in_parents"))
+        files_query = param.get("q")
+        if not files_query:
+            raise ApiRequestError
 
         list_object = GoogleDriveFileListMock()
 
-        if get_children:
-            list_object.mocked_list = remote_data[item_id].get("children", [])
-        else:
-            item = remote_data[item_id].get("item")
-            list_object.mocked_list = [item] if item else []
+        match = search(r"'(?P<item_id>[-\w]+)' in parents", files_query)
+        assert match
+        item_id = match.group("item_id")
+        list_object.mocked_list = remote_data[item_id].get("children", [])
 
         return list_object
 
+    def mock_authenticate(*args: List, **kwargs: Dict) -> GoogleAuth:
+        return GoogleAuth()
+
+    monkeypatch.setattr(GoogleDriveImporter, "authenticate", mock_authenticate)
     monkeypatch.setattr(GoogleDrive, "ListFile", mock_list_file)
+    monkeypatch.setattr(GoogleDriveFile, "FetchMetadata", mock_fetch_metadata)
 
 
 @pytest.fixture
@@ -69,6 +80,7 @@ def basic_job(db: Session) -> Generator[Dict, None, None]:
     job_input = JobCreate(
         import_service="google_drive",
         import_url=f"https://drive.google.com/drive/u/0/folders/{random_folder_id}",
+        import_token="google-drive-valid-token",
         export_service="wikifactory",
         export_url=f"https://wikifactory.com/@user/{random_folder_id}",
     )
@@ -279,10 +291,11 @@ def test_google_drive_importer(db: Session, basic_job: dict, remote_data: dict) 
 
 @pytest.fixture
 def api_error(monkeypatch: Any, exception: Exception) -> None:
-    def mock_list_file(self: Any, param: Dict = {}) -> None:
+    def mock_api_exception(*args: List, **kwargs: Dict) -> None:
         raise exception
 
-    monkeypatch.setattr(GoogleDrive, "ListFile", mock_list_file)
+    monkeypatch.setattr(GoogleDrive, "ListFile", mock_api_exception)
+    monkeypatch.setattr(GoogleDriveFile, "FetchMetadata", mock_api_exception)
 
 
 @pytest.mark.parametrize("exception", [ApiRequestError, FileNotDownloadableError])
