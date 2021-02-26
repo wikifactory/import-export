@@ -7,6 +7,7 @@ import pygit2
 import requests
 from gql import Client
 from gql.transport.requests import RequestsHTTPTransport
+from requests.models import HTTPError
 from sqlalchemy.orm import Session
 
 from app import crud
@@ -47,29 +48,31 @@ def wikifactory_api_request(
         url=endpoint_url,
         headers=headers,
     )
+
     session = Client(transport=transport, fetch_schema_from_transport=False)
 
     try:
         # FIXME - this seems to be a sync request. In the future,
         # we should look into making requests async
         execution_result = session.execute(graphql_document, variable_values=variables)
-    except requests.HTTPError as http_error:
-        if http_error.response.status_code == requests.codes["unauthorized"]:
-            raise AuthRequired()
-        raise http_error
+    except HTTPError as http_error:
+        if http_error.response.status_code is requests.codes["unauthorized"]:
+            raise AuthRequired
+        raise NotReachable(http_error)
+    except Exception as gql_error:
+        error_message = str(gql_error)
+        unauthorized_messages = ["unauthorized", "token is invalid"]
+
+        for message in unauthorized_messages:
+            if message in error_message:
+                raise AuthRequired
+
+        raise NotReachable(error_message)
 
     result_path_root, *result_path_rest = result_path.split(".")
 
-    if execution_result.errors:
-        for error in execution_result.errors:
-            if "unauthorized request" in error.get(
-                "message"
-            ) or "token is invalid" in error.get("message"):
-                raise AuthRequired()
-        # FIXME trigger an exception on other GraphQL errors?
-
     try:
-        result = execution_result.data[result_path_root]
+        result = execution_result[result_path_root]
     except KeyError:
         raise NoResult()
 
@@ -138,6 +141,7 @@ class WikifactoryExporter(BaseExporter):
                 self.db, db_obj=job, status=JobStatus.FINISHED_SUCCESSFULLY
             )
         except (FileUploadFailed, UserErrors):
+
             # FIXME - improve error handling
             crud.job.update_status(
                 self.db, db_obj=job, status=JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE
@@ -232,7 +236,7 @@ class WikifactoryExporter(BaseExporter):
                 project_query, job.export_token, variables, "project.result"
             )
         except (NoResult, UserErrors):
-            raise NotReachable("Project nof found in Wikifactory")
+            raise NotReachable("Project not found in Wikifactory")
 
         return {
             "project_id": project["id"],
@@ -274,7 +278,7 @@ class WikifactoryExporter(BaseExporter):
         try:
             response = requests.put(file_url, data=file_handle, headers=headers)
             response.raise_for_status()
-        except requests.HTTPError:
+        except HTTPError:
             raise FileUploadFailed(
                 f"There was an error uploading the file. Error code: {response.status_code}"
             )

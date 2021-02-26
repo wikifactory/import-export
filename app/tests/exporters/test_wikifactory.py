@@ -4,7 +4,7 @@ from typing import Any, Dict, Generator, List
 import gql
 import pytest
 import requests
-from graphql.execution import ExecutionResult
+from gql import Client
 from sqlalchemy.orm import Session
 
 from app import crud
@@ -73,24 +73,28 @@ dummy_gql = gql.gql(
 )
 
 
-def generate_mock_gql_response(response_dict: Dict) -> ExecutionResult:
+def generate_mock_gql_response(client: Client, response_dict: Dict) -> Dict:
     response = requests.Response()
     response.status_code = response_dict.get("status_code") or requests.codes["ok"]
     response.raise_for_status()
-    return ExecutionResult(
-        data=response_dict.get("data"), errors=response_dict.get("errors")
-    )
+
+    errors = response_dict.get("errors")
+    if errors:
+        # https://github.com/graphql-python/gql/blob/e76c576c135a229504213e51fecbd44b251b4039/gql/client.py#L78
+        raise Exception(str(errors[0]))
+
+    return response_dict.get("data", {})
 
 
 @pytest.fixture
 def mock_gql_response_assert_variables(
     monkeypatch: Any, response_dict: dict, expected_variables: dict
 ) -> None:
-    def mock_execute(*args: List, **kwargs: Dict) -> ExecutionResult:
+    def mock_execute(self: Client, *args: List, **kwargs: Dict) -> Dict:
         if expected_variables:
             assert kwargs.get("variable_values") == expected_variables
 
-        return generate_mock_gql_response(response_dict)
+        return generate_mock_gql_response(self, response_dict)
 
     monkeypatch.setattr(gql.Client, "execute", mock_execute)
 
@@ -99,8 +103,8 @@ def mock_gql_response_assert_variables(
 def mock_gql_response(monkeypatch: Any, response_dict: dict) -> None:
     # mocking the response is a direct mock on the output/result
     # it doesn't use any data from the query/mutation requested
-    def mock_execute(*args: List, **kwargs: Dict) -> ExecutionResult:
-        return generate_mock_gql_response(response_dict)
+    def mock_execute(self: Client, *args: List, **kwargs: Dict) -> Dict:
+        return generate_mock_gql_response(self, response_dict)
 
     monkeypatch.setattr(gql.Client, "execute", mock_execute)
 
