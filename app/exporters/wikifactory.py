@@ -47,6 +47,7 @@ def wikifactory_api_request(
         url=endpoint_url,
         headers=headers,
     )
+
     session = Client(transport=transport, fetch_schema_from_transport=False)
 
     try:
@@ -60,16 +61,8 @@ def wikifactory_api_request(
 
     result_path_root, *result_path_rest = result_path.split(".")
 
-    if execution_result.errors:
-        for error in execution_result.errors:
-            if "unauthorized request" in error.get(
-                "message"
-            ) or "token is invalid" in error.get("message"):
-                raise AuthRequired()
-        # FIXME trigger an exception on other GraphQL errors?
-
     try:
-        result = execution_result.data[result_path_root]
+        result = execution_result[result_path_root]
     except KeyError:
         raise NoResult()
 
@@ -96,7 +89,9 @@ def wikifactory_api_request(
     return result
 
 
-wikifactory_project_regex = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
+wikifactory_project_regex = (
+    r"^(?:http(s)?:\/\/)?wikifactory.com\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
+)
 
 
 def validate_url(url: str) -> bool:
@@ -138,6 +133,7 @@ class WikifactoryExporter(BaseExporter):
                 self.db, db_obj=job, status=JobStatus.FINISHED_SUCCESSFULLY
             )
         except (FileUploadFailed, UserErrors):
+
             # FIXME - improve error handling
             crud.job.update_status(
                 self.db, db_obj=job, status=JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE

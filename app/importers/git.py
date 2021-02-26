@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 from re import search
 from typing import Any
 
@@ -63,6 +64,12 @@ class GitImporter(BaseImporter):
                 if readme.is_file()
                 and re.search(r"README.md$", readme.name, re.IGNORECASE)
             ]
+
+        # Remove the .git folder
+        try:
+            shutil.rmtree(os.path.join(job.path, ".git"))
+        except Exception:
+            print("Error deleting .git folder")
 
         if readme_candidates:
             chosen_readme = readme_candidates[0]
