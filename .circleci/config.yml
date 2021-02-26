@@ -9,6 +9,8 @@ jobs:
 
     docker:
       - image: "circleci/python:3.7"
+        environment:
+          PIPENV_VENV_IN_PROJECT: true
       - image: circleci/postgres
         command: postgres -c 'fsync=off' -c 'synchronous_commit=off' -c 'full_page_writes=off'
         environment:
@@ -17,28 +19,63 @@ jobs:
       - image: circleci/redis
     resource_class: small
     environment:
-      POSTGRES_ROOT_DSN: postgresql://postgres:postgres@localhost/postgres
-      POSTGRES_TEST_DSN: postgresql://postgres:postgres@localhost/dido_test
+      SERVER_NAME: localhost
+      SERVER_HOST: http://localhost
+      PROJECT_NAME: import-export
+      BACKEND_CORS_ORIGINS: "[\"http://localhost:8000\"]"
+      POSTGRES_SERVER: localhost
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      PYTEST_POSTGRES_SERVER: localhost
+      PYTEST_POSTGRES_USER: postgres
+      PYTEST_POSTGRES_PASSWORD: postgres
+      PYTEST_POSTGRES_DB: test
+      DOWNLOAD_BASE_PATH: /tmp
+      BROKER_URL: redis://redis:6379/0
 
-    working_directory: ~/dido
+    working_directory: ~/import-export
 
     steps:
 
       - checkout
+
       - setup_remote_docker:
           docker_layer_caching: true
+
+      - restore_cache:
+          name: restore pipenv cache
+          key: venv-python-3.7-{{ checksum "Pipfile.lock" }}
+
       - run:
-          name: python VENV
+          name: pipenv
           command: |
             sudo pip install pipenv
-            pipenv install --pre --dev
+            pipenv install --dev
           when: always
+
+      - save_cache:
+          name: save pipenv cache
+          key: venv-python-3.7-{{ checksum "Pipfile.lock" }}
+          paths:
+            - .venv
             
+      - restore_cache:
+          name: restore pre-commit cache
+          key: pre-commit-{{ checksum ".pre-commit-config.yaml" }}
+
       - run:
-          name: Code formatting
+          name: pre-commit checks
           command: |
-            cd app & pipenv run black --check .
+            pipenv run pre-commit install
+            pipenv run pre-commit run --all --show-diff-on-failure
           when: always
+
+      - save_cache:
+          name: save pre-commit cache
+          key: pre-commit-{{ checksum ".pre-commit-config.yaml" }}
+          paths:
+            - ~/.cache/pre-commit
 
       - run:
           name: Build using docker-compose
@@ -46,17 +83,12 @@ jobs:
             docker-compose build
 
       - run:
-          name: flake8
-          command: |
-            pipenv run flake8
-          when: always
-      
-      - run:
           name: unit-tests
           command: |
             rm -f ~/.gitconfig
+            rm -f .env
             mkdir test-results
-            pipenv run pytest -k "not needs_alpha" --junitxml=test-results/junit.xml
+            pipenv run pytest --junitxml=test-results/junit.xml
           when: always  # run even if there is a flake8 error
 
       - store_test_results:

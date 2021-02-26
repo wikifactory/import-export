@@ -1,36 +1,19 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.cors import CORSMiddleware
 
+from app.api.api_v1.api import api_router
+from app.core.config import settings
 
-import uvicorn
-import os
+app = FastAPI(title=settings.PROJECT_NAME)
 
-from app.routers import manifests
+# Set all CORS enabled origins
+if settings.BACKEND_CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-
-fastapi_app = FastAPI()
-fastapi_app.include_router(manifests.router)
-
-
-TMP_FOLDER = "/tmp/outputs/"
-
-fastapi_app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Check if the /tmp/outputs folder exists
-try:
-    if not os.path.exists(TMP_FOLDER):
-        print("Creating tmp folder")
-        os.makedirs(TMP_FOLDER)
-
-except Exception as e:
-    print(e)
-
-if __name__ == "__main__":
-    print("Starting....")
-    uvicorn.run(fastapi_app, host="0.0.0.0", port=os.getenv("PORT"))
+app.include_router(api_router, prefix=settings.API_V1_STR)
