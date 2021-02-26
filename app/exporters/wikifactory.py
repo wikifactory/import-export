@@ -226,7 +226,7 @@ class WikifactoryExporter(BaseExporter):
                 project_query, job.export_token, variables, "project.result"
             )
         except (NoResult, UserErrors):
-            raise NotReachable("Project nof found in Wikifactory")
+            raise NotReachable("Project not found in Wikifactory")
 
         return {
             "project_id": project["id"],
