@@ -29,7 +29,6 @@ services:
       - DAP_PORT=5680
       - DOWNLOAD_BASE_PATH=${DOWNLOAD_BASE_PATH}
     ports: 
-      - "8000:80"
       - 127.0.0.1:5680:5680
     volumes:
       - ./app:/app/app

@@ -18,7 +18,7 @@ services:
       - SERVER_NAME=${DOMAIN?Variable not set}
       - SERVER_HOST=https://${DOMAIN?Variable not set}
     ports: 
-      - "80:80"
+      - "${BACKEND_PORT-8000}:80"
     networks:
       - default
 
