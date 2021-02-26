@@ -3,6 +3,9 @@ from pathlib import Path
 from re import search
 from typing import Dict
 
+import httplib2
+from googleapiclient.discovery import build
+from oauth2client.client import AccessTokenCredentials, AccessTokenCredentialsError
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 from pydrive.files import ApiRequestError, FileNotDownloadableError, GoogleDriveFile
@@ -39,6 +42,30 @@ class GoogleDriveImporter(BaseImporter):
         self.drive: GoogleDrive = None
         self.tree_root: Dict = {"item": None, "children": {}}
 
+    def authenticate(self, token: str) -> GoogleAuth:
+        if not token:
+            raise AccessTokenCredentialsError
+
+        gauth = GoogleAuth()
+        # FIXME - for security and trust purposes, it is probably better
+        # to use the "drive.file" scope (because "drive.readonly" can read the full Drive contents).
+        # As a downside, it needs the private folders to be shared with the app in advance.
+
+        # FIXME - replace access token approach. Google API tokens expire in an hour,
+        # so they might have expired if there's a high load
+        gauth.credentials = AccessTokenCredentials(
+            token,
+            user_agent="https://www.googleapis.com/oauth2/v1/certs",
+        )
+
+        if gauth.http is None:
+            gauth.http = httplib2.Http(timeout=gauth.http_timeout)
+
+        gauth.http = gauth.credentials.authorize(gauth.http)
+        gauth.service = build("drive", "v2", http=gauth.http, cache_discovery=False)
+
+        return gauth
+
     def build_tree_recursively(self, current_level: Dict, folder_id: str) -> None:
         item_list = self.drive.ListFile(
             {"q": f"'{folder_id}' in parents and trashed=false"}
@@ -71,25 +98,24 @@ class GoogleDriveImporter(BaseImporter):
         assert job
         crud.job.update_status(self.db, db_obj=job, status=JobStatus.IMPORTING)
 
-        gauth = GoogleAuth()
-        # FIXME - for security and trust purposes, it is probably better
-        # to use the "drive.file" scope (because "drive.readonly" can read the full Drive contents).
-        # As a downside, it needs the private folders to be shared with the app in advance.
-        gauth.settings["oauth_scope"] = "https://www.googleapis.com/auth/drive.readonly"
-
-        if job.import_token:
-            gauth.Auth(job.import_token)
+        try:
+            gauth = self.authenticate(job.import_token)
+        except AccessTokenCredentialsError:
+            crud.job.update_status(
+                self.db,
+                db_obj=job,
+                status=JobStatus.IMPORTING_ERROR_AUTHORIZATION_REQUIRED,
+            )
+            return
 
         self.drive = GoogleDrive(gauth)
-
         folder_id = folder_id_from_url(job.import_url)
 
         try:
-            res = self.drive.ListFile(
-                {"q": f"'{folder_id}' and trashed=false"}
-            ).GetList()
-
-            [root_folder] = res
+            root_folder = self.drive.CreateFile({"id": folder_id})
+            root_folder.FetchMetadata()
+            assert root_folder.get("title")
+            assert is_folder(root_folder)
 
             self.tree_root["item"] = root_folder
 
@@ -97,9 +123,7 @@ class GoogleDriveImporter(BaseImporter):
             # FIXME - this can probably be improved by flattening the tree first
             # and then starting downloads in parallel
             self.download_tree_recursively(self.tree_root["children"], job.path)
-        except (ApiRequestError, FileNotDownloadableError):
-            # FIXME - store/pass this API clients can use it
-            # auth_url = gauth.GetAuthUrl()
+        except (ApiRequestError, FileNotDownloadableError, AssertionError):
             crud.job.update_status(
                 self.db,
                 db_obj=job,
