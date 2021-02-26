@@ -89,9 +89,7 @@ def wikifactory_api_request(
     return result
 
 
-wikifactory_project_regex = (
-    r"^(?:http(s)?:\/\/)?wikifactory.com\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
-)
+wikifactory_project_regex = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
 
 
 def validate_url(url: str) -> bool:

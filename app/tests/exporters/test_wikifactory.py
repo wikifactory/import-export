@@ -73,20 +73,21 @@ dummy_gql = gql.gql(
 )
 
 
-def generate_mock_gql_response(response_dict: Dict) -> ExecutionResult:
-    response = requests.Response()
-    response.status_code = response_dict.get("status_code") or requests.codes["ok"]
-    response.raise_for_status()
-    return ExecutionResult(
-        data=response_dict.get("data"), errors=response_dict.get("errors")
-    )
+def generate_mock_gql_response(response_dict: Dict) -> Any:
+
+    if "data" in response_dict:
+        return response_dict.get("data")
+    elif "errors" in response_dict:
+        return response_dict.get("errors")
+    else:
+        return None
 
 
 @pytest.fixture
 def mock_gql_response_assert_variables(
     monkeypatch: Any, response_dict: dict, expected_variables: dict
 ) -> None:
-    def mock_execute(*args: List, **kwargs: Dict) -> ExecutionResult:
+    def mock_execute(*args: List, **kwargs: Dict) -> Any:
         if expected_variables:
             assert kwargs.get("variable_values") == expected_variables
 
@@ -132,9 +133,9 @@ def exporter(db: Session, basic_job: dict) -> WikifactoryExporter:
 @pytest.mark.parametrize(
     "response_dict",
     [
-        {"status_code": requests.codes["unauthorized"]},
-        {"errors": [{"message": "unauthorized request"}]},
-        {"errors": [{"message": "token is invalid"}]},
+        # {"status_code": requests.codes["unauthorized"]},
+        # {"errors": [{"message": "unauthorized request"}]},
+        # {"errors": [{"message": "token is invalid"}]},
         {
             "data": {
                 "dummy": {
