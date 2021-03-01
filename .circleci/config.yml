@@ -33,8 +33,6 @@ jobs:
       PYTEST_POSTGRES_DB: test
       DOWNLOAD_BASE_PATH: /tmp
       BROKER_URL: redis://redis:6379/0
-      DOCKER_IMAGE_BACKEND: ${DOCKER_REGISTRY}/${CIRCLE_PROJECT_REPONAME}/backend
-      DOCKER_IMAGE_CELERYWORKER: ${DOCKER_REGISTRY}/${CIRCLE_PROJECT_REPONAME}/celeryworker
 
     working_directory: ~/import-export
 
@@ -101,20 +99,21 @@ jobs:
           use-docker-credentials-store: true
 
       - run:
-          name: Trim branch name for tagging
+          name: Set up docker build variables
           command: |
             echo 'export TRIM_BRANCH=`echo $CIRCLE_BRANCH | sed -r 's,/,-,g'`' >> $BASH_ENV
+            echo 'export SHORT_HASH=$($CIRCLE_SHA1 | cut -c -7)' >> $BASH_ENV
+            source $BASH_ENV
+            echo export TAG=$TRIM_BRANCH.$CIRCLE_BUILD_NUM.$SHORT_HASH,$TRIM_BRANCH >> $BASH_ENV
+            echo export DOCKER_IMAGE_BACKEND=$DOCKER_REGISTRY/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/backend >> $BASH_ENV
+            echo export DOCKER_IMAGE_CELERYWORKER=$DOCKER_REGISTRY/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/celeryworker >> $BASH_ENV
 
       - run:
           name: Build using docker-compose
-          environment:
-            TAG: ${TRIM_BRANCH}.${CIRCLE_BUILD_NUM}.${CIRCLE_SHA1:0:7},${TRIM_BRANCH}
           command: |
             docker-compose -f docker-compose.yaml build
 
       - run:
           name: Push using docker-compose
-          environment:
-            TAG: ${TRIM_BRANCH}.${CIRCLE_BUILD_NUM}.${CIRCLE_SHA1:0:7},${TRIM_BRANCH}
           command: |
             docker-compose -f docker-compose.yaml push
