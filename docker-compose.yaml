@@ -6,7 +6,7 @@ services:
       - default
 
   backend:
-    image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG}'
+    image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
     depends_on:
       - "redis"
     build:
@@ -24,7 +24,7 @@ services:
       - default
 
   celeryworker:
-    image: '${DOCKER_IMAGE_CELERYWORKER?Variable not set}:${TAG}'
+    image: '${DOCKER_IMAGE_CELERYWORKER?Variable not set}:${TAG-latest}'
     depends_on:
       - "redis"
     build:
