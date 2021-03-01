@@ -33,6 +33,8 @@ jobs:
       PYTEST_POSTGRES_DB: test
       DOWNLOAD_BASE_PATH: /tmp
       BROKER_URL: redis://redis:6379/0
+      DOCKER_IMAGE_BACKEND: ${DOCKER_REGISTRY}/${CIRCLE_PROJECT_REPONAME}/backend
+      DOCKER_IMAGE_CELERYWORKER: ${DOCKER_REGISTRY}/${CIRCLE_PROJECT_REPONAME}/celeryworker
 
     working_directory: ~/import-export
 
@@ -59,7 +61,7 @@ jobs:
           key: venv-python-3.7-{{ checksum "Pipfile.lock" }}
           paths:
             - .venv
-            
+
       - restore_cache:
           name: restore pre-commit cache
           key: pre-commit-{{ checksum ".pre-commit-config.yaml" }}
@@ -92,7 +94,27 @@ jobs:
       - store_artifacts:
           path: test-results
 
+      - docker/check:
+          docker-username: CIRCLE_PROJECT_USERNAME
+          docker-password: GITHUB_TOKEN
+          registry: docker.pkg.github.com
+          use-docker-credentials-store: true
+
+      - run:
+          name: Trim branch name for tagging
+          command: |
+            echo 'export TRIM_BRANCH=`echo $CIRCLE_BRANCH | sed -r 's,/,-,g'`' >> $BASH_ENV
+
       - run:
           name: Build using docker-compose
+          environment:
+            TAG: ${TRIM_BRANCH}.${CIRCLE_BUILD_NUM}.${CIRCLE_SHA1:0:7},${TRIM_BRANCH}
           command: |
-            docker-compose build
+            docker-compose -f docker-compose.yaml build
+
+      - run:
+          name: Push using docker-compose
+          environment:
+            TAG: ${TRIM_BRANCH}.${CIRCLE_BUILD_NUM}.${CIRCLE_SHA1:0:7},${TRIM_BRANCH}
+          command: |
+            docker-compose -f docker-compose.yaml push
