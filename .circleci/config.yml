@@ -85,13 +85,13 @@ jobs:
           use-docker-credentials-store: true
 
       - run:
-        name: unit-tests
-        command: |
-          rm -f ~/.gitconfig
-          rm -f .env
-          mkdir test-results
-          pipenv run pytest --junitxml=test-results/junit.xml
-        when: always  # run even if there is a flake8 error
+          name: unit-tests
+          command: |
+            rm -f ~/.gitconfig
+            rm -f .env
+            mkdir test-results
+            pipenv run pytest --junitxml=test-results/junit.xml
+          when: always  # run even if there is a flake8 error
 
       - store_test_results:
           path: test-results
