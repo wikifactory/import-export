@@ -85,12 +85,27 @@ jobs:
           use-docker-credentials-store: true
 
       - run:
+        name: unit-tests
+        command: |
+          rm -f ~/.gitconfig
+          rm -f .env
+          mkdir test-results
+          pipenv run pytest --junitxml=test-results/junit.xml
+        when: always  # run even if there is a flake8 error
+
+      - store_test_results:
+          path: test-results
+
+      - store_artifacts:
+          path: test-results
+
+      - run:
           name: Set up docker build variables
           command: |
             echo 'export TRIM_BRANCH=`echo $CIRCLE_BRANCH | sed -r 's,/,-,g'`' >> $BASH_ENV
-            echo 'export SHORT_HASH=$($CIRCLE_SHA1 | cut -c -7)' >> $BASH_ENV
+            echo 'export SHORT_HASH=$(echo $CIRCLE_SHA1 | cut -c -7)' >> $BASH_ENV
             source $BASH_ENV
-            echo export TAG=$TRIM_BRANCH.$CIRCLE_BUILD_NUM.$SHORT_HASH,$TRIM_BRANCH >> $BASH_ENV
+            echo export TAG=$TRIM_BRANCH.$CIRCLE_BUILD_NUM.$SHORT_HASH >> $BASH_ENV
             echo export DOCKER_IMAGE_BACKEND=$DOCKER_REGISTRY/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME-backend >> $BASH_ENV
             echo export DOCKER_IMAGE_CELERYWORKER=$DOCKER_REGISTRY/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME-celeryworker >> $BASH_ENV
 
@@ -98,22 +113,7 @@ jobs:
           name: Build using docker-compose
           command: |
             docker-compose -f docker-compose.yaml build
-
-      - run:
-          name: unit-tests
-          command: |
-            docker-compose 
-            rm -f ~/.gitconfig
-            rm -f .env
-            mkdir test-results
-            pipenv run pytest --junitxml=test-results/junit.xml
-          when: always  # run even if there is a flake8 error
-
-      - store_test_results:
-          path: test-results
-
-      - store_artifacts:
-          path: test-results
+            docker tag $DOCKER_IMAGE_BACKEND:$TAG $DOCKER_IMAGE_BACKEND:$TRIM_BRANCH
 
       - run:
           name: Push using docker-compose
