@@ -78,11 +78,6 @@ jobs:
             - ~/.cache/pre-commit
 
       - run:
-          name: Build using docker-compose
-          command: |
-            docker-compose build
-
-      - run:
           name: unit-tests
           command: |
             rm -f ~/.gitconfig
@@ -96,3 +91,8 @@ jobs:
 
       - store_artifacts:
           path: test-results
+
+      - run:
+          name: Build using docker-compose
+          command: |
+            docker-compose build
