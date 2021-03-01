@@ -36,5 +36,3 @@ services:
     networks:
       - default
 
-volumes:
-  database-data:
