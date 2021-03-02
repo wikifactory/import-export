@@ -1,12 +1,23 @@
 version: 2.1
 
-
 orbs:
   docker: circleci/docker@1.5.0
 
+commands:
+  image_variables:
+    steps:
+      - run:
+          name: Set up docker image names variables
+          command: |
+            echo 'export TRIM_BRANCH=`echo $CIRCLE_BRANCH | sed -r 's,/,-,g'`' >> $BASH_ENV
+            echo 'export SHORT_HASH=$(echo $CIRCLE_SHA1 | cut -c -7)' >> $BASH_ENV
+            source $BASH_ENV
+            echo export TAG=$TRIM_BRANCH.$CIRCLE_BUILD_NUM.$SHORT_HASH >> $BASH_ENV
+            echo export DOCKER_IMAGE_BACKEND=$DOCKER_REGISTRY/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME-backend >> $BASH_ENV
+            echo export DOCKER_IMAGE_CELERYWORKER=$DOCKER_REGISTRY/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME-celeryworker >> $BASH_ENV
+
 jobs:
   build:
-
     docker:
       - image: "circleci/python:3.7"
         environment:
@@ -17,7 +28,9 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgtres
       - image: circleci/redis
+
     resource_class: small
+
     environment:
       DOMAIN: localhost
       SERVER_NAME: localhost
@@ -99,15 +112,7 @@ jobs:
       - store_artifacts:
           path: test-results
 
-      - run:
-          name: Set up docker build variables
-          command: |
-            echo 'export TRIM_BRANCH=`echo $CIRCLE_BRANCH | sed -r 's,/,-,g'`' >> $BASH_ENV
-            echo 'export SHORT_HASH=$(echo $CIRCLE_SHA1 | cut -c -7)' >> $BASH_ENV
-            source $BASH_ENV
-            echo export TAG=$TRIM_BRANCH.$CIRCLE_BUILD_NUM.$SHORT_HASH >> $BASH_ENV
-            echo export DOCKER_IMAGE_BACKEND=$DOCKER_REGISTRY/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME-backend >> $BASH_ENV
-            echo export DOCKER_IMAGE_CELERYWORKER=$DOCKER_REGISTRY/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME-celeryworker >> $BASH_ENV
+      - image_variables
 
       - run:
           name: Build using docker-compose
@@ -119,3 +124,48 @@ jobs:
           name: Push using docker-compose
           command: |
             docker-compose -f docker-compose.yaml push
+
+  deploy:
+    docker:
+      - image: "circleci/python:3.7"
+    steps:
+      - image_variables
+
+      - run:
+          name: Set deployment environment and target
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "production" ]; then
+              echo 'export ENVIRONMENT=PRODUCTION' >> $BASH_ENV
+            else
+              echo 'export ENVIRONMENT=STAGING' >> $BASH_ENV
+            fi
+            echo 'export DEPLOYMENT_TARGET=$(echo \$DEPLOY_$ENVIRONMENT_\$TARGET | envsubst)' >> $BASH_ENV
+
+      - run:
+          name: Copy .env and docker-compose.yaml
+          command: |
+            sed -i 's/{ENVIRONMENT}/$ENVIRONMENT/g' .circleci/.template.env
+            envsubst < .circleci/.template.env > target.env
+            scp target.env $DEPLOYMENT_TARGET:~/.env
+            scp docker-compose.yaml DEPLOYMENT_TARGET:~/docker-compose.yaml
+
+      - run:
+          name: Update and run docker-compose
+          command: |
+            ssh -v $DEPLOYMENT_TARGET 'docker-compose pull'
+            ssh -v $DEPLOYMENT_TARGET 'docker-compose up -d'
+
+workflows:
+  version: 2.1
+  build_and_deploy:
+    jobs:
+      - build
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - main
+                - production
+                - feature/circle-deployment # FIXME
