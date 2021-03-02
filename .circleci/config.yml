@@ -152,7 +152,7 @@ jobs:
             sed -i "s/{ENVIRONMENT}/$ENVIRONMENT/g" .circleci/.template.env
             envsubst < .circleci/.template.env > target.env
             scp -oStrictHostKeyChecking=no target.env $DEPLOYMENT_TARGET:~/.env
-            scp -oStrictHostKeyChecking=no docker-compose.yaml DEPLOYMENT_TARGET:~/docker-compose.yaml
+            scp -oStrictHostKeyChecking=no docker-compose.yaml $DEPLOYMENT_TARGET:~/docker-compose.yaml
 
       - run:
           name: Update and run docker-compose
