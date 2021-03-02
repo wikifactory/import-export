@@ -1,12 +1,13 @@
 version: "3.8"
-services: 
-  redis: 
+services:
+  redis:
     image: "redis:6.0.10-alpine"
     networks:
       - default
 
   backend:
-    depends_on: 
+    image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
+    depends_on:
       - "redis"
     build:
       context: .
@@ -17,13 +18,14 @@ services:
     environment:
       - SERVER_NAME=${DOMAIN?Variable not set}
       - SERVER_HOST=https://${DOMAIN?Variable not set}
-    ports: 
+    ports:
       - "${BACKEND_PORT-8000}:80"
     networks:
       - default
 
   celeryworker:
-    depends_on: 
+    image: '${DOCKER_IMAGE_CELERYWORKER?Variable not set}:${TAG-latest}'
+    depends_on:
       - "redis"
     build:
       context: .
@@ -36,5 +38,3 @@ services:
     networks:
       - default
 
-volumes:
-  database-data:
