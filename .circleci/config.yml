@@ -128,7 +128,12 @@ jobs:
   deploy:
     docker:
       - image: "circleci/python:3.7"
+
+    working_directory: ~/import-export
+
     steps:
+      - checkout
+
       - image_variables
 
       - run:
