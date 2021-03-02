@@ -151,14 +151,14 @@ jobs:
           command: |
             sed -i "s/{ENVIRONMENT}/$ENVIRONMENT/g" .circleci/.template.env
             envsubst < .circleci/.template.env > target.env
-            scp target.env $DEPLOYMENT_TARGET:~/.env
-            scp docker-compose.yaml DEPLOYMENT_TARGET:~/docker-compose.yaml
+            scp -oStrictHostKeyChecking=no target.env $DEPLOYMENT_TARGET:~/.env
+            scp -oStrictHostKeyChecking=no docker-compose.yaml DEPLOYMENT_TARGET:~/docker-compose.yaml
 
       - run:
           name: Update and run docker-compose
           command: |
-            ssh -v $DEPLOYMENT_TARGET 'docker-compose pull'
-            ssh -v $DEPLOYMENT_TARGET 'docker-compose up -d'
+            ssh -v -oStrictHostKeyChecking=no $DEPLOYMENT_TARGET 'docker-compose pull'
+            ssh -v -oStrictHostKeyChecking=no $DEPLOYMENT_TARGET 'docker-compose up -d'
 
 workflows:
   version: 2.1
