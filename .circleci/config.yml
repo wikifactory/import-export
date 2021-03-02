@@ -139,13 +139,13 @@ jobs:
       - run:
           name: Set deployment environment and target
           command: |
-            apt-get -y install gettext-base
+            sudo apt-get -y install gettext-base
             if [ "${CIRCLE_BRANCH}" == "production" ]; then
               echo 'export ENVIRONMENT=PRODUCTION' >> $BASH_ENV
             else
               echo 'export ENVIRONMENT=STAGING' >> $BASH_ENV
             fi
-            echo 'export DEPLOYMENT_TARGET=$(echo \$DEPLOY_$ENVIRONMENT_\$TARGET | envsubst)' >> $BASH_ENV
+            echo 'export DEPLOYMENT_TARGET=$(echo \$DEPLOY_$ENVIRONMENT\_TARGET | envsubst)' >> $BASH_ENV
 
       - run:
           name: Copy .env and docker-compose.yaml
