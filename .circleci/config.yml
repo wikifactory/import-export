@@ -149,7 +149,7 @@ jobs:
       - run:
           name: Copy .env and docker-compose.yaml
           command: |
-            sed -i 's/{ENVIRONMENT}/$ENVIRONMENT/g' .circleci/.template.env
+            sed -i "s/{ENVIRONMENT}/$ENVIRONMENT/g" .circleci/.template.env
             envsubst < .circleci/.template.env > target.env
             scp target.env $DEPLOYMENT_TARGET:~/.env
             scp docker-compose.yaml DEPLOYMENT_TARGET:~/docker-compose.yaml
