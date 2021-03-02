@@ -15,6 +15,8 @@ services:
       args:
         INSTALL_DEV: ${INSTALL_DEV-false}
     working_dir: /app
+    env_file:
+      - .env
     environment:
       - SERVER_NAME=${DOMAIN?Variable not set}
       - SERVER_HOST=https://${DOMAIN?Variable not set}
@@ -32,6 +34,8 @@ services:
       dockerfile: celeryworker.Dockerfile
       args:
         INSTALL_DEV: ${INSTALL_DEV-false}
+    env_file:
+      - .env
     environment:
       - SERVER_NAME=${DOMAIN?Variable not set}
       - SERVER_HOST=https://${DOMAIN?Variable not set}
