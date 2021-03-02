@@ -139,6 +139,7 @@ jobs:
       - run:
           name: Set deployment environment and target
           command: |
+            apt-get -y install gettext-base
             if [ "${CIRCLE_BRANCH}" == "production" ]; then
               echo 'export ENVIRONMENT=PRODUCTION' >> $BASH_ENV
             else
