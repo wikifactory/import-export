@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app import crud
 from app.exporters.base import AuthRequired, BaseExporter, NotReachable
-from app.models.job import JobStatus
+from app.models.job import Job, JobStatus
 
 from .wikifactory_gql import (
     commit_contribution_mutation,
@@ -130,7 +130,7 @@ class WikifactoryExporter(BaseExporter):
             for (dirpath, _, filenames) in os.walk(job.path):
                 for name in filenames:
                     file_path = os.path.join(dirpath, name)
-                    self.on_file_cb(file_path)
+                    self.on_file_cb(job=job, file_path=file_path)
 
             self.on_finished_cb()
 
@@ -147,7 +147,7 @@ class WikifactoryExporter(BaseExporter):
                 self.db, db_obj=job, status=JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE
             )
 
-    def on_file_cb(self, file_path: str) -> None:
+    def on_file_cb(self, job: Job, file_path: str) -> None:
 
         try:
             file_result = self.process_file(file_path)
@@ -182,6 +182,9 @@ class WikifactoryExporter(BaseExporter):
 
             # Mark the file as completed
             self.complete_file(wikifactory_file_id)
+
+            # Update the exported items
+            crud.job.increment_exported_items(self.db, db_obj=job)
 
     def on_finished_cb(self) -> None:
         # In order to finish, I need to perform the commit

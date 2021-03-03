@@ -78,11 +78,14 @@ class CRUDJob(CRUDBase[Job, JobCreate, BaseModel]):
         return db_obj
 
     def increment_exported_items(self, db: Session, *, db_obj: Job) -> Job:
-        db_obj.exported_items += 1
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
+
+        db_obj = db.query(Job).filter_by(id=db_obj.id).one_or_none()
+        if db_obj:
+            db_obj.exported_items += 1
+            db.add(db_obj)
+            db.commit()
+            db.refresh(db_obj)
+            return db_obj
 
     def cancel(self, db: Session, *, db_obj: Job) -> Job:
         if not self.is_active(job=db_obj):
