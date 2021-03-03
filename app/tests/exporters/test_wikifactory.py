@@ -554,8 +554,7 @@ def test_wikifactory_exporter(
     monkeypatch.setattr(exporter, "get_project_details", mock_get_project_details)
 
     def mock_on_file_cb(*args: List, **kwargs: Dict) -> None:
-        job = crud.job.get(db, exporter.job_id)
-        crud.job.increment_exported_items(db=db, db_obj=job)
+        crud.job.increment_exported_items(db=db, job_id=exporter.job_id)
 
     monkeypatch.setattr(exporter, "on_file_cb", mock_on_file_cb)
 

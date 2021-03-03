@@ -54,27 +54,29 @@ class CRUDJob(CRUDBase[Job, JobCreate, BaseModel]):
         db.refresh(db_obj)
         return db_obj
 
-    def update_total_items(self, db: Session, *, db_obj: Job, total_items: int) -> Job:
-        db_obj.total_items = total_items
+    def update_total_items(self, db: Session, *, job_id: str, total_items: int) -> None:
+        db.query(Job).filter(Job.id == job_id).update({Job.total_items: total_items})
         db.commit()
-        return db_obj
 
     def update_imported_items(
-        self, db: Session, *, db_obj: Job, imported_items: int
-    ) -> Job:
-        db_obj.imported_items = imported_items
+        self, db: Session, *, job_id: str, imported_items: int
+    ) -> None:
+        db.query(Job).filter(Job.id == job_id).update(
+            {Job.imported_items: imported_items}
+        )
         db.commit()
-        return db_obj
 
-    def increment_imported_items(self, db: Session, *, db_obj: Job) -> Job:
-        db_obj.imported_items = Job.imported_items + 1
+    def increment_imported_items(self, db: Session, *, job_id: str) -> None:
+        db.query(Job).filter(Job.id == job_id).update(
+            {Job.imported_items: Job.imported_items + 1}
+        )
         db.commit()
-        return db_obj
 
-    def increment_exported_items(self, db: Session, *, db_obj: Job) -> Job:
-        db_obj.exported_items = Job.exported_items + 1
+    def increment_exported_items(self, db: Session, *, job_id: str) -> None:
+        db.query(Job).filter(Job.id == job_id).update(
+            {Job.exported_items: Job.exported_items + 1}
+        )
         db.commit()
-        return db_obj
 
     def cancel(self, db: Session, *, db_obj: Job) -> Job:
         if not self.is_active(job=db_obj):

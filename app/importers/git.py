@@ -87,13 +87,13 @@ class GitImporter(BaseImporter):
                 print("FILE")
                 downloaded_files += 1
 
-        job = crud.job.update_total_items(
-            self.db, db_obj=job, total_items=downloaded_files
+        crud.job.update_total_items(
+            self.db, job_id=self.job_id, total_items=downloaded_files
         )
 
         # Since we cannot process the files one by one
-        job = crud.job.update_imported_items(
-            self.db, db_obj=job, imported_items=downloaded_files
+        crud.job.update_imported_items(
+            self.db, job_id=self.job_id, imported_items=downloaded_files
         )
 
         crud.manifest.update_or_create(self.db, obj_in=manifest_input)
