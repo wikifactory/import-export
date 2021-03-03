@@ -25,6 +25,9 @@ services:
     environment:
       - SERVER_NAME=${DOMAIN?Variable not set}
       - SERVER_HOST=https://${DOMAIN?Variable not set}
+      - JOBS_BASE_PATH=${JOBS_BASE_PATH_MOUNT}
+    volumes:
+      - $JOBS_BASE_PATH_HOST:$JOBS_BASE_PATH_MOUNT
     ports:
       - "${BACKEND_PORT-8000}:80"
     logging:
@@ -49,6 +52,9 @@ services:
     environment:
       - SERVER_NAME=${DOMAIN?Variable not set}
       - SERVER_HOST=https://${DOMAIN?Variable not set}
+      - JOBS_BASE_PATH=${JOBS_BASE_PATH_MOUNT}
+    volumes:
+      - $JOBS_BASE_PATH_HOST:$JOBS_BASE_PATH_MOUNT
     logging:
       driver: "json-file"
       options:
