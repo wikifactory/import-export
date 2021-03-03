@@ -4,8 +4,6 @@ WORKDIR /app
 
 COPY . /app
 ENV PYTHONPATH=/app
-COPY ./start-reload.sh /start-reload.sh
-RUN chmod +x /start-reload.sh
 
 # Install dependencies
 RUN pip install pipenv
