@@ -516,7 +516,7 @@ def test_on_file_cb_user_errors(
     monkeypatch.setattr(exporter, "process_file", mock_process_file)
 
     with pytest.raises(FileUploadFailed):
-        exporter.on_file_cb(None, "")
+        exporter.on_file_cb("")
 
 
 def test_on_file_cb_no_file_id(monkeypatch: Any, exporter: WikifactoryExporter) -> None:
@@ -526,7 +526,7 @@ def test_on_file_cb_no_file_id(monkeypatch: Any, exporter: WikifactoryExporter) 
     monkeypatch.setattr(exporter, "process_file", mock_process_file)
 
     with pytest.raises(FileUploadFailed):
-        exporter.on_file_cb(None, "")
+        exporter.on_file_cb("")
 
 
 @pytest.mark.parametrize(

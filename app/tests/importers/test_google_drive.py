@@ -223,9 +223,8 @@ def assert_tree_directory_recursive(current_level: Dict, accumulated_path: str) 
 def test_download_tree_recursively(db: Session, basic_job: dict, tree: dict) -> None:
     importer = GoogleDriveImporter(db, basic_job["db_job"].id)
     importer.drive = GoogleDrive()
-    importer.download_tree_recursively(
-        basic_job["db_job"], tree, basic_job["db_job"].path
-    )
+    importer.job = basic_job["db_job"]
+    importer.download_tree_recursively(tree, basic_job["db_job"].path)
     assert_tree_directory_recursive(tree, basic_job["db_job"].path)
 
 
