@@ -54,6 +54,36 @@ class CRUDJob(CRUDBase[Job, JobCreate, BaseModel]):
         db.refresh(db_obj)
         return db_obj
 
+    def update_total_items(self, db: Session, *, db_obj: Job, total_items: int) -> Job:
+        db_obj.total_items = total_items
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+
+    def update_imported_items(
+        self, db: Session, *, db_obj: Job, imported_items: int
+    ) -> Job:
+        db_obj.imported_items = imported_items
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+
+    def increment_imported_items(self, db: Session, *, db_obj: Job) -> Job:
+        db_obj.imported_items += 1
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+
+    def increment_exported_items(self, db: Session, *, db_obj: Job) -> Job:
+        db_obj.exported_items += 1
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+
     def cancel(self, db: Session, *, db_obj: Job) -> Job:
         if not self.is_active(job=db_obj):
             raise JobNotCancellable()

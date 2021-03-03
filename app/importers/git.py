@@ -65,12 +65,6 @@ class GitImporter(BaseImporter):
                 and re.search(r"README.md$", readme.name, re.IGNORECASE)
             ]
 
-        # Remove the .git folder
-        try:
-            shutil.rmtree(os.path.join(job.path, ".git"))
-        except Exception:
-            print("Error deleting .git folder")
-
         if readme_candidates:
             chosen_readme = readme_candidates[0]
             # FIXME potentially dangerous!
@@ -78,6 +72,30 @@ class GitImporter(BaseImporter):
             with open(chosen_readme.path, "r") as file_handle:
                 # FIXME maybe just read up to a certain length
                 manifest_input.project_description = file_handle.read()
+
+        # Remove the .git folder
+        try:
+            shutil.rmtree(os.path.join(job.path, ".git"))
+        except Exception:
+            print("Error deleting .git folder")
+
+        # Set the number of total_items
+        with os.scandir(job.path) as directory_iterator:
+
+            downloaded_files = 0
+
+            for element in directory_iterator:
+                if element.is_file():
+                    downloaded_files += 1
+
+        job = crud.job.update_total_items(
+            self.db, db_obj=job, total_items=downloaded_files
+        )
+
+        # Since we cannot process the files one by one
+        job = crud.job.update_imported_items(
+            self.db, db_obj=job, imported_items=downloaded_files
+        )
 
         crud.manifest.update_or_create(self.db, obj_in=manifest_input)
         crud.job.update_status(

@@ -68,6 +68,8 @@ def test_git_importer(db: Session, basic_job: dict) -> None:
 This is sample-project's README file"""
     )
     assert job.manifest.source_url == job.import_url
+    assert job.total_items == 1
+    assert job.imported_items == job.total_items
 
 
 @pytest.mark.usefixtures("clone_error")
