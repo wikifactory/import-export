@@ -67,13 +67,12 @@ class CRUDJob(CRUDBase[Job, JobCreate, BaseModel]):
         return db_obj
 
     def increment_imported_items(self, db: Session, *, db_obj: Job) -> Job:
-        db_obj.imported_items += 1
+        db_obj.imported_items = Job.imported_items + 1
         db.commit()
         return db_obj
 
     def increment_exported_items(self, db: Session, *, db_obj: Job) -> Job:
-
-        db_obj.exported_items += 1
+        db_obj.exported_items = Job.exported_items + 1
         db.commit()
         return db_obj
 
