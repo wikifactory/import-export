@@ -96,7 +96,8 @@ You can run the service by doing: `docker-compose up -d` and stop it by using `d
 
 By default, the access to the database has been disabled (i.e. not exposed). If you want to access directly to that data, you must change the `docker-compose.override.yaml` file. In particular, you must expose the db port inside your computer. For example, you could do this:
 
-``` networks:
+``` 
+	networks:
       - default
     ports: 				# Add this line
       - "8004:5432"		# Add this line
