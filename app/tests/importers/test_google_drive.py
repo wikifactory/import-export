@@ -223,7 +223,9 @@ def assert_tree_directory_recursive(current_level: Dict, accumulated_path: str) 
 def test_download_tree_recursively(db: Session, basic_job: dict, tree: dict) -> None:
     importer = GoogleDriveImporter(db, basic_job["db_job"].id)
     importer.drive = GoogleDrive()
-    importer.download_tree_recursively(tree, basic_job["db_job"].path)
+    importer.download_tree_recursively(
+        basic_job["db_job"], tree, basic_job["db_job"].path
+    )
     assert_tree_directory_recursive(tree, basic_job["db_job"].path)
 
 
@@ -265,6 +267,7 @@ def remote_data(basic_job: Dict) -> Dict:
                 },
             ],
         },
+        "total_items": 2,
     }
 
 
@@ -287,6 +290,8 @@ def test_google_drive_importer(db: Session, basic_job: dict, remote_data: dict) 
         == remote_data[basic_job["folder_id"]]["item"]["title"]
     )
     assert job.manifest.source_url == job.import_url
+
+    assert job.imported_items == remote_data["total_items"]
 
 
 @pytest.fixture

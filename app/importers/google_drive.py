@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app import crud
 from app.importers.base import BaseImporter
-from app.models.job import JobStatus
+from app.models.job import Job, JobStatus
 from app.schemas import ManifestInput
 
 googledrive_folder_regex = r"^https?:\/\/drive\.google\.com\/drive\/(u\/[0-9]+\/)?folders\/(?P<folder_id>[-\w]{25,})"
@@ -81,7 +81,7 @@ class GoogleDriveImporter(BaseImporter):
                 self.build_tree_recursively(node.get("children"), item.get("id"))
 
     def download_tree_recursively(
-        self, current_level: Dict, accumulated_path: str
+        self, job: Job, current_level: Dict, accumulated_path: str
     ) -> None:
         Path(accumulated_path).mkdir(parents=True, exist_ok=True)
 
@@ -89,9 +89,12 @@ class GoogleDriveImporter(BaseImporter):
             item = node.get("item")
             item_full_path = os.path.join(accumulated_path, name)
             if is_folder(item):
-                self.download_tree_recursively(node.get("children"), item_full_path)
+                self.download_tree_recursively(
+                    job, node.get("children"), item_full_path
+                )
             else:
                 item.GetContentFile(item_full_path)
+                crud.job.increment_imported_items(self.db, db_obj=job)
 
     def process(self) -> None:
         job = crud.job.get(self.db, self.job_id)
@@ -122,7 +125,7 @@ class GoogleDriveImporter(BaseImporter):
             self.build_tree_recursively(self.tree_root["children"], folder_id)
             # FIXME - this can probably be improved by flattening the tree first
             # and then starting downloads in parallel
-            self.download_tree_recursively(self.tree_root["children"], job.path)
+            self.download_tree_recursively(job, self.tree_root["children"], job.path)
         except (ApiRequestError, FileNotDownloadableError, AssertionError):
             crud.job.update_status(
                 self.db,
