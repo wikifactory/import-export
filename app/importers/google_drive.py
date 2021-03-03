@@ -140,6 +140,9 @@ class GoogleDriveImporter(BaseImporter):
         manifest_input.project_name = root_item.get("title")
         # TODO - add project_description to manifest
 
+        # Set the number of total_items
+        crud.job.update_total_items(self.db, db_obj=job, total_items=job.imported_items)
+
         crud.manifest.update_or_create(self.db, obj_in=manifest_input)
         crud.job.update_status(
             self.db, db_obj=job, status=JobStatus.IMPORTING_SUCCESSFULLY
