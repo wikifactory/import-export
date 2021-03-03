@@ -18,22 +18,6 @@ jobs:
 
     resource_class: small
 
-    environment:
-      DOMAIN: localhost
-      SERVER_NAME: localhost
-      SERVER_HOST: http://localhost
-      BACKEND_CORS_ORIGINS: "[\"http://localhost:8000\"]"
-      POSTGRES_SERVER: localhost
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
-      PYTEST_POSTGRES_SERVER: localhost
-      PYTEST_POSTGRES_USER: postgres
-      PYTEST_POSTGRES_PASSWORD: postgres
-      PYTEST_POSTGRES_DB: test
-      DOWNLOAD_BASE_PATH: /tmp
-      BROKER_URL: redis://redis:6379/0
-
     working_directory: ~/import-export
 
     steps:
@@ -85,9 +69,24 @@ jobs:
 
       - run:
           name: unit-tests
+          environment:
+            PIPENV_DONT_LOAD_ENV: true
+            DOMAIN: localhost
+            SERVER_NAME: localhost
+            SERVER_HOST: http://localhost
+            BACKEND_CORS_ORIGINS: "[\"http://localhost:8000\"]"
+            POSTGRES_SERVER: localhost
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_DB: postgres
+            PYTEST_POSTGRES_SERVER: localhost
+            PYTEST_POSTGRES_USER: postgres
+            PYTEST_POSTGRES_PASSWORD: postgres
+            PYTEST_POSTGRES_DB: test
+            DOWNLOAD_BASE_PATH: /tmp
+            BROKER_URL: redis://redis:6379/0
           command: |
             rm -f ~/.gitconfig
-            rm -f .env
             mkdir test-results
             pipenv run pytest --junitxml=test-results/junit.xml
           when: always  # run even if there is a flake8 error
