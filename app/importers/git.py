@@ -80,13 +80,12 @@ class GitImporter(BaseImporter):
             print("Error deleting .git folder")
 
         # Set the number of total_items
-        with os.scandir(job.path) as directory_iterator:
+        downloaded_files = 0
 
-            downloaded_files = 0
-
-            for element in directory_iterator:
-                if element.is_file():
-                    downloaded_files += 1
+        for (_, _, files) in os.walk(job.path):
+            for _ in files:
+                print("FILE")
+                downloaded_files += 1
 
         job = crud.job.update_total_items(
             self.db, db_obj=job, total_items=downloaded_files
