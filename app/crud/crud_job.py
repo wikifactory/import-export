@@ -73,11 +73,9 @@ class CRUDJob(CRUDBase[Job, JobCreate, BaseModel]):
 
     def increment_exported_items(self, db: Session, *, db_obj: Job) -> Job:
 
-        db_obj = db.query(Job).filter_by(id=db_obj.id).one_or_none()
-        if db_obj:
-            db_obj.exported_items += 1
-            db.commit()
-            return db_obj
+        db_obj.exported_items += 1
+        db.commit()
+        return db_obj
 
     def cancel(self, db: Session, *, db_obj: Job) -> Job:
         if not self.is_active(job=db_obj):
