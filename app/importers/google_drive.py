@@ -88,14 +88,17 @@ class GoogleDriveImporter(BaseImporter):
         for (name, node) in current_level.items():
             item = node.get("item")
             item_full_path = os.path.join(accumulated_path, name)
+
             if is_folder(item):
                 self.download_tree_recursively(node.get("children"), item_full_path)
             else:
                 item.GetContentFile(item_full_path)
+                crud.job.increment_imported_items(self.db, job_id=self.job_id)
 
     def process(self) -> None:
         job = crud.job.get(self.db, self.job_id)
         assert job
+
         crud.job.update_status(self.db, db_obj=job, status=JobStatus.IMPORTING)
 
         try:
@@ -139,6 +142,14 @@ class GoogleDriveImporter(BaseImporter):
         # TODO - add project_description to manifest
 
         self.populate_project_description(manifest_input)
+
+
+        # Set the number of total_items
+        crud.job.update_total_items(
+            self.db, job_id=self.job_id, total_items=job.imported_items
+        )
+
+        crud.manifest.update_or_create(self.db, obj_in=manifest_input)
 
         crud.job.update_status(
             self.db, db_obj=job, status=JobStatus.IMPORTING_SUCCESSFULLY

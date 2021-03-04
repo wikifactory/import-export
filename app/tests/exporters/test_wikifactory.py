@@ -530,11 +530,12 @@ def test_on_file_cb_no_file_id(monkeypatch: Any, exporter: WikifactoryExporter) 
 
 
 @pytest.mark.parametrize(
-    "job_path, project_details",
+    "job_path, project_details, items_count",
     [
         (
             os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project"),
             {"project_id": "project-id", "private": True, "space_id": "space-id"},
+            1,
         )
     ],
 )
@@ -545,6 +546,7 @@ def test_wikifactory_exporter(
     basic_job: dict,
     exporter: WikifactoryExporter,
     job_path: str,
+    items_count: int,
 ) -> None:
     def mock_get_project_details(*args: List, **kwargs: Dict) -> Dict:
         return project_details
@@ -552,7 +554,7 @@ def test_wikifactory_exporter(
     monkeypatch.setattr(exporter, "get_project_details", mock_get_project_details)
 
     def mock_on_file_cb(*args: List, **kwargs: Dict) -> None:
-        pass
+        crud.job.increment_exported_items(db=db, job_id=exporter.job_id)
 
     monkeypatch.setattr(exporter, "on_file_cb", mock_on_file_cb)
 
@@ -594,3 +596,4 @@ def test_wikifactory_exporter(
         .one()
     )
     assert finished_successfully_status_log
+    assert items_count == job.exported_items
