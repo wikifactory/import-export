@@ -4,6 +4,11 @@ services:
     image: "redis:6.0.10-alpine"
     networks:
       - default
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "10"
 
   backend:
     image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
@@ -15,11 +20,18 @@ services:
       args:
         INSTALL_DEV: ${INSTALL_DEV-false}
     working_dir: /app
+    env_file:
+      - .env
     environment:
       - SERVER_NAME=${DOMAIN?Variable not set}
       - SERVER_HOST=https://${DOMAIN?Variable not set}
     ports:
       - "${BACKEND_PORT-8000}:80"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "10"
     networks:
       - default
 
@@ -32,9 +44,16 @@ services:
       dockerfile: celeryworker.Dockerfile
       args:
         INSTALL_DEV: ${INSTALL_DEV-false}
+    env_file:
+      - .env
     environment:
       - SERVER_NAME=${DOMAIN?Variable not set}
       - SERVER_HOST=https://${DOMAIN?Variable not set}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "10"
     networks:
       - default
 

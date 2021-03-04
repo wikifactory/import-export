@@ -1,12 +1,10 @@
 version: 2.1
 
-
 orbs:
   docker: circleci/docker@1.5.0
 
 jobs:
   build:
-
     docker:
       - image: "circleci/python:3.7"
         environment:
@@ -17,23 +15,8 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgtres
       - image: circleci/redis
+
     resource_class: small
-    environment:
-      DOMAIN: localhost
-      SERVER_NAME: localhost
-      SERVER_HOST: http://localhost
-      PROJECT_NAME: import-export
-      BACKEND_CORS_ORIGINS: "[\"http://localhost:8000\"]"
-      POSTGRES_SERVER: localhost
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
-      PYTEST_POSTGRES_SERVER: localhost
-      PYTEST_POSTGRES_USER: postgres
-      PYTEST_POSTGRES_PASSWORD: postgres
-      PYTEST_POSTGRES_DB: test
-      DOWNLOAD_BASE_PATH: /tmp
-      BROKER_URL: redis://redis:6379/0
 
     working_directory: ~/import-export
 
@@ -86,9 +69,24 @@ jobs:
 
       - run:
           name: unit-tests
+          environment:
+            PIPENV_DONT_LOAD_ENV: true
+            DOMAIN: localhost
+            SERVER_NAME: localhost
+            SERVER_HOST: http://localhost
+            BACKEND_CORS_ORIGINS: "[\"http://localhost:8000\"]"
+            POSTGRES_SERVER: localhost
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_DB: postgres
+            PYTEST_POSTGRES_SERVER: localhost
+            PYTEST_POSTGRES_USER: postgres
+            PYTEST_POSTGRES_PASSWORD: postgres
+            PYTEST_POSTGRES_DB: test
+            DOWNLOAD_BASE_PATH: /tmp
+            BROKER_URL: redis://redis:6379/0
           command: |
             rm -f ~/.gitconfig
-            rm -f .env
             mkdir test-results
             pipenv run pytest --junitxml=test-results/junit.xml
           when: always  # run even if there is a flake8 error
@@ -100,7 +98,7 @@ jobs:
           path: test-results
 
       - run:
-          name: Set up docker build variables
+          name: Set up docker image names variables
           command: |
             echo 'export TRIM_BRANCH=`echo $CIRCLE_BRANCH | sed -r 's,/,-,g'`' >> $BASH_ENV
             echo 'export SHORT_HASH=$(echo $CIRCLE_SHA1 | cut -c -7)' >> $BASH_ENV
@@ -119,3 +117,34 @@ jobs:
           name: Push using docker-compose
           command: |
             docker-compose -f docker-compose.yaml push
+
+      - when:
+          condition:
+            or: 
+              - equal: [ main, << pipeline.git.branch >> ]
+              - equal: [ production, << pipeline.git.branch >> ]
+          steps:
+            - run:
+                name: Set deployment environment and target
+                command: |
+                  sudo apt-get -y install gettext-base
+                  if [ "${CIRCLE_BRANCH}" == "production" ]; then
+                    echo 'export ENVIRONMENT=PRODUCTION' >> $BASH_ENV
+                  else
+                    echo 'export ENVIRONMENT=STAGING' >> $BASH_ENV
+                  fi
+                  echo 'export DEPLOYMENT_TARGET=$(echo \$DEPLOY_$ENVIRONMENT\_TARGET | envsubst)' >> $BASH_ENV
+
+            - run:
+                name: Copy .env and docker-compose.yaml
+                command: |
+                  sed -i "s/{ENVIRONMENT}/$ENVIRONMENT/g" .circleci/.template.env
+                  envsubst < .circleci/.template.env > target.env
+                  scp -oStrictHostKeyChecking=no target.env $DEPLOYMENT_TARGET:~/.env
+                  scp -oStrictHostKeyChecking=no docker-compose.yaml $DEPLOYMENT_TARGET:~/docker-compose.yaml
+
+            - run:
+                name: Update and run docker-compose
+                command: |
+                  ssh -v -oStrictHostKeyChecking=no $DEPLOYMENT_TARGET 'docker-compose pull'
+                  ssh -v -oStrictHostKeyChecking=no $DEPLOYMENT_TARGET 'docker-compose up -d'
