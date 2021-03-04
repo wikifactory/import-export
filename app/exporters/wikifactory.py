@@ -131,7 +131,7 @@ class WikifactoryExporter(BaseExporter):
             for (dirpath, _, filenames) in os.walk(job.path):
                 for name in filenames:
                     file_path = os.path.join(dirpath, name)
-                    self.on_file_cb(file_path=file_path)
+                    self.on_file_cb(file_path)
 
             self.on_finished_cb()
 

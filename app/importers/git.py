@@ -76,16 +76,11 @@ class GitImporter(BaseImporter):
         # Remove the .git folder
         try:
             shutil.rmtree(os.path.join(job.path, ".git"))
-        except Exception:
+        except OSError:
             print("Error deleting .git folder")
 
         # Set the number of total_items
-        downloaded_files = 0
-
-        for (_, _, files) in os.walk(job.path):
-            for _ in files:
-                print("FILE")
-                downloaded_files += 1
+        downloaded_files = sum([len(files) for _, _, files in os.walk(job.path)])
 
         crud.job.update_total_items(
             self.db, job_id=self.job_id, total_items=downloaded_files
