@@ -265,6 +265,7 @@ def remote_data(basic_job: Dict) -> Dict:
                 },
             ],
         },
+        "total_items": 2,
     }
 
 
@@ -287,6 +288,8 @@ def test_google_drive_importer(db: Session, basic_job: dict, remote_data: dict) 
         == remote_data[basic_job["folder_id"]]["item"]["title"]
     )
     assert job.manifest.source_url == job.import_url
+
+    assert job.imported_items == remote_data["total_items"]
 
 
 @pytest.fixture

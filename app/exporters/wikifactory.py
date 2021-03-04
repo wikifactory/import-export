@@ -121,6 +121,7 @@ class WikifactoryExporter(BaseExporter):
     def process(self) -> None:
         job = crud.job.get(self.db, self.job_id)
         assert job
+
         crud.job.update_status(self.db, db_obj=job, status=JobStatus.EXPORTING)
 
         self.project_details = self.get_project_details()
@@ -182,6 +183,9 @@ class WikifactoryExporter(BaseExporter):
 
             # Mark the file as completed
             self.complete_file(wikifactory_file_id)
+
+            # Update the exported items
+            crud.job.increment_exported_items(self.db, job_id=self.job_id)
 
     def on_finished_cb(self) -> None:
         # In order to finish, I need to perform the commit
