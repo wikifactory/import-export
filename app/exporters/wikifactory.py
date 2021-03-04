@@ -140,6 +140,9 @@ class WikifactoryExporter(BaseExporter):
             crud.job.update_status(
                 self.db, db_obj=job, status=JobStatus.FINISHED_SUCCESSFULLY
             )
+
+            # Finally, remove the local files
+            self.clean_download_folder(job.path)
         except (FileUploadFailed, UserErrors):
 
             # FIXME - improve error handling

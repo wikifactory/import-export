@@ -1,3 +1,5 @@
+import shutil
+
 from sqlalchemy.orm import Session
 
 
@@ -7,6 +9,9 @@ class BaseExporter:
 
     def process(self) -> None:
         raise NotImplementedError()
+
+    def clean_download_folder(self, path: str) -> None:
+        shutil.rmtree(path, ignore_errors=True)
 
 
 class AuthRequired(Exception):
