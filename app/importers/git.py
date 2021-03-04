@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app import crud
 from app.importers.base import BaseImporter
-from app.models.job import JobStatus
+from app.models.job import Job, JobStatus
 from app.schemas import ManifestInput
 
 # FIXME - there's git beyond github and gitlab
@@ -56,6 +56,21 @@ class GitImporter(BaseImporter):
         # Fill some basic information of the project
         manifest_input.project_name = os.path.basename(os.path.normpath(url))
 
+        # Load the project description
+        self.populate_project_description(manifest_input)
+
+        # Remove the .git folder
+        try:
+            shutil.rmtree(os.path.join(job.path, ".git"))
+        except Exception:
+            print("Error deleting .git folder")
+
+        crud.job.update_status(
+            self.db, db_obj=job, status=JobStatus.IMPORTING_SUCCESSFULLY
+        )
+
+    def populate_project_description(self, manifest_input: ManifestInput) -> None:
+        job: Job = crud.job.get(self.db, self.job_id)
         # use readme contents as project description
         with os.scandir(job.path) as directory_iterator:
             readme_candidates = [
@@ -64,13 +79,6 @@ class GitImporter(BaseImporter):
                 if readme.is_file()
                 and re.search(r"README.md$", readme.name, re.IGNORECASE)
             ]
-
-        # Remove the .git folder
-        try:
-            shutil.rmtree(os.path.join(job.path, ".git"))
-        except Exception:
-            print("Error deleting .git folder")
-
         if readme_candidates:
             chosen_readme = readme_candidates[0]
             # FIXME potentially dangerous!
@@ -80,6 +88,3 @@ class GitImporter(BaseImporter):
                 manifest_input.project_description = file_handle.read()
 
         crud.manifest.update_or_create(self.db, obj_in=manifest_input)
-        crud.job.update_status(
-            self.db, db_obj=job, status=JobStatus.IMPORTING_SUCCESSFULLY
-        )

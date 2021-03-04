@@ -134,10 +134,17 @@ class GoogleDriveImporter(BaseImporter):
         manifest_input = ManifestInput(job_id=job.id, source_url=job.import_url)
         root_item = self.tree_root.get("item")
         assert root_item
+        self.root_item = root_item
         manifest_input.project_name = root_item.get("title")
         # TODO - add project_description to manifest
 
-        crud.manifest.update_or_create(self.db, obj_in=manifest_input)
+        self.populate_project_description(manifest_input)
+
         crud.job.update_status(
             self.db, db_obj=job, status=JobStatus.IMPORTING_SUCCESSFULLY
         )
+
+    def populate_project_description(self, manifest_input: ManifestInput) -> None:
+        self.root_item.FetchMetadata(fields="description")
+        manifest_input.project_description = self.root_item.get("description")
+        crud.manifest.update_or_create(self.db, obj_in=manifest_input)
