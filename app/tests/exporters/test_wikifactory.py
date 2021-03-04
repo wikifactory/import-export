@@ -1,7 +1,9 @@
 import os
+from distutils.dir_util import copy_tree
 from typing import Any, Dict, Generator, List
 
 import gql
+import py
 import pytest
 import requests
 from gql import Client
@@ -110,7 +112,7 @@ def mock_gql_response(monkeypatch: Any, response_dict: dict) -> None:
 
 
 @pytest.fixture
-def basic_job(db: Session) -> Generator[Dict, None, None]:
+def basic_job(db: Session, tmpdir: py.path.local) -> Generator[Dict, None, None]:
     random_project_name = utils.random_lower_string()
     job_input = JobCreate(
         import_service="git",
@@ -119,7 +121,18 @@ def basic_job(db: Session) -> Generator[Dict, None, None]:
         export_url=f"https://wikifactory.com/@user/{random_project_name}",
     )
     db_job = crud.job.create(db, obj_in=job_input)
-    db_job.path = os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project")
+
+    db_job.path = os.path.join(tmpdir, str(db_job.id))
+
+    # Copy the content of test_files/sample-project to that path
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    copy_tree(
+        os.path.normpath(
+            os.path.join(current_dir, "..", "test_files", "sample-project")
+        ),
+        db_job.path,
+    )
+
     yield {
         "job_input": job_input,
         "db_job": db_job,
@@ -530,13 +543,8 @@ def test_on_file_cb_no_file_id(monkeypatch: Any, exporter: WikifactoryExporter) 
 
 
 @pytest.mark.parametrize(
-    "job_path, project_details",
-    [
-        (
-            os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project"),
-            {"project_id": "project-id", "private": True, "space_id": "space-id"},
-        )
-    ],
+    "project_details",
+    [({"project_id": "project-id", "private": True, "space_id": "space-id"},)],
 )
 def test_wikifactory_exporter(
     monkeypatch: Any,
@@ -544,7 +552,6 @@ def test_wikifactory_exporter(
     project_details: dict,
     basic_job: dict,
     exporter: WikifactoryExporter,
-    job_path: str,
 ) -> None:
     def mock_get_project_details(*args: List, **kwargs: Dict) -> Dict:
         return project_details
@@ -562,7 +569,7 @@ def test_wikifactory_exporter(
     monkeypatch.setattr(exporter, "on_finished_cb", mock_on_finished_cb)
 
     job = basic_job["db_job"]
-    job.path = job_path
+
     exporter.process()
 
     # TODO check that on_file_cb has been called for each file
