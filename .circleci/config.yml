@@ -123,7 +123,6 @@ jobs:
             or: 
               - equal: [ main, << pipeline.git.branch >> ]
               - equal: [ production, << pipeline.git.branch >> ]
-              - equal: [ feature/circle-deployment, << pipeline.git.branch >> ]
           steps:
             - run:
                 name: Set deployment environment and target
