@@ -3,9 +3,7 @@ import re
 import shutil
 import subprocess
 from re import search
-from typing import Any
 
-import pygit2
 from sqlalchemy.orm import Session
 
 from app import crud
@@ -15,14 +13,6 @@ from app.schemas import ManifestInput
 
 # FIXME - there's git beyond github and gitlab
 popular_git_regex = r"^https?:\/\/(www\.)?git(hub|lab)\.com\/(?P<organization>[\w-]+)/(?P<project>[\w-]+)"
-
-
-class IgnoreCredentialsCallbacks(pygit2.RemoteCallbacks):
-    def credentials(self, url: str, username_from_url: str, allowed_types: int) -> None:
-        return None
-
-    def certificate_check(self, certificate: Any, valid: bool, host: str) -> bool:
-        return True
 
 
 def validate_url(url: str) -> bool:
