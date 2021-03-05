@@ -143,7 +143,6 @@ class GoogleDriveImporter(BaseImporter):
 
         self.populate_project_description(manifest_input)
 
-
         # Set the number of total_items
         crud.job.update_total_items(
             self.db, job_id=self.job_id, total_items=job.imported_items

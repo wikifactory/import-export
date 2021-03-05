@@ -291,7 +291,6 @@ def test_google_drive_importer(db: Session, basic_job: dict, remote_data: dict) 
     )
     assert job.manifest.source_url == job.import_url
 
-
     manifest = db.query(Manifest).filter_by(job_id=job.id).one()
 
     assert (
@@ -300,7 +299,6 @@ def test_google_drive_importer(db: Session, basic_job: dict, remote_data: dict) 
     )
 
     assert job.imported_items == remote_data["total_items"]
-
 
 
 @pytest.fixture
