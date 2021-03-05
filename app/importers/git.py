@@ -1,10 +1,9 @@
 import os
 import re
 import shutil
+import subprocess
 from re import search
-from typing import Any
 
-import pygit2
 from sqlalchemy.orm import Session
 
 from app import crud
@@ -16,16 +15,12 @@ from app.schemas import ManifestInput
 popular_git_regex = r"^https?:\/\/(www\.)?git(hub|lab)\.com\/(?P<organization>[\w-]+)/(?P<project>[\w-]+)"
 
 
-class IgnoreCredentialsCallbacks(pygit2.RemoteCallbacks):
-    def credentials(self, url: str, username_from_url: str, allowed_types: int) -> None:
-        return None
-
-    def certificate_check(self, certificate: Any, valid: bool, host: str) -> bool:
-        return True
-
-
 def validate_url(url: str) -> bool:
     return bool(search(popular_git_regex, url))
+
+
+def clone_repository(url: str, path: str) -> None:
+    subprocess.run(["git", "clone", "--depth", "1", url, path], check=True)
 
 
 class GitImporter(BaseImporter):
@@ -41,10 +36,8 @@ class GitImporter(BaseImporter):
 
         try:
             # First, we clone the repo into the tmp folder
-            pygit2.clone_repository(
-                url, job.path, callbacks=IgnoreCredentialsCallbacks()
-            )
-        except pygit2.errors.GitError:
+            clone_repository(url, job.path)
+        except subprocess.CalledProcessError:
             # TODO support "auth required" status when support for private repos is added
             crud.job.update_status(
                 self.db, db_obj=job, status=JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE

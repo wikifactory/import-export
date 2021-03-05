@@ -1,10 +1,11 @@
 import os
+import subprocess
 from typing import Any, Dict, Generator, List
 
-import pygit2
 import pytest
 from sqlalchemy.orm import Session
 
+import app.importers.git
 from app import crud
 from app.core.config import settings
 from app.importers.git import GitImporter
@@ -36,17 +37,19 @@ def basic_job(db: Session) -> Generator[Dict, None, None]:
 @pytest.fixture()
 def clone_error(monkeypatch: Any) -> None:
     def mock_clone_repository_error(*args: List, **kwargs: Dict) -> None:
-        raise pygit2.errors.GitError
+        subprocess.run(["git", "clone"], check=True)
 
-    monkeypatch.setattr(pygit2, "clone_repository", mock_clone_repository_error)
+    monkeypatch.setattr(
+        app.importers.git, "clone_repository", mock_clone_repository_error
+    )
 
 
 @pytest.fixture()
 def clone_repository(monkeypatch: Any) -> None:
-    def mock_clone_repository(*args: List, **kwargs: Dict) -> pygit2.Repository:
-        return pygit2.Repository()
+    def mock_clone_repository(*args: List, **kwargs: Dict) -> None:
+        return
 
-    monkeypatch.setattr(pygit2, "clone_repository", mock_clone_repository)
+    monkeypatch.setattr(app.importers.git, "clone_repository", mock_clone_repository)
 
 
 @pytest.mark.usefixtures("clone_repository")
