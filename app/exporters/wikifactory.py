@@ -1,4 +1,5 @@
 import os
+import traceback
 from re import search
 from typing import IO, Dict, Optional
 
@@ -141,6 +142,7 @@ class WikifactoryExporter(BaseExporter):
                 self.db, db_obj=job, status=JobStatus.FINISHED_SUCCESSFULLY
             )
         except (FileUploadFailed, UserErrors):
+            traceback.print_exc()
 
             # FIXME - improve error handling
             crud.job.update_status(
@@ -212,6 +214,9 @@ class WikifactoryExporter(BaseExporter):
         assert job
         assert self.project_details
 
+        with open(path) as file_handle:
+            content_type = magic.from_descriptor(file_handle.fileno(), mime=True)
+
         variables = {
             "fileInput": {
                 "filename": os.path.basename(path),
@@ -220,7 +225,7 @@ class WikifactoryExporter(BaseExporter):
                 "projectPath": os.path.relpath(path, job.path),
                 "gitHash": str(pygit2.hashfile(path)),
                 "completed": False,
-                "contentType": magic.from_file(path, mime=True),
+                "contentType": content_type,
             }
         }
 
@@ -271,20 +276,31 @@ class WikifactoryExporter(BaseExporter):
     def upload_file(self, file_handle: IO, file_url: str) -> None:
         assert self.project_details
 
+        content_type = magic.from_descriptor(file_handle.fileno(), mime=True)
+
         headers = {
             "x-amz-acl": "private"
             if self.project_details["private"]
             else "public-read",
-            "Content-Type": magic.from_descriptor(file_handle.fileno(), mime=True),
+            "Content-Type": content_type,
         }
 
+        # This is weird but requests handles an empty file object
+        # differently than None, with empty file
+        # it appends Content-Length: 0 header which triggers 501 on S3
+        if not file_handle.read(1):
+            data = None
+        else:
+            data = file_handle
+            file_handle.seek(0)
+
         try:
-            response = requests.put(file_url, data=file_handle, headers=headers)
+            response = requests.put(file_url, data=data, headers=headers)
             response.raise_for_status()
-        except HTTPError:
+        except HTTPError as e:
             raise FileUploadFailed(
                 f"There was an error uploading the file. Error code: {response.status_code}"
-            )
+            ) from e
 
         file_name = os.path.basename(file_handle.name)
         print(f"File {file_name} uploaded to s3")
