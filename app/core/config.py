@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     # BACKEND_CORS_ORIGINS is a JSON-formatted list of origins
     # e.g: '["http://localhost", "http://localhost:4200", "http://localhost:3000", \
     # "http://localhost:8080", "http://local.dockertoolbox.tiangolo.com"]'
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+    BACKEND_CORS_ORIGINS: List[str] = []
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
@@ -24,6 +24,8 @@ class Settings(BaseSettings):
 
     PROJECT_NAME: str
     SENTRY_DSN: Optional[HttpUrl] = None
+
+    WIKIFACTORY_API_HOST: str = "wikifactory.com"
 
     @validator("SENTRY_DSN", pre=True)
     def sentry_dsn_can_be_blank(cls, v: str) -> Optional[str]:

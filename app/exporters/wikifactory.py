@@ -11,6 +11,7 @@ from requests.models import HTTPError
 from sqlalchemy.orm import Session
 
 from app import crud
+from app.core.config import settings
 from app.exporters.base import AuthRequired, BaseExporter, NotReachable
 from app.models.job import JobStatus
 
@@ -21,8 +22,6 @@ from .wikifactory_gql import (
     operation_mutation,
     project_query,
 )
-
-endpoint_url = "https://wikifactory.com/api/graphql"
 
 
 class FileUploadFailed(Exception):
@@ -45,7 +44,7 @@ def wikifactory_api_request(
 ) -> Dict:
     headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else None
     transport = RequestsHTTPTransport(
-        url=endpoint_url,
+        url=f"http://{settings.WIKIFACTORY_API_HOST}/api/graphql",
         headers=headers,
     )
 
@@ -99,7 +98,7 @@ def wikifactory_api_request(
     return result
 
 
-wikifactory_project_regex = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
+wikifactory_project_regex = fr"^(?:http(s)?:\/\/)?(www\.)?{settings.WIKIFACTORY_API_HOST}\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
 
 
 def validate_url(url: str) -> bool:
