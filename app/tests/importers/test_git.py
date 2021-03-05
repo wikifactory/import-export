@@ -2,7 +2,6 @@ import os
 import subprocess
 from typing import Any, Dict, Generator, List
 
-import pygit2
 import pytest
 from sqlalchemy.orm import Session
 
@@ -47,7 +46,7 @@ def clone_error(monkeypatch: Any) -> None:
 
 @pytest.fixture()
 def clone_repository(monkeypatch: Any) -> None:
-    def mock_clone_repository(*args: List, **kwargs: Dict) -> pygit2.Repository:
+    def mock_clone_repository(*args: List, **kwargs: Dict) -> None:
         return
 
     monkeypatch.setattr(app.importers.git, "clone_repository", mock_clone_repository)
