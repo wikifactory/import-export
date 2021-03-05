@@ -119,7 +119,7 @@ def basic_job(db: Session) -> Generator[Dict, None, None]:
         export_url=f"https://wikifactory.com/@user/{random_project_name}",
     )
     db_job = crud.job.create(db, obj_in=job_input)
-    db_job.path = os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project")
+    db_job.path = os.path.join(settings.JOBS_BASE_PATH, "sample-project")
     yield {
         "job_input": job_input,
         "db_job": db_job,
@@ -291,8 +291,8 @@ def test_get_project_details(
     [
         (
             {"space_id": "space-id", "project_id": "project-id"},
-            os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project"),
-            os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project", "README.md"),
+            os.path.join(settings.JOBS_BASE_PATH, "sample-project"),
+            os.path.join(settings.JOBS_BASE_PATH, "sample-project", "README.md"),
             {
                 "data": {
                     "file": {
@@ -335,7 +335,7 @@ def test_process_element_mutation_variables(
     "file_path, project_details, expected_headers",
     [
         (
-            os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project", "README.md"),
+            os.path.join(settings.JOBS_BASE_PATH, "sample-project", "README.md"),
             {
                 "space_id": "space-id",
                 "project_id": "project-id",
@@ -344,7 +344,7 @@ def test_process_element_mutation_variables(
             {"x-amz-acl": "public-read", "Content-Type": "text/plain"},
         ),
         (
-            os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project", "README.md"),
+            os.path.join(settings.JOBS_BASE_PATH, "sample-project", "README.md"),
             {
                 "space_id": "space-id",
                 "project_id": "project-id",
@@ -393,7 +393,7 @@ def test_upload_file_error(monkeypatch: Any, exporter: WikifactoryExporter) -> N
     }
 
     file_url = "http://upload-domain/upload-endpoint"
-    file_path = os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project", "README.md")
+    file_path = os.path.join(settings.JOBS_BASE_PATH, "sample-project", "README.md")
 
     with open(file_path, "rb") as file_handle, pytest.raises(FileUploadFailed):
         exporter.upload_file(file_handle, file_url)
@@ -436,9 +436,9 @@ def test_complete_file_mutation_variables(
     "project_path, project_details, file_path, file_id, response_dict, expected_variables",
     [
         (
-            os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project"),
+            os.path.join(settings.JOBS_BASE_PATH, "sample-project"),
             {"space_id": "space-id", "project_id": "project-id"},
-            os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project", "README.md"),
+            os.path.join(settings.JOBS_BASE_PATH, "sample-project", "README.md"),
             "file-id",
             {
                 "data": {
@@ -533,7 +533,7 @@ def test_on_file_cb_no_file_id(monkeypatch: Any, exporter: WikifactoryExporter) 
     "job_path, project_details",
     [
         (
-            os.path.join(settings.DOWNLOAD_BASE_PATH, "sample-project"),
+            os.path.join(settings.JOBS_BASE_PATH, "sample-project"),
             {"project_id": "project-id", "private": True, "space_id": "space-id"},
         )
     ],
