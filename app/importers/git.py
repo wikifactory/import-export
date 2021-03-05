@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+import subprocess
 from re import search
 from typing import Any
 
@@ -28,6 +29,10 @@ def validate_url(url: str) -> bool:
     return bool(search(popular_git_regex, url))
 
 
+def clone_repository(url: str, path: str) -> None:
+    subprocess.run(["git", "clone", "--depth", "1", url, path], check=True)
+
+
 class GitImporter(BaseImporter):
     def __init__(self, db: Session, job_id: str):
         self.job_id = job_id
@@ -41,10 +46,8 @@ class GitImporter(BaseImporter):
 
         try:
             # First, we clone the repo into the tmp folder
-            pygit2.clone_repository(
-                url, job.path, callbacks=IgnoreCredentialsCallbacks()
-            )
-        except pygit2.errors.GitError:
+            clone_repository(url, job.path)
+        except subprocess.CalledProcessError:
             # TODO support "auth required" status when support for private repos is added
             crud.job.update_status(
                 self.db, db_obj=job, status=JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE
