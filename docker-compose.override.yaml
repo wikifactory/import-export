@@ -25,7 +25,7 @@ services:
     environment:
       - SERVER_HOST=https://${DOMAIN?Variable not set}
       - DAP_PORT=5680
-      - DOWNLOAD_BASE_PATH=${DOWNLOAD_BASE_PATH}
+      - JOBS_BASE_PATH=${JOBS_BASE_PATH}
     ports:
       - 127.0.0.1:5680:5680
     volumes:

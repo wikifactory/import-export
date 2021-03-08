@@ -36,7 +36,7 @@ class CRUDJob(CRUDBase[Job, JobCreate, BaseModel]):
             raise JobDuplicated()
 
         db_job = super().create(db, obj_in=obj_in)
-        db_job.path = os.path.join(settings.DOWNLOAD_BASE_PATH, str(db_job.id))
+        db_job.path = os.path.join(settings.JOBS_BASE_PATH, str(db_job.id))
         log_obj = JobLog(job_id=db_job.id, to_status=db_job.status)
         db.add(log_obj)
         db.commit()

@@ -83,7 +83,7 @@ jobs:
             PYTEST_POSTGRES_USER: postgres
             PYTEST_POSTGRES_PASSWORD: postgres
             PYTEST_POSTGRES_DB: test
-            DOWNLOAD_BASE_PATH: /tmp
+            JOBS_BASE_PATH: /tmp
             BROKER_URL: redis://redis:6379/0
           command: |
             rm -f ~/.gitconfig

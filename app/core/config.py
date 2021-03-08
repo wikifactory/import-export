@@ -66,17 +66,13 @@ class Settings(BaseSettings):
         )
 
     # TODO - define validations
-    DOWNLOAD_BASE_PATH: str
+    JOBS_BASE_PATH: str
 
-    @validator("DOWNLOAD_BASE_PATH", pre=True)
+    @validator("JOBS_BASE_PATH", pre=True)
     def ensure_download_path(cls, v: str) -> str:
         if "pytest" in sys.modules:
             current_dir = os.path.dirname(os.path.realpath(__file__))
             return os.path.normpath(os.path.join(current_dir, "../tests/test_files"))
-
-        if not os.path.exists(v):
-            print("Creating DOWNLOAD_BASE_PATH")
-            os.makedirs(v)
 
         # if directory can't be written, raise ValueError(v)
         return v
