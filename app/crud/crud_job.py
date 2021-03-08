@@ -1,4 +1,5 @@
 import os
+from typing import Dict
 
 from pydantic.main import BaseModel
 from sqlalchemy.orm import Session
@@ -65,6 +66,26 @@ class CRUDJob(CRUDBase[Job, JobCreate, BaseModel]):
             {Job.imported_items: imported_items}
         )
         db.commit()
+
+    def update_import_parameters(
+        self, db: Session, *, db_obj: Job, options: Dict
+    ) -> Job:
+
+        if "export_url" in options:
+            db_obj.export_url = options["export_url"]
+
+        if "import_url" in options:
+            db_obj.import_url = options["import_url"]
+
+        if "export_token" in options:
+            db_obj.export_token = options["export_token"]
+
+        if "import_token" in options:
+            db_obj.import_token = options["import_token"]
+
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
 
     def increment_imported_items(self, db: Session, *, job_id: str) -> None:
         db.query(Job).filter(Job.id == job_id).update(
