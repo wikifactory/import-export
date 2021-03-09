@@ -24,7 +24,7 @@ jobs:
 
       - checkout
 
-      - setup_remote_docker:
+      - setup_remote_docker
 
       - restore_cache:
           name: restore pipenv cache
