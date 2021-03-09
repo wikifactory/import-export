@@ -182,7 +182,7 @@ def test_retry_job(
 ) -> None:
     db_job = crud.job.create(db, obj_in=job_create)
     crud.job.update_status(db, db_obj=db_job, status=status)
-    response = client.post(f"{settings.API_V1_STR}/job/{db_job.id}/retry")
+    response = client.post(f"{settings.API_V1_STR}/job/{db_job.id}/retry", json={})
     job = response.json()
     assert job
     assert job.get("id") == str(db_job.id)
@@ -217,7 +217,7 @@ def test_retry_job_error(
         db_job = crud.job.create(db, obj_in=job_create)
         crud.job.update_status(db, db_obj=db_job, status=status)
         job_id = db_job.id
-    response = client.post(f"{settings.API_V1_STR}/job/{job_id}/retry")
+    response = client.post(f"{settings.API_V1_STR}/job/{job_id}/retry", json={})
     assert response.status_code == status_code
 
 
