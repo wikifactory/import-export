@@ -46,7 +46,6 @@ def wikifactory_api_request(
     transport = RequestsHTTPTransport(
         url=f"{settings.WIKIFACTORY_API_HOST}/api/graphql",
         headers=headers,
-        verify=False,
     )
 
     session = Client(transport=transport, fetch_schema_from_transport=False)
