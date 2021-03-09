@@ -28,7 +28,7 @@ services:
       - 127.0.0.1:5680:5680
     volumes:
       - ./app:/app/app
-    command: /start-reload.sh
+    command: /app/start-reload.sh
     networks:
       - default
 
