@@ -3,6 +3,7 @@ import sys
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import AnyHttpUrl, AnyUrl, BaseSettings, HttpUrl, PostgresDsn, validator
+from pydantic.tools import parse_obj_as
 
 
 class Settings(BaseSettings):
@@ -25,7 +26,32 @@ class Settings(BaseSettings):
     PROJECT_NAME: str
     SENTRY_DSN: Optional[HttpUrl] = None
 
-    WIKIFACTORY_API_HOST: str = "wikifactory.com"
+    WIKIFACTORY_API_BASE_URL: AnyHttpUrl = parse_obj_as(
+        AnyHttpUrl, "https://wikifactory.com"
+    )
+
+    @validator("WIKIFACTORY_API_BASE_URL", pre=True)
+    def wikifactory_base_url(cls, v: Union[str, AnyHttpUrl]) -> AnyHttpUrl:
+        if isinstance(v, str):
+            return parse_obj_as(AnyHttpUrl, v)
+        elif isinstance(v, AnyHttpUrl):
+            return v
+        raise ValueError(v)
+
+    WIKIFACTORY_API_HOST: Optional[str] = None
+
+    @validator("WIKIFACTORY_API_HOST")
+    def wikifactory_host_from_url(cls, v: Optional[str], values: Dict[str, Any]) -> str:
+        if isinstance(v, str):
+            return v
+
+        api_base_url = values.get("WIKIFACTORY_API_BASE_URL")
+        if api_base_url:
+            if api_base_url.port:
+                return f"{api_base_url.host}:{api_base_url.port}"
+            return api_base_url.host
+
+        raise ValueError(api_base_url)
 
     @validator("SENTRY_DSN", pre=True)
     def sentry_dsn_can_be_blank(cls, v: str) -> Optional[str]:
