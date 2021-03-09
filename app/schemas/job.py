@@ -15,6 +15,13 @@ class BaseJob(BaseModel):
     export_token: Optional[str] = None
 
 
+class JobUpdate(BaseModel):
+    import_url: Optional[AnyHttpUrl] = None
+    export_url: Optional[AnyHttpUrl] = None
+    import_token: Optional[str] = None
+    export_token: Optional[str] = None
+
+
 class Job(BaseJob):
     id: uuid.UUID
     status: JobStatus

@@ -163,7 +163,7 @@ def test_get_job_error(client: TestClient) -> None:
 
 # TODO - generators
 @pytest.mark.parametrize(
-    "job_create, status",
+    "job_create, status, retry_input",
     [
         (
             JobCreate(
@@ -173,20 +173,55 @@ def test_get_job_error(client: TestClient) -> None:
                 export_service="wikifactory",
             ),
             JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE,
+            None,
+        ),
+        (
+            JobCreate(
+                import_url="https://github.com/wikifactory/retry-2",
+                import_service="git",
+                export_url="https://wikifactory.com/+wikifactory/retry-2",
+                export_service="wikifactory",
+            ),
+            JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE,
+            {"import_token": "new-import-token"},
+        ),
+        (
+            JobCreate(
+                import_url="https://github.com/wikifactory/retry-3",
+                import_service="git",
+                export_url="https://wikifactory.com/+wikifactory/retry-3",
+                export_service="wikifactory",
+            ),
+            JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE,
+            {
+                "import_url": "https://github.com/wikifactory/retry-3-different",
+                "import_token": "new-import-token",
+                "export_url": "https://wikifactory.com/+wikifactory/retry-3-changed",
+                "export_token": "new-export-token",
+            },
         ),
     ],
 )
 @pytest.mark.usefixtures("dummy_process_job")
 def test_retry_job(
-    db: Session, client: TestClient, job_create: JobCreate, status: JobStatus
+    db: Session,
+    client: TestClient,
+    job_create: JobCreate,
+    status: JobStatus,
+    retry_input: Dict,
 ) -> None:
     db_job = crud.job.create(db, obj_in=job_create)
     crud.job.update_status(db, db_obj=db_job, status=status)
-    response = client.post(f"{settings.API_V1_STR}/job/{db_job.id}/retry")
+    response = client.post(
+        f"{settings.API_V1_STR}/job/{db_job.id}/retry", json=retry_input
+    )
     job = response.json()
     assert job
     assert job.get("id") == str(db_job.id)
     assert job.get("status") == JobStatus.PENDING.value
+    if retry_input:
+        for field, value in retry_input.items():
+            assert job.get(field) == value
 
 
 @pytest.mark.parametrize(

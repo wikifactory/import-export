@@ -45,7 +45,7 @@ def wikifactory_api_request(
 ) -> Dict:
     headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else None
     transport = RequestsHTTPTransport(
-        url=f"http://{settings.WIKIFACTORY_API_HOST}/api/graphql",
+        url=f"{settings.WIKIFACTORY_API_BASE_URL}/api/graphql",
         headers=headers,
     )
 

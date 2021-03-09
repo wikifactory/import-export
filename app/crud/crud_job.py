@@ -1,6 +1,6 @@
 import os
+from typing import Optional
 
-from pydantic.main import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import not_
 
@@ -18,10 +18,10 @@ from app.models.job import (
     terminated_job_statuses,
 )
 from app.models.job_log import JobLog
-from app.schemas.job import JobCreate
+from app.schemas.job import JobCreate, JobUpdate
 
 
-class CRUDJob(CRUDBase[Job, JobCreate, BaseModel]):
+class CRUDJob(CRUDBase[Job, JobCreate, JobUpdate]):
     def create(self, db: Session, *, obj_in: JobCreate) -> Job:
         active_job_exists = (
             db.query(Job)
@@ -85,9 +85,15 @@ class CRUDJob(CRUDBase[Job, JobCreate, BaseModel]):
         # mark the job as cancelling
         return self.update_status(db, db_obj=db_obj, status=JobStatus.CANCELLING)
 
-    def retry(self, db: Session, *, db_obj: Job) -> Job:
+    def retry(
+        self, db: Session, *, db_obj: Job, retry_input: Optional[JobUpdate]
+    ) -> Job:
         if not self.is_retriable(job=db_obj):
             raise JobNotRetriable()
+
+        # update with params if available
+        if retry_input:
+            self.update(db, db_obj=db_obj, obj_in=retry_input)
 
         # mark the job as pending
         self.update_status(db, db_obj=db_obj, status=JobStatus.PENDING)
