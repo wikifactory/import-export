@@ -1,5 +1,5 @@
 import uuid
-from typing import Any, Dict
+from typing import Any, Optional
 
 import requests
 from fastapi import APIRouter, Depends, HTTPException
@@ -43,7 +43,12 @@ def get_job(*, db: Session = Depends(deps.get_db), job_id: uuid.UUID) -> Any:
 
 
 @router.post("/{job_id}/retry", response_model=schemas.Job)
-def retry(*, db: Session = Depends(deps.get_db), job_id: uuid.UUID, body: Dict) -> Any:
+def retry(
+    *,
+    db: Session = Depends(deps.get_db),
+    job_id: uuid.UUID,
+    retry_input: Optional[schemas.JobUpdate] = None,
+) -> Any:
     job = crud.job.get(db, job_id)
 
     if not job:
@@ -52,16 +57,8 @@ def retry(*, db: Session = Depends(deps.get_db), job_id: uuid.UUID, body: Dict) 
             detail=f"Job with id {job_id} not found",
         )
 
-    if "export_url" in body:
-        job.export_url = body["export_url"]
-
-    if "import_token" in body:
-        job.export_url = body["import_token"]
-
-    job = crud.job.update_import_parameters(db, db_obj=job, options=body)
-
     try:
-        crud.job.retry(db, db_obj=job)
+        crud.job.retry(db, db_obj=job, retry_input=retry_input)
     except JobNotRetriable:
         raise HTTPException(
             status_code=requests.codes["unprocessable"],
