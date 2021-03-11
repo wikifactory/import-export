@@ -12,6 +12,7 @@ from app import crud
 from app.core.config import settings
 from app.importers import dropbox
 from app.importers.dropbox import DropboxImporter
+from app.models.job import Job, JobStatus
 from app.schemas import JobCreate
 from app.tests.utils import utils
 
@@ -202,7 +203,7 @@ def assert_tree_directory_recursive(current_level: Dict, accumulated_path: str) 
 def test_dropbox_importer_success(
     tmpdir: pathlib.Path, db: Session, basic_job: dict, remote_data: Dict
 ) -> None:
-    job = basic_job["db_job"]
+    job: Job = basic_job["db_job"]
     job.path = str(tmpdir)
 
     importer = DropboxImporter(db, job.id)
@@ -215,3 +216,5 @@ def test_dropbox_importer_success(
     )
 
     assert job.imported_items == remote_data["total_items"]
+
+    assert job.status == JobStatus.IMPORTING_SUCCESSFULLY
