@@ -5,7 +5,7 @@ from typing import Dict, List
 
 import dropbox
 from dropbox.dropbox_client import Dropbox
-from dropbox.exceptions import ApiError
+from dropbox.exceptions import ApiError, AuthError
 from dropbox.files import FolderMetadata
 from sqlalchemy.orm import Session
 
@@ -77,7 +77,13 @@ class DropboxImporter(BaseImporter):
         try:
             self.build_tree_recursively(self.tree_root["children"], url_details["path"])
             self.download_tree_recursively(self.tree_root["children"], job.path)
-
+        except AuthError:
+            crud.job.update_status(
+                self.db,
+                db_obj=job,
+                status=JobStatus.IMPORTING_ERROR_AUTHORIZATION_REQUIRED,
+            )
+            return
         except ApiError:
             crud.job.update_status(
                 self.db,

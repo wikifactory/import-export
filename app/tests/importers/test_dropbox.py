@@ -5,6 +5,7 @@ from typing import Any, Dict, Generator, List, Optional
 
 import pytest
 from dropbox.dropbox_client import Dropbox
+from dropbox.exceptions import ApiError, AuthError
 from dropbox.files import FileMetadata, FolderMetadata
 from sqlalchemy.orm import Session
 
@@ -218,3 +219,40 @@ def test_dropbox_importer_success(
     assert job.imported_items == remote_data["total_items"]
 
     assert job.status == JobStatus.IMPORTING_SUCCESSFULLY
+
+
+@pytest.fixture
+def launch_api_error(monkeypatch: Any, exception: Exception) -> None:
+    def mock_api_exception(*args: List, **kwargs: Dict) -> None:
+        raise exception
+
+    monkeypatch.setattr(Dropbox, "files_list_folder", mock_api_exception)
+    monkeypatch.setattr(dropbox, "Dropbox", mock_api_exception)
+
+
+@pytest.mark.parametrize(
+    "exception, job_status",
+    [
+        (
+            ApiError(
+                request_id="id",
+                user_message_text="",
+                user_message_locale="",
+                error=None,
+            ),
+            JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE,
+        ),
+        (
+            AuthError(request_id="id", error=None),
+            JobStatus.IMPORTING_ERROR_AUTHORIZATION_REQUIRED,
+        ),
+    ],
+)
+@pytest.mark.usefixtures("launch_api_error")
+def test_dropbox_importer_api_error(
+    db: Session, basic_job: dict, exception: Exception, job_status: JobStatus
+) -> None:
+    job = basic_job["db_job"]
+    importer = DropboxImporter(db, job.id)
+    importer.process()
+    assert job.status is job_status
