@@ -4,8 +4,8 @@ from re import search
 from typing import Dict, List
 
 import dropbox
-from dropbox.dropbox_client import Dropbox
-from dropbox.exceptions import ApiError, AuthError
+from dropbox.dropbox_client import BadInputException, Dropbox
+from dropbox.exceptions import ApiError, AuthError, BadInputError, HttpError
 from dropbox.files import FolderMetadata
 from sqlalchemy.orm import Session
 
@@ -66,7 +66,23 @@ class DropboxImporter(BaseImporter):
         job: Job = crud.job.get(self.db, self.job_id)
         crud.job.update_status(self.db, db_obj=job, status=JobStatus.IMPORTING)
 
-        self.dropbox_handler = dropbox.Dropbox(oauth2_access_token=job.import_token)
+        try:
+            if len(job.import_token) == 0:
+                self.dropbox_handler = dropbox.Dropbox(
+                    oauth2_access_token="R2D2c3p0p4dm34n4k1n3Ia"
+                )
+            else:
+                self.dropbox_handler = dropbox.Dropbox(
+                    oauth2_access_token=job.import_token
+                )
+        except (BadInputException, HttpError):
+            # self.dropbox_handler = dropbox.Dropbox(oauth2_access_token="test_token")
+            crud.job.update_status(
+                self.db,
+                db_obj=job,
+                status=JobStatus.IMPORTING_ERROR_AUTHORIZATION_REQUIRED,
+            )
+            return
 
         url_details = get_url_details(job.import_url)
 
@@ -77,14 +93,14 @@ class DropboxImporter(BaseImporter):
         try:
             self.build_tree_recursively(self.tree_root["children"], url_details["path"])
             self.download_tree_recursively(self.tree_root["children"], job.path)
-        except AuthError:
+        except (AuthError, HttpError, BadInputError):
             crud.job.update_status(
                 self.db,
                 db_obj=job,
                 status=JobStatus.IMPORTING_ERROR_AUTHORIZATION_REQUIRED,
             )
             return
-        except ApiError:
+        except (ApiError):
             crud.job.update_status(
                 self.db,
                 db_obj=job,

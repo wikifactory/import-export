@@ -29,7 +29,6 @@ def basic_job(db: Session) -> Generator[Dict, None, None]:
     job_input = JobCreate(
         import_service="dropbox",
         import_url="https://www.dropbox.com/home/user_folder",
-        # import_url="https://www.dropbox.com/sh/hnihhm3t1wer170/AADbUL6p382dnCDMYkkstGGqa?dl=0",
         export_service="wikifactory",
         export_url=f"https://wikifactory.com/@user/{random_project_name}",
         import_token="import_token",
