@@ -1,12 +1,15 @@
 import os
+
 from distutils.dir_util import copy_tree
 from typing import Any, Dict, Generator, List
 
 import py
 import pygit2
+
 import pytest
 from sqlalchemy.orm import Session
 
+import app.importers.git
 from app import crud
 from app.importers.git import GitImporter
 from app.models.job import JobStatus
@@ -26,6 +29,7 @@ def basic_job(db: Session, tmpdir: py.path.local) -> Generator[Dict, None, None]
     )
     db_job = crud.job.create(db, obj_in=job_input)
 
+
     db_job.path = os.path.join(tmpdir, str(db_job.id))
 
     # Copy the content of test_files/sample-project to that path
@@ -39,6 +43,7 @@ def basic_job(db: Session, tmpdir: py.path.local) -> Generator[Dict, None, None]
         db_job.path,
     )
 
+
     yield {
         "job_input": job_input,
         "db_job": db_job,
@@ -51,17 +56,19 @@ def basic_job(db: Session, tmpdir: py.path.local) -> Generator[Dict, None, None]
 @pytest.fixture()
 def clone_error(monkeypatch: Any) -> None:
     def mock_clone_repository_error(*args: List, **kwargs: Dict) -> None:
-        raise pygit2.errors.GitError
+        subprocess.run(["git", "clone"], check=True)
 
-    monkeypatch.setattr(pygit2, "clone_repository", mock_clone_repository_error)
+    monkeypatch.setattr(
+        app.importers.git, "clone_repository", mock_clone_repository_error
+    )
 
 
 @pytest.fixture()
 def clone_repository(monkeypatch: Any) -> None:
-    def mock_clone_repository(*args: List, **kwargs: Dict) -> pygit2.Repository:
-        return pygit2.Repository()
+    def mock_clone_repository(*args: List, **kwargs: Dict) -> None:
+        return
 
-    monkeypatch.setattr(pygit2, "clone_repository", mock_clone_repository)
+    monkeypatch.setattr(app.importers.git, "clone_repository", mock_clone_repository)
 
 
 @pytest.mark.usefixtures("clone_repository")
@@ -83,6 +90,8 @@ def test_git_importer(db: Session, basic_job: dict) -> None:
 This is sample-project's README file"""
     )
     assert job.manifest.source_url == job.import_url
+    assert job.total_items == 1
+    assert job.imported_items == job.total_items
 
 
 @pytest.mark.usefixtures("clone_error")

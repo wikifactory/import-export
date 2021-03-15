@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.importers.google_drive import GoogleDriveImporter, folder_mimetype, is_folder
 from app.models.job import JobStatus
 from app.models.job_log import JobLog
+from app.models.manifest import Manifest
 from app.schemas import JobCreate
 from app.tests.utils import utils
 
@@ -85,7 +86,7 @@ def basic_job(db: Session) -> Generator[Dict, None, None]:
         export_url=f"https://wikifactory.com/@user/{random_folder_id}",
     )
     db_job = crud.job.create(db, obj_in=job_input)
-    db_job.path = os.path.join(settings.DOWNLOAD_BASE_PATH, random_folder_id)
+    db_job.path = os.path.join(settings.JOBS_BASE_PATH, random_folder_id)
     yield {
         "job_input": job_input,
         "db_job": db_job,
@@ -237,6 +238,7 @@ def remote_data(basic_job: Dict) -> Dict:
                 "id": folder_id,
                 "title": "My Google Drive Project",
                 "mimeType": folder_mimetype,
+                "description": "Test description",
             },
             "children": [
                 {
@@ -265,6 +267,7 @@ def remote_data(basic_job: Dict) -> Dict:
                 },
             ],
         },
+        "total_items": 2,
     }
 
 
@@ -287,6 +290,15 @@ def test_google_drive_importer(db: Session, basic_job: dict, remote_data: dict) 
         == remote_data[basic_job["folder_id"]]["item"]["title"]
     )
     assert job.manifest.source_url == job.import_url
+
+    manifest = db.query(Manifest).filter_by(job_id=job.id).one()
+
+    assert (
+        manifest.project_description
+        == remote_data[basic_job["folder_id"]]["item"]["description"]
+    )
+
+    assert job.imported_items == remote_data["total_items"]
 
 
 @pytest.fixture

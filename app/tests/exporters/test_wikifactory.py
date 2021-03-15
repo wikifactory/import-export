@@ -121,6 +121,7 @@ def basic_job(db: Session, tmpdir: py.path.local) -> Generator[Dict, None, None]
     )
     db_job = crud.job.create(db, obj_in=job_input)
 
+
     db_job.path = os.path.join(tmpdir, str(db_job.id))
 
     # Copy the content of test_files/sample-project to that path
@@ -131,6 +132,7 @@ def basic_job(db: Session, tmpdir: py.path.local) -> Generator[Dict, None, None]
         ),
         db_job.path,
     )
+
 
     yield {
         "job_input": job_input,
@@ -343,6 +345,7 @@ def test_process_element_mutation_variables(
     "project_details, expected_headers",
     [
         (
+
             {
                 "space_id": "space-id",
                 "project_id": "project-id",
@@ -556,7 +559,7 @@ def test_wikifactory_exporter(
     monkeypatch.setattr(exporter, "get_project_details", mock_get_project_details)
 
     def mock_on_file_cb(*args: List, **kwargs: Dict) -> None:
-        pass
+        crud.job.increment_exported_items(db=db, job_id=exporter.job_id)
 
     monkeypatch.setattr(exporter, "on_file_cb", mock_on_file_cb)
 
@@ -598,3 +601,4 @@ def test_wikifactory_exporter(
         .one()
     )
     assert finished_successfully_status_log
+    assert items_count == job.exported_items

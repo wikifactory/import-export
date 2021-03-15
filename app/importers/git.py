@@ -1,31 +1,26 @@
 import os
 import re
 import shutil
+import subprocess
 from re import search
-from typing import Any
 
-import pygit2
 from sqlalchemy.orm import Session
 
 from app import crud
 from app.importers.base import BaseImporter
-from app.models.job import JobStatus
+from app.models.job import Job, JobStatus
 from app.schemas import ManifestInput
 
 # FIXME - there's git beyond github and gitlab
 popular_git_regex = r"^https?:\/\/(www\.)?git(hub|lab)\.com\/(?P<organization>[\w-]+)/(?P<project>[\w-]+)"
 
 
-class IgnoreCredentialsCallbacks(pygit2.RemoteCallbacks):
-    def credentials(self, url: str, username_from_url: str, allowed_types: int) -> None:
-        return None
-
-    def certificate_check(self, certificate: Any, valid: bool, host: str) -> bool:
-        return True
-
-
 def validate_url(url: str) -> bool:
     return bool(search(popular_git_regex, url))
+
+
+def clone_repository(url: str, path: str) -> None:
+    subprocess.run(["git", "clone", "--depth", "1", url, path], check=True)
 
 
 class GitImporter(BaseImporter):
@@ -41,10 +36,8 @@ class GitImporter(BaseImporter):
 
         try:
             # First, we clone the repo into the tmp folder
-            pygit2.clone_repository(
-                url, job.path, callbacks=IgnoreCredentialsCallbacks()
-            )
-        except pygit2.errors.GitError:
+            clone_repository(url, job.path)
+        except subprocess.CalledProcessError:
             # TODO support "auth required" status when support for private repos is added
             crud.job.update_status(
                 self.db, db_obj=job, status=JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE
@@ -56,6 +49,21 @@ class GitImporter(BaseImporter):
         # Fill some basic information of the project
         manifest_input.project_name = os.path.basename(os.path.normpath(url))
 
+        # Load the project description
+        self.populate_project_description(manifest_input)
+
+        # Remove the .git folder
+        try:
+            shutil.rmtree(os.path.join(job.path, ".git"))
+        except Exception:
+            print("Error deleting .git folder")
+
+        crud.job.update_status(
+            self.db, db_obj=job, status=JobStatus.IMPORTING_SUCCESSFULLY
+        )
+
+    def populate_project_description(self, manifest_input: ManifestInput) -> None:
+        job: Job = crud.job.get(self.db, self.job_id)
         # use readme contents as project description
         with os.scandir(job.path) as directory_iterator:
             readme_candidates = [
@@ -65,12 +73,6 @@ class GitImporter(BaseImporter):
                 and re.search(r"README.md$", readme.name, re.IGNORECASE)
             ]
 
-        # Remove the .git folder
-        try:
-            shutil.rmtree(os.path.join(job.path, ".git"))
-        except Exception:
-            print("Error deleting .git folder")
-
         if readme_candidates:
             chosen_readme = readme_candidates[0]
             # FIXME potentially dangerous!
@@ -79,7 +81,22 @@ class GitImporter(BaseImporter):
                 # FIXME maybe just read up to a certain length
                 manifest_input.project_description = file_handle.read()
 
-        crud.manifest.update_or_create(self.db, obj_in=manifest_input)
-        crud.job.update_status(
-            self.db, db_obj=job, status=JobStatus.IMPORTING_SUCCESSFULLY
+        # Remove the .git folder
+        try:
+            shutil.rmtree(os.path.join(job.path, ".git"))
+        except OSError:
+            print("Error deleting .git folder")
+
+        # Set the number of total_items
+        downloaded_files = sum([len(files) for _, _, files in os.walk(job.path)])
+
+        crud.job.update_total_items(
+            self.db, job_id=self.job_id, total_items=downloaded_files
         )
+
+        # Since we cannot process the files one by one
+        crud.job.update_imported_items(
+            self.db, job_id=self.job_id, imported_items=downloaded_files
+        )
+
+        crud.manifest.update_or_create(self.db, obj_in=manifest_input)

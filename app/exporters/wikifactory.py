@@ -1,4 +1,5 @@
 import os
+import traceback
 from re import search
 from typing import IO, Dict, Optional
 
@@ -11,6 +12,7 @@ from requests.models import HTTPError
 from sqlalchemy.orm import Session
 
 from app import crud
+from app.core.config import settings
 from app.exporters.base import AuthRequired, BaseExporter, NotReachable
 from app.models.job import JobStatus
 
@@ -21,8 +23,6 @@ from .wikifactory_gql import (
     operation_mutation,
     project_query,
 )
-
-endpoint_url = "https://wikifactory.com/api/graphql"
 
 
 class FileUploadFailed(Exception):
@@ -45,7 +45,7 @@ def wikifactory_api_request(
 ) -> Dict:
     headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else None
     transport = RequestsHTTPTransport(
-        url=endpoint_url,
+        url=f"{settings.WIKIFACTORY_API_BASE_URL}/api/graphql",
         headers=headers,
     )
 
@@ -99,7 +99,7 @@ def wikifactory_api_request(
     return result
 
 
-wikifactory_project_regex = r"^(?:http(s)?:\/\/)?(www\.)?wikifactory\.com\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
+wikifactory_project_regex = fr"^(?:http(s)?:\/\/)?(www\.)?{settings.WIKIFACTORY_API_HOST}\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
 
 
 def validate_url(url: str) -> bool:
@@ -121,6 +121,7 @@ class WikifactoryExporter(BaseExporter):
     def process(self) -> None:
         job = crud.job.get(self.db, self.job_id)
         assert job
+
         crud.job.update_status(self.db, db_obj=job, status=JobStatus.EXPORTING)
 
         self.project_details = self.get_project_details()
@@ -144,6 +145,7 @@ class WikifactoryExporter(BaseExporter):
             # Finally, remove the local files
             self.clean_download_folder(job.path)
         except (FileUploadFailed, UserErrors):
+            traceback.print_exc()
 
             # FIXME - improve error handling
             crud.job.update_status(
@@ -186,6 +188,9 @@ class WikifactoryExporter(BaseExporter):
             # Mark the file as completed
             self.complete_file(wikifactory_file_id)
 
+            # Update the exported items
+            crud.job.increment_exported_items(self.db, job_id=self.job_id)
+
     def on_finished_cb(self) -> None:
         # In order to finish, I need to perform the commit
         job = crud.job.get(self.db, self.job_id)
@@ -212,6 +217,9 @@ class WikifactoryExporter(BaseExporter):
         assert job
         assert self.project_details
 
+        with open(path) as file_handle:
+            content_type = magic.from_descriptor(file_handle.fileno(), mime=True)
+
         variables = {
             "fileInput": {
                 "filename": os.path.basename(path),
@@ -220,7 +228,7 @@ class WikifactoryExporter(BaseExporter):
                 "projectPath": os.path.relpath(path, job.path),
                 "gitHash": str(pygit2.hashfile(path)),
                 "completed": False,
-                "contentType": magic.from_file(path, mime=True),
+                "contentType": content_type,
             }
         }
 
@@ -271,20 +279,31 @@ class WikifactoryExporter(BaseExporter):
     def upload_file(self, file_handle: IO, file_url: str) -> None:
         assert self.project_details
 
+        content_type = magic.from_descriptor(file_handle.fileno(), mime=True)
+
         headers = {
             "x-amz-acl": "private"
             if self.project_details["private"]
             else "public-read",
-            "Content-Type": magic.from_descriptor(file_handle.fileno(), mime=True),
+            "Content-Type": content_type,
         }
 
+        # This is weird but requests handles an empty file object
+        # differently than None, with empty file
+        # it appends Content-Length: 0 header which triggers 501 on S3
+        if not file_handle.read(1):
+            data = None
+        else:
+            data = file_handle
+            file_handle.seek(0)
+
         try:
-            response = requests.put(file_url, data=file_handle, headers=headers)
+            response = requests.put(file_url, data=data, headers=headers)
             response.raise_for_status()
-        except HTTPError:
+        except HTTPError as e:
             raise FileUploadFailed(
                 f"There was an error uploading the file. Error code: {response.status_code}"
-            )
+            ) from e
 
         file_name = os.path.basename(file_handle.name)
         print(f"File {file_name} uploaded to s3")

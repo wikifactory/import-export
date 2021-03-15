@@ -3,10 +3,10 @@ services:
 
   postgres-db:
     image: "postgres:12.6"
-    env_file:
-      - .env
     environment:
       - PGDATA=/var/lib/postgresql/data/pgdata
+    env_file:
+      - .env
     volumes:
       - database-data:/var/lib/postgresql/data # To persist content
     command: ["postgres", "-c", "log_statement=all"]
@@ -22,17 +22,15 @@ services:
       args:
         INSTALL_DEV: ${INSTALL_DEV-true}
     working_dir: /app
-    env_file:
-      - .env
     environment:
       - SERVER_HOST=https://${DOMAIN?Variable not set}
       - DAP_PORT=5680
-      - DOWNLOAD_BASE_PATH=${DOWNLOAD_BASE_PATH}
+      - JOBS_BASE_PATH=${JOBS_BASE_PATH}
     ports:
       - 127.0.0.1:5680:5680
     volumes:
       - ./app:/app/app
-    command: /start-reload.sh
+    command: /app/start-reload.sh
     networks:
       - default
 
@@ -44,8 +42,6 @@ services:
       dockerfile: celeryworker.Dockerfile
       args:
         INSTALL_DEV: ${INSTALL_DEV-true}
-    env_file:
-      - .env
     environment:
       - SERVER_HOST=https://${DOMAIN?Variable not set}
       - DAP_PORT=5681

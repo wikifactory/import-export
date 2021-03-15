@@ -3,6 +3,7 @@ import sys
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import AnyHttpUrl, AnyUrl, BaseSettings, HttpUrl, PostgresDsn, validator
+from pydantic.tools import parse_obj_as
 
 
 class Settings(BaseSettings):
@@ -12,7 +13,7 @@ class Settings(BaseSettings):
     # BACKEND_CORS_ORIGINS is a JSON-formatted list of origins
     # e.g: '["http://localhost", "http://localhost:4200", "http://localhost:3000", \
     # "http://localhost:8080", "http://local.dockertoolbox.tiangolo.com"]'
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+    BACKEND_CORS_ORIGINS: List[str] = []
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
@@ -24,6 +25,33 @@ class Settings(BaseSettings):
 
     PROJECT_NAME: str
     SENTRY_DSN: Optional[HttpUrl] = None
+
+    WIKIFACTORY_API_BASE_URL: AnyHttpUrl = parse_obj_as(
+        AnyHttpUrl, "https://wikifactory.com"
+    )
+
+    @validator("WIKIFACTORY_API_BASE_URL", pre=True)
+    def wikifactory_base_url(cls, v: Union[str, AnyHttpUrl]) -> AnyHttpUrl:
+        if isinstance(v, str):
+            return parse_obj_as(AnyHttpUrl, v)
+        elif isinstance(v, AnyHttpUrl):
+            return v
+        raise ValueError(v)
+
+    WIKIFACTORY_API_HOST: Optional[str] = None
+
+    @validator("WIKIFACTORY_API_HOST")
+    def wikifactory_host_from_url(cls, v: Optional[str], values: Dict[str, Any]) -> str:
+        if isinstance(v, str):
+            return v
+
+        api_base_url = values.get("WIKIFACTORY_API_BASE_URL")
+        if api_base_url:
+            if api_base_url.port:
+                return f"{api_base_url.host}:{api_base_url.port}"
+            return api_base_url.host
+
+        raise ValueError(api_base_url)
 
     @validator("SENTRY_DSN", pre=True)
     def sentry_dsn_can_be_blank(cls, v: str) -> Optional[str]:
@@ -64,17 +92,13 @@ class Settings(BaseSettings):
         )
 
     # TODO - define validations
-    DOWNLOAD_BASE_PATH: str
+    JOBS_BASE_PATH: str
 
-    @validator("DOWNLOAD_BASE_PATH", pre=True)
+    @validator("JOBS_BASE_PATH", pre=True)
     def ensure_download_path(cls, v: str) -> str:
         if "pytest" in sys.modules:
             current_dir = os.path.dirname(os.path.realpath(__file__))
             return os.path.normpath(os.path.join(current_dir, "../tests/test_files"))
-
-        if not os.path.exists(v):
-            print("Creating DOWNLOAD_BASE_PATH")
-            os.makedirs(v)
 
         # if directory can't be written, raise ValueError(v)
         return v

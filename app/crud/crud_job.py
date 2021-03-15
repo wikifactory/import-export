@@ -1,6 +1,6 @@
 import os
+from typing import Optional
 
-from pydantic.main import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import not_
 
@@ -18,10 +18,10 @@ from app.models.job import (
     terminated_job_statuses,
 )
 from app.models.job_log import JobLog
-from app.schemas.job import JobCreate
+from app.schemas.job import JobCreate, JobUpdate
 
 
-class CRUDJob(CRUDBase[Job, JobCreate, BaseModel]):
+class CRUDJob(CRUDBase[Job, JobCreate, JobUpdate]):
     def create(self, db: Session, *, obj_in: JobCreate) -> Job:
         active_job_exists = (
             db.query(Job)
@@ -36,7 +36,7 @@ class CRUDJob(CRUDBase[Job, JobCreate, BaseModel]):
             raise JobDuplicated()
 
         db_job = super().create(db, obj_in=obj_in)
-        db_job.path = os.path.join(settings.DOWNLOAD_BASE_PATH, str(db_job.id))
+        db_job.path = os.path.join(settings.JOBS_BASE_PATH, str(db_job.id))
         log_obj = JobLog(job_id=db_job.id, to_status=db_job.status)
         db.add(log_obj)
         db.commit()
@@ -54,6 +54,30 @@ class CRUDJob(CRUDBase[Job, JobCreate, BaseModel]):
         db.refresh(db_obj)
         return db_obj
 
+    def update_total_items(self, db: Session, *, job_id: str, total_items: int) -> None:
+        db.query(Job).filter(Job.id == job_id).update({Job.total_items: total_items})
+        db.commit()
+
+    def update_imported_items(
+        self, db: Session, *, job_id: str, imported_items: int
+    ) -> None:
+        db.query(Job).filter(Job.id == job_id).update(
+            {Job.imported_items: imported_items}
+        )
+        db.commit()
+
+    def increment_imported_items(self, db: Session, *, job_id: str) -> None:
+        db.query(Job).filter(Job.id == job_id).update(
+            {Job.imported_items: Job.imported_items + 1}
+        )
+        db.commit()
+
+    def increment_exported_items(self, db: Session, *, job_id: str) -> None:
+        db.query(Job).filter(Job.id == job_id).update(
+            {Job.exported_items: Job.exported_items + 1}
+        )
+        db.commit()
+
     def cancel(self, db: Session, *, db_obj: Job) -> Job:
         if not self.is_active(job=db_obj):
             raise JobNotCancellable()
@@ -61,9 +85,15 @@ class CRUDJob(CRUDBase[Job, JobCreate, BaseModel]):
         # mark the job as cancelling
         return self.update_status(db, db_obj=db_obj, status=JobStatus.CANCELLING)
 
-    def retry(self, db: Session, *, db_obj: Job) -> Job:
+    def retry(
+        self, db: Session, *, db_obj: Job, retry_input: Optional[JobUpdate]
+    ) -> Job:
         if not self.is_retriable(job=db_obj):
             raise JobNotRetriable()
+
+        # update with params if available
+        if retry_input:
+            self.update(db, db_obj=db_obj, obj_in=retry_input)
 
         # mark the job as pending
         self.update_status(db, db_obj=db_obj, status=JobStatus.PENDING)
