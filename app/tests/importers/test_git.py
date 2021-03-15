@@ -1,11 +1,9 @@
 import os
-
+import subprocess
 from distutils.dir_util import copy_tree
 from typing import Any, Dict, Generator, List
 
 import py
-import pygit2
-
 import pytest
 from sqlalchemy.orm import Session
 
@@ -29,7 +27,6 @@ def basic_job(db: Session, tmpdir: py.path.local) -> Generator[Dict, None, None]
     )
     db_job = crud.job.create(db, obj_in=job_input)
 
-
     db_job.path = os.path.join(tmpdir, str(db_job.id))
 
     # Copy the content of test_files/sample-project to that path
@@ -42,7 +39,6 @@ def basic_job(db: Session, tmpdir: py.path.local) -> Generator[Dict, None, None]
         ),
         db_job.path,
     )
-
 
     yield {
         "job_input": job_input,

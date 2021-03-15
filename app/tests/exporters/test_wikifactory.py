@@ -121,7 +121,6 @@ def basic_job(db: Session, tmpdir: py.path.local) -> Generator[Dict, None, None]
     )
     db_job = crud.job.create(db, obj_in=job_input)
 
-
     db_job.path = os.path.join(tmpdir, str(db_job.id))
 
     # Copy the content of test_files/sample-project to that path
@@ -132,7 +131,6 @@ def basic_job(db: Session, tmpdir: py.path.local) -> Generator[Dict, None, None]
         ),
         db_job.path,
     )
-
 
     yield {
         "job_input": job_input,
@@ -345,7 +343,6 @@ def test_process_element_mutation_variables(
     "project_details, expected_headers",
     [
         (
-
             {
                 "space_id": "space-id",
                 "project_id": "project-id",
@@ -543,8 +540,8 @@ def test_on_file_cb_no_file_id(monkeypatch: Any, exporter: WikifactoryExporter) 
 
 
 @pytest.mark.parametrize(
-    "project_details",
-    [({"project_id": "project-id", "private": True, "space_id": "space-id"},)],
+    "project_details, items_count",
+    [({"project_id": "project-id", "private": True, "space_id": "space-id"}, 1)],
 )
 def test_wikifactory_exporter(
     monkeypatch: Any,
@@ -552,6 +549,7 @@ def test_wikifactory_exporter(
     project_details: dict,
     basic_job: dict,
     exporter: WikifactoryExporter,
+    items_count: int,
 ) -> None:
     def mock_get_project_details(*args: List, **kwargs: Dict) -> Dict:
         return project_details
