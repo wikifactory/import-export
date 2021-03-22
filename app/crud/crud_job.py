@@ -83,7 +83,9 @@ class CRUDJob(CRUDBase[Job, JobCreate, JobUpdate]):
             raise JobNotCancellable()
 
         # mark the job as cancelling
-        return self.update_status(db, db_obj=db_obj, status=JobStatus.CANCELLING)
+        self.update_status(db, db_obj=db_obj, status=JobStatus.CANCELLING)
+
+        return db_obj
 
     def retry(
         self, db: Session, *, db_obj: Job, retry_input: Optional[JobUpdate]

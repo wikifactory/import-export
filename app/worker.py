@@ -7,6 +7,8 @@ from app.core.config import settings
 from app.db.session import SessionLocal
 from app.exporters import service_map as exporters_map
 from app.importers import service_map as importers_map
+from app.models.job import JobStatus
+from app.utils import remove_job_downloaded_files
 
 logger = get_task_logger(__name__)
 client_sentry = sentry_sdk.init(settings.SENTRY_DSN)
@@ -35,3 +37,17 @@ def process_job(job_id: str) -> None:
         assert Exporter
         exporter = Exporter(db, job.id)
         exporter.process()
+
+
+@celery_app.task
+def cancel_job(job_id: str) -> None:
+
+    db = SessionLocal()
+    job = crud.job.get(db, job_id)
+    assert job
+
+    # Remove downloaded files (if any)
+    remove_job_downloaded_files(job.path)
+
+    # TODO: Set as cancelled
+    crud.job.update_status(db, db_obj=job, status=JobStatus.CANCELLED)
