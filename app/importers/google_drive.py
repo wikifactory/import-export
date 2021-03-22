@@ -156,5 +156,5 @@ class GoogleDriveImporter(BaseImporter):
 
     def populate_project_description(self, manifest_input: ManifestInput) -> None:
         self.root_item.FetchMetadata(fields="description")
-        manifest_input.project_description = self.root_item.get("description")
+        manifest_input.project_description = ""
         crud.manifest.update_or_create(self.db, obj_in=manifest_input)
