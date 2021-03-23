@@ -2,7 +2,6 @@ import os
 import re
 import shutil
 import subprocess
-from re import search
 
 from sqlalchemy.orm import Session
 
@@ -10,13 +9,7 @@ from app import crud
 from app.importers.base import BaseImporter
 from app.models.job import Job, JobStatus
 from app.schemas import ManifestInput
-
-# FIXME - there's git beyond github and gitlab
-popular_git_regex = r"^https?:\/\/(www\.)?git(hub|lab)\.com\/(?P<organization>[\w-]+)/(?P<project>[\w-]+)"
-
-
-def validate_url(url: str) -> bool:
-    return bool(search(popular_git_regex, url))
+from app.service_validators.git_service_validator import GitServiceValidator
 
 
 def clone_repository(url: str, path: str) -> None:
@@ -27,6 +20,7 @@ class GitImporter(BaseImporter):
     def __init__(self, db: Session, job_id: str):
         self.job_id = job_id
         self.db = db
+        self.validator = GitServiceValidator()
 
     def process(self) -> None:
         job = crud.job.get(self.db, self.job_id)

@@ -15,6 +15,9 @@ from app import crud
 from app.core.config import settings
 from app.exporters.base import AuthRequired, BaseExporter, NotReachable
 from app.models.job import JobStatus
+from app.service_validators.wikifactory_service_validator import (
+    WikifactoryServiceValidator,
+)
 
 from .wikifactory_gql import (
     commit_contribution_mutation,
@@ -102,10 +105,6 @@ def wikifactory_api_request(
 wikifactory_project_regex = fr"^(?:http(s)?:\/\/)?(www\.)?{settings.WIKIFACTORY_API_HOST}\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
 
 
-def validate_url(url: str) -> bool:
-    return bool(search(wikifactory_project_regex, url))
-
-
 def space_slug_from_url(url: str) -> Dict:
     match = search(wikifactory_project_regex, url)
     assert match
@@ -117,6 +116,7 @@ class WikifactoryExporter(BaseExporter):
         self.db = db
         self.job_id = job_id
         self.project_details: Optional[Dict] = None
+        self.validator = WikifactoryServiceValidator()
 
     def process(self) -> None:
         job = crud.job.get(self.db, self.job_id)
