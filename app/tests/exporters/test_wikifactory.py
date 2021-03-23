@@ -21,9 +21,7 @@ from app.exporters.wikifactory import (
 from app.models.job import JobStatus
 from app.models.job_log import JobLog
 from app.schemas import JobCreate
-from app.service_validators.wikifactory_service_validator import (
-    WikifactoryServiceValidator,
-)
+from app.service_validators.services import wikifactory_validator
 from app.tests.utils import utils
 
 
@@ -43,7 +41,7 @@ from app.tests.utils import utils
     ],
 )
 def test_validate_url(project_url: str, is_valid: bool) -> None:
-    assert WikifactoryServiceValidator().validate_url(project_url) is is_valid
+    assert wikifactory_validator.validate_url(project_url) is is_valid
 
 
 @pytest.mark.parametrize(

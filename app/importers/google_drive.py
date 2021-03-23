@@ -15,9 +15,7 @@ from app import crud
 from app.importers.base import BaseImporter
 from app.models.job import JobStatus
 from app.schemas import ManifestInput
-from app.service_validators.googledrive_service_validator import (
-    GoogleDriveServiceValidator,
-)
+from app.service_validators.services import google_drive_validator
 
 folder_mimetype = "application/vnd.google-apps.folder"
 
@@ -30,7 +28,7 @@ class GoogleDriveImporter(BaseImporter):
     def __init__(self, db: Session, job_id: str):
         self.db = db
         self.job_id = job_id
-        self.validator = GoogleDriveServiceValidator()
+        self.validator = google_drive_validator
         self.drive: GoogleDrive = None
         self.tree_root: Dict = {"item": None, "children": {}}
 

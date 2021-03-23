@@ -15,9 +15,7 @@ from app import crud
 from app.core.config import settings
 from app.exporters.base import AuthRequired, BaseExporter, NotReachable
 from app.models.job import JobStatus
-from app.service_validators.wikifactory_service_validator import (
-    WikifactoryServiceValidator,
-)
+from app.service_validators.services import wikifactory_validator
 
 from .wikifactory_gql import (
     commit_contribution_mutation,
@@ -116,7 +114,7 @@ class WikifactoryExporter(BaseExporter):
         self.db = db
         self.job_id = job_id
         self.project_details: Optional[Dict] = None
-        self.validator = WikifactoryServiceValidator()
+        self.validator = wikifactory_validator
 
     def process(self) -> None:
         job = crud.job.get(self.db, self.job_id)

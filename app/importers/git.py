@@ -9,7 +9,7 @@ from app import crud
 from app.importers.base import BaseImporter
 from app.models.job import Job, JobStatus
 from app.schemas import ManifestInput
-from app.service_validators.git_service_validator import GitServiceValidator
+from app.service_validators.services import git_validator
 
 
 def clone_repository(url: str, path: str) -> None:
@@ -20,7 +20,7 @@ class GitImporter(BaseImporter):
     def __init__(self, db: Session, job_id: str):
         self.job_id = job_id
         self.db = db
-        self.validator = GitServiceValidator()
+        self.validator = git_validator
 
     def process(self) -> None:
         job = crud.job.get(self.db, self.job_id)
