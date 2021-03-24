@@ -48,7 +48,7 @@ class DropboxImporter(BaseImporter):
     def __init__(self, db: Session, job_id: str):
         self.db = db
         self.job_id = job_id
-        self.dropbox_handler: Dropbox = None
+        self.dropbox_handler: Optional[Dropbox] = None
         self.tree_root: Dict = {
             "entry": FolderMetadata(id="root-folder", name="root-folder"),
             "children": {},
