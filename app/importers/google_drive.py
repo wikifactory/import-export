@@ -24,18 +24,19 @@ def is_folder(item: GoogleDriveFile) -> bool:
     return item.get("mimeType") == folder_mimetype
 
 
+def folder_id_from_url(url: str) -> str:
+    match = search(google_drive_validator.keywords["regexes"][0], url)
+    assert match
+    return match.group("folder_id")
+
+
 class GoogleDriveImporter(BaseImporter):
     def __init__(self, db: Session, job_id: str):
         self.db = db
         self.job_id = job_id
-        self.validator = google_drive_validator
+
         self.drive: GoogleDrive = None
         self.tree_root: Dict = {"item": None, "children": {}}
-
-    def folder_id_from_url(self, url: str) -> str:
-        match = search(self.validator.valid_regexes[0], url)
-        assert match
-        return match.group("folder_id")
 
     def authenticate(self, token: str) -> GoogleAuth:
         if not token:
@@ -107,7 +108,7 @@ class GoogleDriveImporter(BaseImporter):
             return
 
         self.drive = GoogleDrive(gauth)
-        folder_id = self.folder_id_from_url(job.import_url)
+        folder_id = folder_id_from_url(url=job.import_url)
 
         try:
             root_folder = self.drive.CreateFile({"id": folder_id})

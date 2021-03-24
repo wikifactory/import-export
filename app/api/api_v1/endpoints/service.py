@@ -11,8 +11,8 @@ router = APIRouter()
 @router.post("/validate", response_model=schemas.Service)
 def validate_url(*, service_input: schemas.ServiceInput) -> Any:
 
-    for service in available_services:
-        service_name = service.validate_url(service_input.url)
+    for validator in available_services:
+        service_name = validator(url=service_input.url)
 
         if service_name is not None:
             return {"name": service_name}

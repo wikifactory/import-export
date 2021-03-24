@@ -100,11 +100,8 @@ def wikifactory_api_request(
     return result
 
 
-wikifactory_project_regex = fr"^(?:http(s)?:\/\/)?(www\.)?{settings.WIKIFACTORY_API_HOST}\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
-
-
 def space_slug_from_url(url: str) -> Dict:
-    match = search(wikifactory_project_regex, url)
+    match = search(wikifactory_validator.keywords["regexes"][0], url)
     assert match
     return match.groupdict()
 
@@ -114,7 +111,6 @@ class WikifactoryExporter(BaseExporter):
         self.db = db
         self.job_id = job_id
         self.project_details: Optional[Dict] = None
-        self.validator = wikifactory_validator
 
     def process(self) -> None:
         job = crud.job.get(self.db, self.job_id)

@@ -41,7 +41,7 @@ from app.tests.utils import utils
     ],
 )
 def test_validate_url(project_url: str, is_valid: bool) -> None:
-    assert wikifactory_validator.validate_url(project_url) is is_valid
+    assert wikifactory_validator(project_url) is is_valid
 
 
 @pytest.mark.parametrize(
