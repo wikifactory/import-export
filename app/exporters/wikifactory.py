@@ -15,6 +15,7 @@ from app import crud
 from app.core.config import settings
 from app.exporters.base import AuthRequired, BaseExporter, NotReachable
 from app.models.job import JobStatus
+from app.service_validators.services import wikifactory_validator
 
 from .wikifactory_gql import (
     commit_contribution_mutation,
@@ -99,15 +100,8 @@ def wikifactory_api_request(
     return result
 
 
-wikifactory_project_regex = fr"^(?:http(s)?:\/\/)?(www\.)?{settings.WIKIFACTORY_API_HOST}\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
-
-
-def validate_url(url: str) -> bool:
-    return bool(search(wikifactory_project_regex, url))
-
-
 def space_slug_from_url(url: str) -> Dict:
-    match = search(wikifactory_project_regex, url)
+    match = search(wikifactory_validator.keywords["regexes"][0], url)
     assert match
     return match.groupdict()
 

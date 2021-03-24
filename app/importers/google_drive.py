@@ -15,8 +15,7 @@ from app import crud
 from app.importers.base import BaseImporter
 from app.models.job import JobStatus
 from app.schemas import ManifestInput
-
-googledrive_folder_regex = r"^https?:\/\/drive\.google\.com\/drive\/(u\/[0-9]+\/)?folders\/(?P<folder_id>[-\w]{25,})"
+from app.service_validators.services import google_drive_validator
 
 folder_mimetype = "application/vnd.google-apps.folder"
 
@@ -26,19 +25,16 @@ def is_folder(item: GoogleDriveFile) -> bool:
 
 
 def folder_id_from_url(url: str) -> str:
-    match = search(googledrive_folder_regex, url)
+    match = search(google_drive_validator.keywords["regexes"][0], url)
     assert match
     return match.group("folder_id")
-
-
-def validate_url(url: str) -> bool:
-    return bool(search(googledrive_folder_regex, url))
 
 
 class GoogleDriveImporter(BaseImporter):
     def __init__(self, db: Session, job_id: str):
         self.db = db
         self.job_id = job_id
+
         self.drive: GoogleDrive = None
         self.tree_root: Dict = {"item": None, "children": {}}
 
@@ -112,7 +108,7 @@ class GoogleDriveImporter(BaseImporter):
             return
 
         self.drive = GoogleDrive(gauth)
-        folder_id = folder_id_from_url(job.import_url)
+        folder_id = folder_id_from_url(url=job.import_url)
 
         try:
             root_folder = self.drive.CreateFile({"id": folder_id})
