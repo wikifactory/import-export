@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from re import search
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import dropbox
 from dropbox.dropbox_client import BadInputException, Dropbox
@@ -122,6 +122,8 @@ class DropboxImporter(BaseImporter):
 
     def get_entries_from_folder(self, folder_path: str) -> List[dropbox.files.Metadata]:
 
+        assert self.dropbox_handler
+
         entries = []
 
         if self.url_type == "shared":
@@ -165,6 +167,8 @@ class DropboxImporter(BaseImporter):
     def download_tree_recursively(
         self, current_level: Dict, accumulated_path: str
     ) -> None:
+
+        assert self.dropbox_handler
 
         Path(accumulated_path).mkdir(parents=True, exist_ok=True)
 
