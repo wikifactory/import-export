@@ -16,32 +16,32 @@ from app.exporters.wikifactory import (
     UserErrors,
     WikifactoryExporter,
     space_slug_from_url,
-    validate_url,
     wikifactory_api_request,
 )
 from app.models.job import JobStatus
 from app.models.job_log import JobLog
 from app.schemas import JobCreate
+from app.service_validators.services import wikifactory_validator
 from app.tests.utils import utils
 
 
 @pytest.mark.parametrize(
     "project_url, is_valid",
     [
-        ("http://wikifactory.com/@botler/test-project", True),
-        ("http://www.wikifactory.com/@botler/test-project", True),
-        ("https://wikifactory.com/@botler/test-project", True),
-        ("https://www.wikifactory.com/@botler/test-project", True),
-        ("https://wikifactory.com/+wikifactory/important-project", True),
-        ("https://wikifactory.com/+wikifactory/试验", True),
-        ("https://wikifactory.com/+wikifactory/", False),
-        ("https://wikifactory.com/+wikifactory", False),
-        ("https://wikifactory.com/+/not-here", False),
-        ("https://wikifactory.com/@/not-here", False),
+        ("http://wikifactory.com/@botler/test-project", "wikifactory"),
+        ("http://www.wikifactory.com/@botler/test-project", "wikifactory"),
+        ("https://wikifactory.com/@botler/test-project", "wikifactory"),
+        ("https://www.wikifactory.com/@botler/test-project", "wikifactory"),
+        ("https://wikifactory.com/+wikifactory/important-project", "wikifactory"),
+        ("https://wikifactory.com/+wikifactory/试验", "wikifactory"),
+        ("https://wikifactory.com/+wikifactory/", None),
+        ("https://wikifactory.com/+wikifactory", None),
+        ("https://wikifactory.com/+/not-here", None),
+        ("https://wikifactory.com/@/not-here", None),
     ],
 )
 def test_validate_url(project_url: str, is_valid: bool) -> None:
-    assert validate_url(project_url) is is_valid
+    assert wikifactory_validator(project_url) is is_valid
 
 
 @pytest.mark.parametrize(
