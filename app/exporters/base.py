@@ -1,4 +1,7 @@
 import shutil
+import traceback
+from types import FunctionType
+from typing import Any, Iterable
 
 from sqlalchemy.orm import Session
 
@@ -11,7 +14,11 @@ class BaseExporter:
         raise NotImplementedError()
 
     def clean_download_folder(self, path: str) -> None:
-        shutil.rmtree(path, ignore_errors=True)
+        def onerror(function: FunctionType, path: str, excinfo: Iterable[Any]) -> None:
+            print(f"While processing {path}")
+            traceback.print_exception(*excinfo)
+
+        shutil.rmtree(path, onerror=onerror)
 
 
 class AuthRequired(Exception):
