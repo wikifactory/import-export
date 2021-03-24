@@ -217,7 +217,7 @@ def test_dropbox_importer_success(
 
     assert job.imported_items == remote_data["total_items"]
 
-    assert job.status == JobStatus.IMPORTING_SUCCESSFULLY
+    assert job.status is JobStatus.IMPORTING_SUCCESSFULLY
 
 
 @pytest.fixture
