@@ -70,7 +70,6 @@ class DropboxImporter(BaseImporter):
                     oauth2_access_token=job.import_token
                 )
         except (BadInputException, HttpError):
-            # self.dropbox_handler = dropbox.Dropbox(oauth2_access_token="test_token")
             crud.job.update_status(
                 self.db,
                 db_obj=job,
