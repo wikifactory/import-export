@@ -13,13 +13,10 @@ from app import crud
 from app.importers.base import BaseImporter
 from app.models.job import Job, JobStatus
 from app.schemas import ManifestInput
+from app.service_validators.services import dropbox_validator
 
-dropbox_shared_folder_regex = (
-    r"^(https)?:\/\/(www\.)?dropbox\.com\/sh\/(?P<path>\w*\/\w*)\?dl=0$"
-)
-dropbox_user_folder_regex = (
-    r"^(https:\/\/)?(www\.)?dropbox\.com\/home\/(?P<path>[\S]+)$"
-)
+dropbox_shared_folder_regex = dropbox_validator.keywords["regexes"][0]
+dropbox_user_folder_regex = dropbox_validator.keywords["regexes"][1]
 
 
 def validate_url_shared_folder(url: str) -> bool:
@@ -28,10 +25,6 @@ def validate_url_shared_folder(url: str) -> bool:
 
 def validate_url_user_folder(url: str) -> bool:
     return bool(search(dropbox_user_folder_regex, url))
-
-
-def validate_url(url: str) -> bool:
-    return validate_url_shared_folder(url) or validate_url_user_folder(url)
 
 
 def get_url_details(url: str) -> Dict[str, str]:
@@ -68,6 +61,7 @@ class DropboxImporter(BaseImporter):
 
         try:
             if len(job.import_token) == 0:
+                # Use a default, not valid token
                 self.dropbox_handler = dropbox.Dropbox(
                     oauth2_access_token="R2D2c3p0p4dm34n4k1n3Ia"
                 )

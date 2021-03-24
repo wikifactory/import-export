@@ -29,4 +29,18 @@ wikifactory_validator = functools.partial(
     ],
 )
 
-available_services = [git_validator, google_drive_validator, wikifactory_validator]
+dropbox_validator = functools.partial(
+    regex_validator,
+    service_id="dropbox",
+    regexes=[
+        r"^(https)?:\/\/(www\.)?dropbox\.com\/sh\/(?P<path>\w*\/\w*)\?dl=0$",
+        r"^(https:\/\/)?(www\.)?dropbox\.com\/home\/(?P<path>[\S]+)$",
+    ],
+)
+
+available_services = [
+    git_validator,
+    google_drive_validator,
+    wikifactory_validator,
+    dropbox_validator,
+]
