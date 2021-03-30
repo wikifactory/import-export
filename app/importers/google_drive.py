@@ -1,4 +1,5 @@
 import os
+import traceback
 from pathlib import Path
 from re import search
 from typing import Dict
@@ -100,6 +101,8 @@ class GoogleDriveImporter(BaseImporter):
         try:
             gauth = self.authenticate(job.import_token)
         except AccessTokenCredentialsError:
+            traceback.print_exc()
+
             crud.job.update_status(
                 self.db,
                 db_obj=job,
@@ -123,6 +126,8 @@ class GoogleDriveImporter(BaseImporter):
             # and then starting downloads in parallel
             self.download_tree_recursively(self.tree_root["children"], job.path)
         except (ApiRequestError, FileNotDownloadableError, AssertionError):
+            traceback.print_exc()
+
             crud.job.update_status(
                 self.db,
                 db_obj=job,
