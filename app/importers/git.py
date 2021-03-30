@@ -41,14 +41,14 @@ class GitImporter(BaseImporter):
         # Fill some basic information of the project
         manifest_input.project_name = os.path.basename(os.path.normpath(url))
 
-        # Load the project description
-        self.populate_project_description(manifest_input)
-
         # Remove the .git folder
         try:
             shutil.rmtree(os.path.join(job.path, ".git"))
         except Exception:
             print("Error deleting .git folder")
+
+        # Load the project description
+        self.populate_project_description(manifest_input)
 
         crud.job.update_status(
             self.db, db_obj=job, status=JobStatus.IMPORTING_SUCCESSFULLY
@@ -72,12 +72,6 @@ class GitImporter(BaseImporter):
             with open(chosen_readme.path, "r") as file_handle:
                 # FIXME maybe just read up to a certain length
                 manifest_input.project_description = file_handle.read()
-
-        # Remove the .git folder
-        try:
-            shutil.rmtree(os.path.join(job.path, ".git"))
-        except OSError:
-            print("Error deleting .git folder")
 
         # Set the number of total_items
         downloaded_files = sum([len(files) for _, _, files in os.walk(job.path)])
