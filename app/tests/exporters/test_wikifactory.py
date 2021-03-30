@@ -1,14 +1,15 @@
 import os
+from distutils.dir_util import copy_tree
 from typing import Any, Dict, Generator, List
 
 import gql
+import py
 import pytest
 import requests
 from gql import Client
 from sqlalchemy.orm import Session
 
 from app import crud
-from app.core.config import settings
 from app.exporters.base import AuthRequired
 from app.exporters.wikifactory import (
     FileUploadFailed,
@@ -110,7 +111,7 @@ def mock_gql_response(monkeypatch: Any, response_dict: dict) -> None:
 
 
 @pytest.fixture
-def basic_job(db: Session) -> Generator[Dict, None, None]:
+def basic_job(db: Session, tmpdir: py.path.local) -> Generator[Dict, None, None]:
     random_project_name = utils.random_lower_string()
     job_input = JobCreate(
         import_service="git",
@@ -119,7 +120,18 @@ def basic_job(db: Session) -> Generator[Dict, None, None]:
         export_url=f"https://wikifactory.com/@user/{random_project_name}",
     )
     db_job = crud.job.create(db, obj_in=job_input)
-    db_job.path = os.path.join(settings.JOBS_BASE_PATH, "sample-project")
+
+    db_job.path = os.path.join(tmpdir, str(db_job.id))
+
+    # Copy the content of test_files/sample-project to that path
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    copy_tree(
+        os.path.normpath(
+            os.path.join(current_dir, "..", "test_files", "sample-project")
+        ),
+        db_job.path,
+    )
+
     yield {
         "job_input": job_input,
         "db_job": db_job,
@@ -287,12 +299,10 @@ def test_get_project_details(
 
 
 @pytest.mark.parametrize(
-    "project_details, job_path, file_path, response_dict, expected_variables",
+    "project_details, response_dict, expected_variables",
     [
         (
             {"space_id": "space-id", "project_id": "project-id"},
-            os.path.join(settings.JOBS_BASE_PATH, "sample-project"),
-            os.path.join(settings.JOBS_BASE_PATH, "sample-project", "README.md"),
             {
                 "data": {
                     "file": {
@@ -322,20 +332,17 @@ def test_process_element_mutation_variables(
     basic_job: Dict,
     exporter: WikifactoryExporter,
     project_details: Dict,
-    job_path: str,
-    file_path: str,
 ) -> None:
     job = basic_job["db_job"]
-    job.path = job_path
+
     exporter.project_details = project_details
-    exporter.process_file(file_path)
+    exporter.process_file(os.path.join(job.path, "README.md"))
 
 
 @pytest.mark.parametrize(
-    "file_path, project_details, expected_headers",
+    "project_details, expected_headers",
     [
         (
-            os.path.join(settings.JOBS_BASE_PATH, "sample-project", "README.md"),
             {
                 "space_id": "space-id",
                 "project_id": "project-id",
@@ -344,7 +351,6 @@ def test_process_element_mutation_variables(
             {"x-amz-acl": "public-read", "Content-Type": "text/plain"},
         ),
         (
-            os.path.join(settings.JOBS_BASE_PATH, "sample-project", "README.md"),
             {
                 "space_id": "space-id",
                 "project_id": "project-id",
@@ -357,9 +363,9 @@ def test_process_element_mutation_variables(
 def test_upload_file_headers(
     monkeypatch: Any,
     exporter: WikifactoryExporter,
-    file_path: str,
     project_details: Dict,
     expected_headers: Dict,
+    basic_job: dict,
 ) -> None:
     def mock_put_assert_headers(*args: List, **kwargs: Dict) -> requests.Response:
         headers = kwargs.get("headers")
@@ -370,21 +376,29 @@ def test_upload_file_headers(
 
     monkeypatch.setattr(requests, "put", mock_put_assert_headers)
 
+    job = basic_job["db_job"]
+
     exporter.project_details = project_details
 
     file_url = "http://upload-domain/upload-endpoint"
-
+    file_path = os.path.join(job.path, "README.md")
     with open(file_path, "rb") as file_handle:
         exporter.upload_file(file_handle, file_url)
 
 
-def test_upload_file_error(monkeypatch: Any, exporter: WikifactoryExporter) -> None:
+def test_upload_file_error(
+    monkeypatch: Any,
+    exporter: WikifactoryExporter,
+    basic_job: dict,
+) -> None:
     def mock_put_status_error(*args: List, **kwargs: Dict) -> requests.Response:
         response = requests.Response()
         response.status_code = requests.codes["expectation_failed"]
         return response
 
     monkeypatch.setattr(requests, "put", mock_put_status_error)
+
+    job = basic_job["db_job"]
 
     exporter.project_details = {
         "space_id": "space-id",
@@ -393,7 +407,7 @@ def test_upload_file_error(monkeypatch: Any, exporter: WikifactoryExporter) -> N
     }
 
     file_url = "http://upload-domain/upload-endpoint"
-    file_path = os.path.join(settings.JOBS_BASE_PATH, "sample-project", "README.md")
+    file_path = os.path.join(job.path, "README.md")
 
     with open(file_path, "rb") as file_handle, pytest.raises(FileUploadFailed):
         exporter.upload_file(file_handle, file_url)
@@ -433,12 +447,10 @@ def test_complete_file_mutation_variables(
 
 
 @pytest.mark.parametrize(
-    "project_path, project_details, file_path, file_id, response_dict, expected_variables",
+    "project_details, file_id, response_dict, expected_variables",
     [
         (
-            os.path.join(settings.JOBS_BASE_PATH, "sample-project"),
             {"space_id": "space-id", "project_id": "project-id"},
-            os.path.join(settings.JOBS_BASE_PATH, "sample-project", "README.md"),
             "file-id",
             {
                 "data": {
@@ -464,13 +476,11 @@ def test_complete_file_mutation_variables(
 def test_perform_mutation_operation_variables(
     basic_job: Dict,
     exporter: WikifactoryExporter,
-    project_path: str,
     project_details: Dict,
     file_id: str,
-    file_path: str,
 ) -> None:
     job = basic_job["db_job"]
-    job.path = project_path
+    file_path = os.path.join(job.path, "README.md")
     exporter.project_details = project_details
     exporter.perform_mutation_operation(file_path, file_id)
 
@@ -530,14 +540,8 @@ def test_on_file_cb_no_file_id(monkeypatch: Any, exporter: WikifactoryExporter) 
 
 
 @pytest.mark.parametrize(
-    "job_path, project_details, items_count",
-    [
-        (
-            os.path.join(settings.JOBS_BASE_PATH, "sample-project"),
-            {"project_id": "project-id", "private": True, "space_id": "space-id"},
-            1,
-        )
-    ],
+    "project_details, items_count",
+    [({"project_id": "project-id", "private": True, "space_id": "space-id"}, 1)],
 )
 def test_wikifactory_exporter(
     monkeypatch: Any,
@@ -545,7 +549,6 @@ def test_wikifactory_exporter(
     project_details: dict,
     basic_job: dict,
     exporter: WikifactoryExporter,
-    job_path: str,
     items_count: int,
 ) -> None:
     def mock_get_project_details(*args: List, **kwargs: Dict) -> Dict:
@@ -564,7 +567,7 @@ def test_wikifactory_exporter(
     monkeypatch.setattr(exporter, "on_finished_cb", mock_on_finished_cb)
 
     job = basic_job["db_job"]
-    job.path = job_path
+
     exporter.process()
 
     # TODO check that on_file_cb has been called for each file

@@ -1,13 +1,14 @@
 import os
 import subprocess
+from distutils.dir_util import copy_tree
 from typing import Any, Dict, Generator, List
 
+import py
 import pytest
 from sqlalchemy.orm import Session
 
 import app.importers.git
 from app import crud
-from app.core.config import settings
 from app.importers.git import GitImporter
 from app.models.job import JobStatus
 from app.models.job_log import JobLog
@@ -16,7 +17,7 @@ from app.tests.utils import utils
 
 
 @pytest.fixture(scope="function")
-def basic_job(db: Session) -> Generator[Dict, None, None]:
+def basic_job(db: Session, tmpdir: py.path.local) -> Generator[Dict, None, None]:
     random_project_name = utils.random_lower_string()
     job_input = JobCreate(
         import_service="git",
@@ -25,12 +26,26 @@ def basic_job(db: Session) -> Generator[Dict, None, None]:
         export_url=f"https://wikifactory.com/@user/{random_project_name}",
     )
     db_job = crud.job.create(db, obj_in=job_input)
-    db_job.path = os.path.join(settings.JOBS_BASE_PATH, "sample-project")
+
+    db_job.path = os.path.join(tmpdir, str(db_job.id))
+
+    # Copy the content of test_files/sample-project to that path
+
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+
+    copy_tree(
+        os.path.normpath(
+            os.path.join(current_dir, "..", "test_files", "sample-project")
+        ),
+        db_job.path,
+    )
+
     yield {
         "job_input": job_input,
         "db_job": db_job,
         "project_name": random_project_name,
     }
+
     crud.job.remove(db, id=db_job.id)
 
 
