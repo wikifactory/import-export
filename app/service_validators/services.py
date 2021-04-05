@@ -25,7 +25,7 @@ wikifactory_validator = functools.partial(
     regex_validator,
     service_id="wikifactory",
     regexes=[
-        fr"^(?:http(s)?:\/\/)?(www\.)?{settings.WIKIFACTORY_API_HOST}\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
+        fr"^(?:http(s)?:\/\/)?(www\.)?{settings.WIKIFACTORY_API_BASE_URL}\/(?P<space>[@+][\w-]+)\/(?P<slug>[\w-]+)$"
     ],
 )
 

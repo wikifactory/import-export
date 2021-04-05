@@ -38,21 +38,6 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
 
-    WIKIFACTORY_API_HOST: Optional[str] = None
-
-    @validator("WIKIFACTORY_API_HOST")
-    def wikifactory_host_from_url(cls, v: Optional[str], values: Dict[str, Any]) -> str:
-        if isinstance(v, str):
-            return v
-
-        api_base_url = values.get("WIKIFACTORY_API_BASE_URL")
-        if api_base_url:
-            if api_base_url.port:
-                return f"{api_base_url.host}:{api_base_url.port}"
-            return api_base_url.host
-
-        raise ValueError(api_base_url)
-
     @validator("SENTRY_DSN", pre=True)
     def sentry_dsn_can_be_blank(cls, v: str) -> Optional[str]:
         if not v:
