@@ -1,7 +1,7 @@
 import os
 import traceback
 from re import search
-from typing import IO, Dict, Optional
+from typing import IO, Any, Dict, Optional
 
 import magic
 import pygit2
@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app import crud
 from app.core.config import settings
-from app.exporters.base import AuthRequired, BaseExporter, NotReachable
+from app.exporters.base import AuthRequired, BaseExporter, HooksEnum, NotReachable
 from app.models.job import JobStatus
 from app.service_validators.services import wikifactory_validator
 
@@ -48,6 +48,7 @@ def wikifactory_api_request(
     transport = RequestsHTTPTransport(
         url=f"{settings.WIKIFACTORY_API_BASE_URL}/api/graphql",
         headers=headers,
+        verify=False,
     )
 
     session = Client(transport=transport, fetch_schema_from_transport=False)
@@ -112,7 +113,16 @@ class WikifactoryExporter(BaseExporter):
         self.job_id = job_id
         self.project_details: Optional[Dict] = None
 
+        def on_file_uploaded_cb(*args: Any, **kwargs: Any) -> None:
+            file_path = kwargs.get("file_path", "")
+            print(f"File {file_path} uploaded to S3")
+
+        self.add_hook_for_status(HooksEnum.ON_FILE_UPLOADED.value, on_file_uploaded_cb)
+
     def process(self) -> None:
+
+        self.on_export_started()
+
         job = crud.job.get(self.db, self.job_id)
         assert job
 
@@ -138,6 +148,9 @@ class WikifactoryExporter(BaseExporter):
 
             # Finally, remove the local files
             self.clean_download_folder(job.path)
+
+            self.on_export_finished()
+
         except (FileUploadFailed, UserErrors):
             traceback.print_exc()
 
@@ -300,7 +313,8 @@ class WikifactoryExporter(BaseExporter):
             ) from e
 
         file_name = os.path.basename(file_handle.name)
-        print(f"File {file_name} uploaded to s3")
+
+        self.on_file_uploaded(file_path=file_name)
 
     def complete_file(self, file_id: str) -> None:
         job = crud.job.get(self.db, self.job_id)
