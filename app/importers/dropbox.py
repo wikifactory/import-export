@@ -7,10 +7,11 @@ import dropbox
 from dropbox.dropbox_client import BadInputException, Dropbox
 from dropbox.exceptions import ApiError, AuthError, BadInputError, HttpError
 from dropbox.files import FolderMetadata
+from mypy.types import Any
 from sqlalchemy.orm import Session
 
 from app import crud
-from app.importers.base import BaseImporter
+from app.importers.base import BaseImporter, HooksEnum
 from app.models.job import Job, JobStatus
 from app.schemas import ManifestInput
 from app.service_validators.services import dropbox_validator
@@ -54,7 +55,17 @@ class DropboxImporter(BaseImporter):
             "children": {},
         }
 
+        def on_file_downloaded_cb(*args: Any, **kwargs: Any) -> None:
+            file_path = kwargs.get("file_path", "")
+            print(f"File {file_path} downloaded")
+
+        self.add_hook_for_status(
+            HooksEnum.ON_FILE_DOWNLOADED.value, on_file_downloaded_cb
+        )
+
     def process(self) -> None:
+
+        self.on_import_started()
 
         job: Job = crud.job.get(self.db, self.job_id)
         crud.job.update_status(self.db, db_obj=job, status=JobStatus.IMPORTING)
@@ -120,6 +131,8 @@ class DropboxImporter(BaseImporter):
             self.db, db_obj=job, status=JobStatus.IMPORTING_SUCCESSFULLY
         )
 
+        self.on_import_finished()
+
     def get_entries_from_folder(self, folder_path: str) -> List[dropbox.files.Metadata]:
 
         assert self.dropbox_handler
@@ -182,5 +195,5 @@ class DropboxImporter(BaseImporter):
                 self.dropbox_handler.files_download_to_file(
                     entry_full_path, entry.path_lower
                 )
-                print("Downloaded file: {}".format(entry.name))
                 crud.job.increment_imported_items(self.db, job_id=self.job_id)
+                self.on_file_downloaded(file_path=entry.name)

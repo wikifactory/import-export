@@ -21,8 +21,12 @@ class GitImporter(BaseImporter):
         self.db = db
 
     def process(self) -> None:
+
+        self.on_import_started()
+
         job = crud.job.get(self.db, self.job_id)
         assert job
+
         crud.job.update_status(self.db, db_obj=job, status=JobStatus.IMPORTING)
         url = job.import_url
 
@@ -53,6 +57,7 @@ class GitImporter(BaseImporter):
         crud.job.update_status(
             self.db, db_obj=job, status=JobStatus.IMPORTING_SUCCESSFULLY
         )
+        self.on_import_finished()
 
     def populate_project_description(self, manifest_input: ManifestInput) -> None:
         job: Job = crud.job.get(self.db, self.job_id)

@@ -6,6 +6,7 @@ from typing import Dict
 
 import httplib2
 from googleapiclient.discovery import build
+from mypy.types import Any
 from oauth2client.client import AccessTokenCredentials, AccessTokenCredentialsError
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
@@ -13,7 +14,7 @@ from pydrive.files import ApiRequestError, FileNotDownloadableError, GoogleDrive
 from sqlalchemy.orm import Session
 
 from app import crud
-from app.importers.base import BaseImporter
+from app.importers.base import BaseImporter, HooksEnum
 from app.models.job import JobStatus
 from app.schemas import ManifestInput
 from app.service_validators.services import google_drive_validator
@@ -38,6 +39,14 @@ class GoogleDriveImporter(BaseImporter):
 
         self.drive: GoogleDrive = None
         self.tree_root: Dict = {"item": None, "children": {}}
+
+        def on_file_downloaded_cb(*args: Any, **kwargs: Any) -> None:
+            file_path = kwargs.get("file_path", "")
+            print(f"File {file_path} downloaded")
+
+        self.add_hook_for_status(
+            HooksEnum.ON_FILE_DOWNLOADED.value, on_file_downloaded_cb
+        )
 
     def authenticate(self, token: str) -> GoogleAuth:
         if not token:
@@ -91,8 +100,12 @@ class GoogleDriveImporter(BaseImporter):
             else:
                 item.GetContentFile(item_full_path)
                 crud.job.increment_imported_items(self.db, job_id=self.job_id)
+                self.on_file_downloaded(file_path=item_full_path)
 
     def process(self) -> None:
+
+        self.on_import_started()
+
         job = crud.job.get(self.db, self.job_id)
         assert job
 
@@ -154,6 +167,8 @@ class GoogleDriveImporter(BaseImporter):
         crud.job.update_status(
             self.db, db_obj=job, status=JobStatus.IMPORTING_SUCCESSFULLY
         )
+
+        self.on_import_finished()
 
     def populate_project_description(self, manifest_input: ManifestInput) -> None:
         self.root_item.FetchMetadata(fields="description")
