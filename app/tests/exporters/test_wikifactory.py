@@ -58,8 +58,8 @@ def test_validate_url(project_url: str, is_valid: bool) -> None:
 )
 def test_space_slug_from_url(project_url: str, space: str, slug: str) -> None:
     result = space_slug_from_url(project_url)
-    assert result.get("space") == space
-    assert result.get("slug") == slug
+    assert result["space"] == space
+    assert result["slug"] == slug
 
 
 dummy_gql = gql.gql(
