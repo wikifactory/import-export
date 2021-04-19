@@ -1,4 +1,6 @@
 import os
+import pathlib
+import shutil
 from typing import Any, Dict, Generator, List
 
 import gql
@@ -6,7 +8,6 @@ import py
 import pytest
 import requests
 from gql import Client
-from requests.models import Response
 from sqlalchemy.orm import Session
 
 from app import crud
@@ -158,7 +159,7 @@ def test_wikifactory_importer(
     # Mock the request for the zip file
     # Instead of performing the network request, we return the content
     # of the test_zip_project file inside the test_files folder
-    def mock_get_zip_from_url(*args: List, **kwargs: Dict) -> Response:
+    """def mock_get_zip_from_url(*args: List, **kwargs: Dict) -> Response:
         resp: Response = Response()
         resp.status_code = 200
 
@@ -171,9 +172,28 @@ def test_wikifactory_importer(
             resp._content = file.read()
         return resp
 
-    monkeypatch.setattr(requests, "get", mock_get_zip_from_url)
+    monkeypatch.setattr(requests, "get", mock_get_zip_from_url)"""
 
     job = basic_job["db_job"]
+
+    def download_zip(*args: List, **kwargs: Dict) -> None:
+
+        tmp_job_name = "tmp_" + os.path.basename(job.path)
+        tmp_job_path = os.path.join(os.path.dirname(job.path), tmp_job_name)
+
+        # Copy the test zip file to mimic the download
+        current_dir = os.path.dirname(os.path.realpath(__file__))
+
+        pathlib.Path(tmp_job_path).mkdir(parents=True, exist_ok=True)
+
+        shutil.copyfile(
+            os.path.normpath(
+                os.path.join(current_dir, "..", "test_files", "test_zip_project.zip")
+            ),
+            os.path.join(tmp_job_path, "zipfile.zip"),
+        )
+
+    monkeypatch.setattr(importer, "download_zip_file", download_zip)
 
     importer.process()
 

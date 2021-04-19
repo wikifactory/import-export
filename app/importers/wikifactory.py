@@ -3,7 +3,6 @@ import pathlib
 import shutil
 import traceback
 import zipfile
-from io import BytesIO
 from re import search
 from typing import Dict
 
@@ -43,7 +42,7 @@ class WikifactoryImporter(BaseImporter):
         assert self.project_details
 
         try:
-            self.download_files_from_zip_url(self.project_details["zip_url"])
+            self.download_and_unzip_url(self.project_details["zip_url"])
 
             manifest_input = ManifestInput(job_id=job.id, source_url=job.import_url)
             manifest_input.project_name = os.path.basename(
@@ -82,41 +81,38 @@ class WikifactoryImporter(BaseImporter):
             "zip_url": f"{settings.WIKIFACTORY_API_BASE_URL}{ project['contributionUpstream']['zipArchiveUrl']}",
         }
 
-    def download_files_from_zip_url(self, zip_url: str) -> None:
+    def download_and_unzip_url(self, zip_url: str) -> None:
         job = crud.job.get(self.db, self.job_id)
 
         assert job
-
-        response = requests.get(zip_url, verify=False)
-
-        assert response.status_code == 200
-
-        filebytes = BytesIO(response.content)
-        zip_content = zipfile.ZipFile(filebytes)
 
         # Define the temporal destination of the uncompressed folder
         # This path will contain the real project folder
         tmp_job_name = "tmp_" + os.path.basename(job.path)
         tmp_job_path = os.path.join(os.path.dirname(job.path), tmp_job_name)
+        zip_file_path = os.path.join(tmp_job_path, "zipfile.zip")
 
-        # Create the target folder
-        pathlib.Path(tmp_job_path).mkdir(parents=True, exist_ok=True)
+        self.download_zip_file(zip_url, zip_file_path)
 
         try:
-            zip_content.extractall(tmp_job_path)
-
-            # Make sure that the tmp folder only contains the real project folder
-            elements_in_temp_folder = os.listdir(tmp_job_path)
-            assert len(elements_in_temp_folder) == 1
-
-            # Move the real project folder to the real job folder
-            folder_path = os.path.join(tmp_job_path, elements_in_temp_folder[0])
-            shutil.move(folder_path, job.path)
-
-            # Delete the temporal folder, because it is not required anymore
-            shutil.rmtree(tmp_job_path)
+            with zipfile.ZipFile(zip_file_path, "r") as zip_content:
+                zip_content.extractall(tmp_job_path)
         except zipfile.error:
             traceback.print_exc()
+
+        # Once unzipped, remove the zip file
+        os.remove(zip_file_path)
+
+        # Make sure that the tmp folder only contains the real project folder
+        elements_in_temp_folder = os.listdir(tmp_job_path)
+        assert len(elements_in_temp_folder) == 1
+
+        # Move the real project folder to the real job folder
+        folder_path = os.path.join(tmp_job_path, elements_in_temp_folder[0])
+        shutil.move(folder_path, job.path)
+
+        # Delete the temporal folder, because it is not required anymore
+        shutil.rmtree(tmp_job_path)
 
     def populate_project_description(self, manifest_input: ManifestInput) -> None:
         job: Job = crud.job.get(self.db, self.job_id)
@@ -134,3 +130,12 @@ class WikifactoryImporter(BaseImporter):
         )
 
         crud.manifest.update_or_create(self.db, obj_in=manifest_input)
+
+    def download_zip_file(self, zip_url: str, target_path: str) -> None:
+
+        # Create the target folder
+        pathlib.Path(os.path.dirname(target_path)).mkdir(parents=True, exist_ok=True)
+
+        with requests.get(zip_url, stream=True, verify=False) as r:
+            with open(target_path, "wb") as file:
+                shutil.copyfileobj(r.raw, file)
