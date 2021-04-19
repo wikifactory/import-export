@@ -12,7 +12,11 @@ from app.schemas import ManifestInput
 
 
 def clone_repository(url: str, path: str) -> None:
-    subprocess.run(["git", "clone", "--depth", "1", url, path], check=True)
+    # Due to the use of core.symlinks=false, symlinks will be cloned as textfiles
+    subprocess.run(
+        ["git", "clone", "-c", "core.symlinks=false", "--depth", "1", url, path],
+        check=True,
+    )
 
 
 class GitImporter(BaseImporter):

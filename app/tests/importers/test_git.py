@@ -1,4 +1,6 @@
 import os
+import pathlib
+import shutil
 import subprocess
 from distutils.dir_util import copy_tree
 from typing import Any, Dict, Generator, List
@@ -9,7 +11,7 @@ from sqlalchemy.orm import Session
 
 import app.importers.git
 from app import crud
-from app.importers.git import GitImporter
+from app.importers.git import GitImporter, clone_repository
 from app.models.job import JobStatus
 from app.models.job_log import JobLog
 from app.schemas import JobCreate
@@ -60,14 +62,14 @@ def clone_error(monkeypatch: Any) -> None:
 
 
 @pytest.fixture()
-def clone_repository(monkeypatch: Any) -> None:
+def mocked_clone_repository(monkeypatch: Any) -> None:
     def mock_clone_repository(*args: List, **kwargs: Dict) -> None:
         return
 
     monkeypatch.setattr(app.importers.git, "clone_repository", mock_clone_repository)
 
 
-@pytest.mark.usefixtures("clone_repository")
+@pytest.mark.usefixtures("mocked_clone_repository")
 def test_git_importer(db: Session, basic_job: dict) -> None:
     job = basic_job["db_job"]
     importer = GitImporter(db, job.id)
@@ -96,3 +98,25 @@ def test_git_importer_error(db: Session, basic_job: dict) -> None:
     importer = GitImporter(db, job.id)
     importer.process()
     assert job.status is JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE
+
+
+def test_git_clone(tmpdir: pathlib.Path) -> None:
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    test_repo_local_path = os.path.normpath(
+        os.path.join(current_dir, "..", "test_files", "test_git_repo")
+    )
+
+    clone_repository(test_repo_local_path, str(tmpdir))
+
+    # Remove the .git folder of the cloned one
+    shutil.rmtree(os.path.join(tmpdir, ".git"), ignore_errors=True)
+
+    for subdir, _, files in os.walk(tmpdir):
+        for file in files:
+            assert os.path.realpath(subdir).startswith(str(tmpdir))
+
+    # Check that the symlink has been cloned as a text file
+    with open(
+        os.path.join(tmpdir, "hosts_links"),
+    ) as f:
+        assert f.read() == "/etc/hosts"
