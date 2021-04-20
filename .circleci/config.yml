@@ -147,3 +147,4 @@ jobs:
                 command: |
                   ssh -v -oStrictHostKeyChecking=no $DEPLOYMENT_TARGET 'docker-compose pull'
                   ssh -v -oStrictHostKeyChecking=no $DEPLOYMENT_TARGET 'docker-compose up -d'
+                  ssh -v -oStrictHostKeyChecking=no $DEPLOYMENT_TARGET 'docker image prune -f'
