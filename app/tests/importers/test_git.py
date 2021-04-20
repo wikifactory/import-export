@@ -2,6 +2,7 @@ import os
 import pathlib
 import shutil
 import subprocess
+import zipfile
 from distutils.dir_util import copy_tree
 from typing import Any, Dict, Generator, List
 
@@ -100,23 +101,41 @@ def test_git_importer_error(db: Session, basic_job: dict) -> None:
     assert job.status is JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE
 
 
-def test_git_clone(tmpdir: pathlib.Path) -> None:
+def test_git_clone(tmp_path: pathlib.Path) -> None:
+
+    test_repo_file_name = "test_git_repo"
+
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    test_repo_local_path = os.path.normpath(
-        os.path.join(current_dir, "..", "test_files", "test_git_repo")
+
+    # Create a folder for the original repo that will be unzipped
+    original_repo_path = tmp_path / "original_repo"
+    original_repo_path.mkdir()
+
+    # Create a folder to store the cloned files
+    cloned_repo_path = tmp_path / "cloned_repo"
+    cloned_repo_path.mkdir()
+
+    test_repo_path = os.path.normpath(
+        os.path.join(current_dir, "..", "test_files", f"{test_repo_file_name}.zip")
     )
 
-    clone_repository(test_repo_local_path, str(tmpdir))
+    # Unzip the test_git_repo.zip file, so we can later clone it
+    with zipfile.ZipFile(test_repo_path, "r") as zip_ref:
+        zip_ref.extractall(original_repo_path)
+
+    unzipped_repo_path = os.path.join(original_repo_path, test_repo_file_name)
+
+    clone_repository(unzipped_repo_path, str(cloned_repo_path))
 
     # Remove the .git folder of the cloned one
-    shutil.rmtree(os.path.join(tmpdir, ".git"), ignore_errors=True)
+    shutil.rmtree(os.path.join(cloned_repo_path, ".git"), ignore_errors=True)
 
-    for subdir, _, files in os.walk(tmpdir):
+    for subdir, _, files in os.walk(cloned_repo_path):
         for file in files:
-            assert os.path.realpath(subdir).startswith(str(tmpdir))
+            assert os.path.realpath(subdir).startswith(str(cloned_repo_path))
 
     # Check that the symlink has been cloned as a text file
     with open(
-        os.path.join(tmpdir, "hosts_links"),
+        os.path.join(cloned_repo_path, "hosts_links"),
     ) as f:
         assert f.read() == "/etc/hosts"
