@@ -12,3 +12,7 @@ class BaseImporter:
 
     def populate_project_description(self, manifest_input: ManifestInput) -> None:
         raise NotImplementedError()
+
+
+class NotReachable(Exception):
+    pass
