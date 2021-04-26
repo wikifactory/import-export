@@ -7,7 +7,7 @@ git_validator = functools.partial(
     regex_validator,
     service_id="git",
     regexes=[
-        r"^https?:\/\/(www\.)?git(hub|lab)\.com\/(?P<organization>[\w-]+)/(?P<project>[\w-]+)"
+        r"^https?:\/\/(www\.)?git(hub|lab)\.com\/(?P<user>[\w-]+)/(?P<project>[\w-]+)"
     ],
 )
 
