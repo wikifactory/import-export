@@ -11,10 +11,14 @@ from app.models.job import Job, JobStatus
 from app.service_validators.services import git_validator
 
 
-def user_project_from_url(url: str) -> Dict:
+def user_project_service_from_url(url: str) -> Dict:
     match = search(git_validator.keywords["regexes"][0], url)
     assert match
     return match.groupdict()
+
+
+class GitServiceNotSupported(Exception):
+    pass
 
 
 class GitExporter(BaseExporter):
@@ -38,6 +42,10 @@ class GitExporter(BaseExporter):
                 self.db, db_obj=job, status=JobStatus.FINISHED_SUCCESSFULLY
             )
         except subprocess.CalledProcessError:
+            crud.job.update_status(
+                self.db, db_obj=job, status=JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE
+            )
+        except GitServiceNotSupported:
             crud.job.update_status(
                 self.db, db_obj=job, status=JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE
             )
@@ -96,7 +104,21 @@ class GitExporter(BaseExporter):
         )
 
     def get_auth_export_url_from_repo(self, repo_url: str, export_token: str) -> str:
+        url_info = user_project_service_from_url(repo_url)
 
-        # TODO: identify service and dispatch the right url
-        user_and_project = user_project_from_url(repo_url)
-        return f"https://{user_and_project['user']}:{export_token}@github.com/{user_and_project['user']}/{user_and_project['project']}.git"
+        user = url_info["user"]
+        project_name = url_info["project"]
+        service = url_info["service"]
+
+        assert user
+        assert project_name
+        assert service
+
+        if service == "hub":
+            return f"https://{user}:{export_token}@github.com/{user}/{project_name}.git"
+        elif service == "lab":
+            return f"https://oauth2:{export_token}@gitlab.com/{user}/{project_name}.git"
+        else:
+            raise GitServiceNotSupported(
+                "We failed to identify the associated git service"
+            )
