@@ -21,6 +21,18 @@ class GitServiceNotSupported(Exception):
     pass
 
 
+class GitCommitError(Exception):
+    pass
+
+
+class GitRemoteOriginError(Exception):
+    pass
+
+
+class GitPushError(Exception):
+    pass
+
+
 class GitExporter(BaseExporter):
     def __init__(self, db: Session, job_id: str):
         self.db = db
@@ -41,11 +53,12 @@ class GitExporter(BaseExporter):
             crud.job.update_status(
                 self.db, db_obj=job, status=JobStatus.FINISHED_SUCCESSFULLY
             )
-        except subprocess.CalledProcessError:
+
+        except GitServiceNotSupported:
             crud.job.update_status(
                 self.db, db_obj=job, status=JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE
             )
-        except GitServiceNotSupported:
+        except subprocess.CalledProcessError:
             crud.job.update_status(
                 self.db, db_obj=job, status=JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE
             )
@@ -59,49 +72,20 @@ class GitExporter(BaseExporter):
         path_to_local_files = job.path
 
         # Init a git repo in the job's folder
-        subprocess.check_output(["git", "init"], cwd=path_to_local_files)
+        self.git_command_init_repo(path_to_local_files)
 
         # Add all the files
-        subprocess.check_output(["git", "add", "."], cwd=path_to_local_files)
+        self.git_command_add_all_files(path_to_local_files)
 
         # Add the initial commit
-        subprocess.check_output(
-            [
-                "git",
-                "-c",
-                f"user.name={settings.EXPORTER_GIT_USER}",
-                "-c",
-                f"user.email={settings.EXPORTER_GIT_MAIL}",
-                "commit",
-                f'--author="{settings.EXPORTER_GIT_USER} <{settings.EXPORTER_GIT_MAIL}>"',
-                "-m",
-                "Initial commit from imported project",
-            ],
-            cwd=path_to_local_files,
-        )
+        self.git_command_add_initial_commit(path_to_local_files)
 
         # Configure the remote to be the export_url
-        subprocess.check_output(
-            [
-                "git",
-                "remote",
-                "add",
-                "origin",
-                self.get_auth_export_url_from_repo(job.export_url, job.export_token),
-            ],
-            cwd=path_to_local_files,
-        )
+        self.git_command_set_remote_origin(path_to_local_files, job)
 
-        # Push
-        subprocess.check_output(
-            ["git", "branch", "-M", "main"],
-            cwd=path_to_local_files,
-        )
-
-        subprocess.check_output(
-            ["git", "push", "-u", "origin", "main"],
-            cwd=path_to_local_files,
-        )
+        # Set branch and push
+        self.git_command_set_branch(path_to_local_files)
+        self.git_command_push_to_remote(path_to_local_files)
 
     def get_auth_export_url_from_repo(self, repo_url: str, export_token: str) -> str:
         url_info = user_project_service_from_url(repo_url)
@@ -122,3 +106,60 @@ class GitExporter(BaseExporter):
             raise GitServiceNotSupported(
                 "We failed to identify the associated git service"
             )
+
+    def git_command_init_repo(self, path_to_local_files: str) -> None:
+        subprocess.check_output(["git", "init"], cwd=path_to_local_files)
+
+    def git_command_add_all_files(self, path_to_local_files: str) -> None:
+        subprocess.check_output(["git", "add", "."], cwd=path_to_local_files)
+
+    def git_command_add_initial_commit(self, path_to_local_files: str) -> None:
+        try:
+            subprocess.check_output(
+                [
+                    "git",
+                    "-c",
+                    f"user.name={settings.EXPORTER_GIT_USER}",
+                    "-c",
+                    f"user.email={settings.EXPORTER_GIT_MAIL}",
+                    "commit",
+                    f'--author="{settings.EXPORTER_GIT_USER} <{settings.EXPORTER_GIT_MAIL}>"',
+                    "-m",
+                    "Initial commit from imported project",
+                ],
+                cwd=path_to_local_files,
+            )
+        except subprocess.CalledProcessError:
+            raise GitCommitError("Found an error while setting the commit parameters")
+
+    def git_command_set_remote_origin(self, path_to_local_files: str, job: Job) -> None:
+        try:
+            subprocess.check_output(
+                [
+                    "git",
+                    "remote",
+                    "add",
+                    "origin",
+                    self.get_auth_export_url_from_repo(
+                        job.export_url, job.export_token
+                    ),
+                ],
+                cwd=path_to_local_files,
+            )
+        except subprocess.CalledProcessError:
+            raise GitRemoteOriginError("Found an error while setting the remote origin")
+
+    def git_command_set_branch(self, path_to_local_files: str) -> None:
+        subprocess.check_output(
+            ["git", "branch", "-M", "main"],
+            cwd=path_to_local_files,
+        )
+
+    def git_command_push_to_remote(self, path_to_local_files: str) -> None:
+        try:
+            subprocess.check_output(
+                ["git", "push", "-u", "origin", "main"],
+                cwd=path_to_local_files,
+            )
+        except subprocess.CalledProcessError:
+            raise GitPushError("Error pushing to origin/main")
