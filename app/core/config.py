@@ -53,6 +53,9 @@ class Settings(BaseSettings):
 
         raise ValueError(api_base_url)
 
+    EXPORTER_GIT_MAIL: Optional[str] = None
+    EXPORTER_GIT_USER: Optional[str] = None
+
     @validator("SENTRY_DSN", pre=True)
     def sentry_dsn_can_be_blank(cls, v: str) -> Optional[str]:
         if not v:
