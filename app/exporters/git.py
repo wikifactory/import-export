@@ -54,7 +54,12 @@ class GitExporter(BaseExporter):
                 self.db, db_obj=job, status=JobStatus.FINISHED_SUCCESSFULLY
             )
 
-        except GitServiceNotSupported:
+        except (
+            GitServiceNotSupported,
+            GitCommitError,
+            GitRemoteOriginError,
+            GitPushError,
+        ):
             crud.job.update_status(
                 self.db, db_obj=job, status=JobStatus.EXPORTING_ERROR_DATA_UNREACHABLE
             )
