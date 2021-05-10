@@ -112,11 +112,9 @@ class DropboxExporter(BaseExporter):
                 if (
                     file_size <= CHUNK_SIZE
                 ):  # Use the direct upload approach for small files
-                    print("Using the direct approach")
-                    self.dropbox_handler.files_upload(f.read(), remote_path)
 
+                    self.dropbox_handler.files_upload(f.read(), remote_path)
                 else:  # Otherwise, use the session aproach
-                    print("Using the session approach")
 
                     upload_session_start_result = (
                         self.dropbox_handler.files_upload_session_start(
