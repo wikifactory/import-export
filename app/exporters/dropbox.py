@@ -138,7 +138,6 @@ class DropboxExporter(BaseExporter):
                             )
                             cursor.offset = f.tell()
 
-
         except OSError as e:
             print("Error opening the local file")
             raise e
@@ -150,5 +149,5 @@ class DropboxExporter(BaseExporter):
         except ValidationError as e:
             raise MalformedDropboxURL(
                 "Maybe you are trying to import from a shared link?"
-            )
+            ) from e
             return
