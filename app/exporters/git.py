@@ -152,7 +152,9 @@ class GitExporter(BaseExporter):
                 cwd=path_to_local_files,
             )
         except subprocess.CalledProcessError as e:
-            raise GitRemoteOriginError("Found an error while setting the remote origin") from e
+            raise GitRemoteOriginError(
+                "Found an error while setting the remote origin"
+            ) from e
 
     def git_command_set_branch(self, path_to_local_files: str) -> None:
         subprocess.check_output(
