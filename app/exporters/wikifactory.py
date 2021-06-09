@@ -138,7 +138,7 @@ class WikifactoryExporter(BaseExporter):
 
             # Finally, remove the local files
             self.clean_download_folder(job.path)
-        except (FileUploadFailed, UserErrors):
+        except (FileUploadFailed, UserErrors, NotReachable):
             traceback.print_exc()
 
             # FIXME - improve error handling
