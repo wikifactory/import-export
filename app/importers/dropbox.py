@@ -139,7 +139,7 @@ class DropboxImporter(BaseImporter):
             result = self.dropbox_handler.files_list_folder(path="", shared_link=link)
 
         elif self.url_type == "user_folder" or self.url_type == "id":
-            result = self.dropbox_handler.files_list_folder(folder_path)
+            result = self.dropbox_handler.files_list_folder(path=folder_path)
 
         entries.extend(result.entries)
 
