@@ -1,5 +1,4 @@
 import os
-import traceback
 from pathlib import Path
 from re import search
 from typing import Dict, List, Optional
@@ -132,42 +131,37 @@ class DropboxImporter(BaseImporter):
 
         entries = []
 
-        try:
+        if self.url_type == "shared":  # First time processing a shared link
 
-            if self.url_type == "shared":  # First time processing a shared link
+            # Change the type to id to treat the following folders as ids
+            self.url_type = "id"
+            self.original_url = folder_path
 
-                # Change the type to id to treat the following folders as ids
-                self.url_type = "id"
-                self.original_url = folder_path
+            link = dropbox.files.SharedLink(
+                url=folder_path,
+            )
 
-                link = dropbox.files.SharedLink(
-                    url=folder_path,
-                )
+            self.shared_link = link
 
-                self.shared_link = link
+            # When handling a shared_link folder, treat the first iteration different
+            result = self.dropbox_handler.files_list_folder(
+                path="", shared_link=link, include_mounted_folders=True
+            )
 
-                # When handling a shared_link folder, treat the first iteration different
-                result = self.dropbox_handler.files_list_folder(
-                    path="", shared_link=link, include_mounted_folders=True
-                )
+        elif self.url_type == "id":  # After that, working with the id
+            result = self.dropbox_handler.files_list_folder(
+                path=folder_path, shared_link=self.shared_link
+            )
+        elif self.url_type == "user_folder":
+            result = self.dropbox_handler.files_list_folder(path=folder_path)
 
-            elif self.url_type == "id":  # After that, working with the id
-                result = self.dropbox_handler.files_list_folder(
-                    path=folder_path, shared_link=self.shared_link
-                )
-            elif self.url_type == "user_folder":
-                result = self.dropbox_handler.files_list_folder(path=folder_path)
+        entries.extend(result.entries)
 
+        while result.has_more:
+            result = self.dropbox_handler.files_list_folder_continue(result.cursor)
             entries.extend(result.entries)
 
-            while result.has_more:
-                result = self.dropbox_handler.files_list_folder_continue(result.cursor)
-                entries.extend(result.entries)
-
-            return entries
-        except ApiError:
-            traceback.print_exc()
-            return []
+        return entries
 
     def build_tree_recursively(self, current_level: Dict, folder_url: str) -> None:
 
