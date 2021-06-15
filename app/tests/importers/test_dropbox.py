@@ -67,9 +67,7 @@ def dropbox_mock(monkeypatch: Any, remote_data: dict) -> None:
 
 @pytest.fixture
 def download_mock(monkeypatch: Any, basic_job: dict) -> None:
-    def mock_files_download_to_file(
-        self: Any, download_path: str, remote_path: str
-    ) -> None:
+    def mock_files_download_to_file(self: Any, download_path: str, path: str) -> None:
         with open(download_path, "wb") as file_handle:
             file_handle.write(b"dummycontent")
 
@@ -119,6 +117,7 @@ def download_mock(monkeypatch: Any, basic_job: dict) -> None:
                         rev="123456789",
                     ),
                     "children": {},
+                    "path": "root-folder/README.md",
                 },
                 "Subfolder": {
                     "entry": FolderMetadata(id="subfolder-1", name="Subfolder"),
@@ -133,8 +132,10 @@ def download_mock(monkeypatch: Any, basic_job: dict) -> None:
                                 rev="123456789",
                             ),
                             "children": {},
+                            "path": "subfolder-1/test.txt",
                         }
                     },
+                    "path": "root-folder/Subfolder",
                 },
             },
         )
@@ -149,7 +150,6 @@ def test_build_tree_recursively(
     importer.dropbox_handler = Dropbox(oauth2_access_token="sadas")
     tree: Dict = {}
     importer.build_tree_recursively(tree, "root-folder")
-
     assert tree == expected_tree
 
 
@@ -220,13 +220,15 @@ def test_dropbox_importer_success(
     assert job.status is JobStatus.IMPORTING_SUCCESSFULLY
 
 
+"""
 @pytest.fixture
 def launch_api_error(monkeypatch: Any, exception: Exception) -> None:
     def mock_api_exception(*args: List, **kwargs: Dict) -> None:
         raise exception
 
     monkeypatch.setattr(Dropbox, "files_list_folder", mock_api_exception)
-    monkeypatch.setattr(dropbox, "Dropbox", mock_api_exception)
+    monkeypatch.setattr(Dropbox, "files_download_to_file", mock_api_exception)
+    monkeypatch.setattr(dropbox, "Dropbox", mock_api_exception)"""
 
 
 @pytest.mark.parametrize(
@@ -247,10 +249,19 @@ def launch_api_error(monkeypatch: Any, exception: Exception) -> None:
         ),
     ],
 )
-@pytest.mark.usefixtures("launch_api_error")
 def test_dropbox_importer_api_error(
-    db: Session, basic_job: dict, exception: Exception, job_status: JobStatus
+    monkeypatch: Any,
+    db: Session,
+    basic_job: dict,
+    exception: Exception,
+    job_status: JobStatus,
 ) -> None:
+    def mock_api_exception(*args: List, **kwargs: Dict) -> None:
+        raise exception
+
+    monkeypatch.setattr(Dropbox, "files_list_folder", mock_api_exception)
+    monkeypatch.setattr(dropbox, "Dropbox", mock_api_exception)
+
     job = basic_job["db_job"]
     importer = DropboxImporter(db, job.id)
     importer.process()
