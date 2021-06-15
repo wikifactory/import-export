@@ -224,8 +224,6 @@ def test_dropbox_importer_success(
 @pytest.fixture
 def launch_api_error(monkeypatch: Any, exception: Exception) -> None:
     def mock_api_exception(*args: List, **kwargs: Dict) -> None:
-        print("\nMOOOOCKED\n")
-        print(exception)
         raise exception
 
     monkeypatch.setattr(Dropbox, "files_list_folder", mock_api_exception)
