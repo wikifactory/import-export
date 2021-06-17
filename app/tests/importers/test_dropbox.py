@@ -264,5 +264,6 @@ def test_dropbox_importer_api_error(
 
     job = basic_job["db_job"]
     importer = DropboxImporter(db, job.id)
-    importer.process()
+    with pytest.raises(exception.__class__):
+        importer.process()
     assert job.status is job_status
