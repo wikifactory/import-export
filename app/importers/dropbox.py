@@ -77,7 +77,7 @@ class DropboxImporter(BaseImporter):
                 db_obj=job,
                 status=JobStatus.IMPORTING_ERROR_AUTHORIZATION_REQUIRED,
             )
-            return
+            raise
 
         url_details = get_url_details(job.import_url)
 
@@ -97,14 +97,14 @@ class DropboxImporter(BaseImporter):
                 db_obj=job,
                 status=JobStatus.IMPORTING_ERROR_AUTHORIZATION_REQUIRED,
             )
-            return
+            raise
         except (ApiError):
             crud.job.update_status(
                 self.db,
                 db_obj=job,
                 status=JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE,
             )
-            return
+            raise
 
         manifest_input = ManifestInput(job_id=job.id, source_url=job.import_url)
 
