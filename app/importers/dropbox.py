@@ -212,7 +212,9 @@ class DropboxImporter(BaseImporter):
 
                     assert self.shared_link
 
-                    shared_path = entry_full_path.replace(str(self.job_id), "")
+                    job = crud.job.get(self.db, self.job_id)
+                    shared_path = f"/{os.path.relpath(entry_full_path, job.path)}"
+
                     (
                         metadata,
                         result,
