@@ -212,16 +212,14 @@ class DropboxImporter(BaseImporter):
 
                     assert self.shared_link
 
-                    shared_path = entry_full_path.replace(str(self.job_id), "")
-                    (
-                        metadata,
-                        result,
-                    ) = self.dropbox_handler.sharing_get_shared_link_file(
-                        url=self.shared_link.url, path=shared_path
-                    )
+                    job = crud.job.get(self.db, self.job_id)
+                    shared_path = f"/{os.path.relpath(entry_full_path, job.path)}"
 
-                    with open(entry_full_path, "wb") as f:
-                        f.write(result.content)
+                    self.dropbox_handler.sharing_get_shared_link_file_to_file(
+                        download_path=entry_full_path,
+                        url=self.shared_link.url,
+                        path=shared_path,
+                    )
 
                 else:
                     self.dropbox_handler.files_download_to_file(
