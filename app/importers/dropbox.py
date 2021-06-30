@@ -53,6 +53,8 @@ class DropboxImporter(BaseImporter):
             "entry": FolderMetadata(id="root-folder", name="root-folder"),
             "children": {},
         }
+        self.shared_link = None
+        self.original_url = ""
 
     def process(self) -> None:
 
@@ -75,7 +77,7 @@ class DropboxImporter(BaseImporter):
                 db_obj=job,
                 status=JobStatus.IMPORTING_ERROR_AUTHORIZATION_REQUIRED,
             )
-            return
+            raise
 
         url_details = get_url_details(job.import_url)
 
@@ -84,7 +86,10 @@ class DropboxImporter(BaseImporter):
         self.url_type = url_details["type"]
 
         try:
-            self.build_tree_recursively(self.tree_root["children"], url_details["path"])
+            self.build_tree_recursively(
+                self.tree_root["children"],
+                url_details["path"],
+            )
             self.download_tree_recursively(self.tree_root["children"], job.path)
         except (AuthError, HttpError, BadInputError):
             crud.job.update_status(
@@ -92,14 +97,14 @@ class DropboxImporter(BaseImporter):
                 db_obj=job,
                 status=JobStatus.IMPORTING_ERROR_AUTHORIZATION_REQUIRED,
             )
-            return
+            raise
         except (ApiError):
             crud.job.update_status(
                 self.db,
                 db_obj=job,
                 status=JobStatus.IMPORTING_ERROR_DATA_UNREACHABLE,
             )
-            return
+            raise
 
         manifest_input = ManifestInput(job_id=job.id, source_url=job.import_url)
 
@@ -126,20 +131,29 @@ class DropboxImporter(BaseImporter):
 
         entries = []
 
-        if self.url_type == "shared":
+        if self.url_type == "shared":  # First time processing a shared link
 
             # Change the type to id to treat the following folders as ids
             self.url_type = "id"
+            self.original_url = folder_path
 
             link = dropbox.files.SharedLink(
                 url=folder_path,
             )
 
-            # When handling a shared_link folder, treat the first iteration different
-            result = self.dropbox_handler.files_list_folder(path="", shared_link=link)
+            self.shared_link = link
 
-        elif self.url_type == "user_folder" or self.url_type == "id":
-            result = self.dropbox_handler.files_list_folder(folder_path)
+            # When handling a shared_link folder, treat the first iteration different
+            result = self.dropbox_handler.files_list_folder(
+                path="", shared_link=link, include_mounted_folders=True
+            )
+
+        elif self.url_type == "id":  # After that, working with the id
+            result = self.dropbox_handler.files_list_folder(
+                path=folder_path, shared_link=self.shared_link
+            )
+        elif self.url_type == "user_folder":
+            result = self.dropbox_handler.files_list_folder(path=folder_path)
 
         entries.extend(result.entries)
 
@@ -155,14 +169,28 @@ class DropboxImporter(BaseImporter):
 
         for entry in entries:
             name = entry.name
-            current_level[name] = {"entry": entry, "children": {}}
+
+            entry_full_path = os.path.join(folder_url, name)
+
+            current_level[name] = {
+                "entry": entry,
+                "children": {},
+                "path": entry_full_path.replace(self.original_url, ""),
+            }
 
         for node in current_level.values():
             entry = node.get("entry")
+
             if isinstance(entry, dropbox.files.FileMetadata):
                 pass
             elif isinstance(entry, dropbox.files.FolderMetadata):
-                self.build_tree_recursively(node.get("children"), entry.id)
+
+                if self.url_type == "id":
+                    path = node.get("path")
+                    self.build_tree_recursively(node.get("children"), path)
+
+                else:
+                    self.build_tree_recursively(node.get("children"), entry.id)
 
     def download_tree_recursively(
         self, current_level: Dict, accumulated_path: str
@@ -179,8 +207,23 @@ class DropboxImporter(BaseImporter):
             if isinstance(entry, dropbox.files.FolderMetadata):
                 self.download_tree_recursively(node.get("children"), entry_full_path)
             else:
-                self.dropbox_handler.files_download_to_file(
-                    entry_full_path, entry.path_lower
-                )
+
+                if entry.path_lower is None and self.url_type == "id":
+
+                    assert self.shared_link
+
+                    job = crud.job.get(self.db, self.job_id)
+                    shared_path = f"/{os.path.relpath(entry_full_path, job.path)}"
+
+                    self.dropbox_handler.sharing_get_shared_link_file_to_file(
+                        download_path=entry_full_path,
+                        url=self.shared_link.url,
+                        path=shared_path,
+                    )
+
+                else:
+                    self.dropbox_handler.files_download_to_file(
+                        download_path=entry_full_path, path=entry.path_lower
+                    )
                 print("Downloaded file: {}".format(entry.name))
                 crud.job.increment_imported_items(self.db, job_id=self.job_id)

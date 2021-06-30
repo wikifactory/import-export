@@ -33,7 +33,7 @@ dropbox_validator = functools.partial(
     regex_validator,
     service_id="dropbox",
     regexes=[
-        r"^(https)?:\/\/(www\.)?dropbox\.com\/sh\/(?P<path>\w*\/\w*)\?dl=0$",
+        r"^(https)?:\/\/(www\.)?dropbox\.com\/sh\/(?P<path>\w*\/\w*)",
         r"^(https:\/\/)?(www\.)?dropbox\.com\/home\/(?P<path>[\S]+)$",
     ],
 )
