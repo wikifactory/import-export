@@ -173,17 +173,17 @@ class WikifactoryExporter(BaseExporter):
             with open(file_path, "rb") as data:
                 self.upload_file(data, s3_upload_url)
 
-            # Once finished do the ADD operation
-            self.perform_mutation_operation(
-                file_path,
-                wikifactory_file_id,
-            )
-
             # Mark the file as completed
             self.complete_file(wikifactory_file_id)
 
-            # Update the exported items
-            crud.job.increment_exported_items(self.db, job_id=self.job_id)
+        # Once finished do the ADD operation
+        self.perform_mutation_operation(
+            file_path,
+            wikifactory_file_id,
+        )
+
+        # Update the exported items
+        crud.job.increment_exported_items(self.db, job_id=self.job_id)
 
     def on_finished_cb(self) -> None:
         # In order to finish, I need to perform the commit
